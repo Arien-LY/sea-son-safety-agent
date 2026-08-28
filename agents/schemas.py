@@ -1,8 +1,15 @@
 """Agent 与业务层之间的稳定问题分析契约。"""
 
 from enum import StrEnum
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+
+
+IssueDetail = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=300),
+]
 
 
 class IssueCategory(StrEnum):
@@ -64,12 +71,12 @@ class IssueAnalysis(BaseModel):
     category: IssueCategory
     issue_type: str = Field(min_length=1, max_length=100)
     summary: str = Field(min_length=1, max_length=500)
-    observed_facts: list[str] = Field(default_factory=list, max_length=20)
-    uncertainties: list[str] = Field(default_factory=list, max_length=20)
-    missing_fields: list[str] = Field(default_factory=list, max_length=20)
+    observed_facts: list[IssueDetail] = Field(max_length=20)
+    uncertainties: list[IssueDetail] = Field(max_length=20)
+    missing_fields: list[IssueDetail] = Field(max_length=20)
     risk_level: RiskLevel
-    immediate_actions: list[str] = Field(default_factory=list, max_length=10)
-    suggested_actions: list[str] = Field(default_factory=list, max_length=10)
+    immediate_actions: list[IssueDetail] = Field(max_length=10)
+    suggested_actions: list[IssueDetail] = Field(max_length=10)
     recommended_route: RecommendedRoute
     requires_human_review: bool
     confidence: float = Field(ge=0, le=1)

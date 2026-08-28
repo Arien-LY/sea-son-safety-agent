@@ -18,6 +18,7 @@ Vue 3 SPA
 - 后端 `/health`、`/api/runtime`。
 - Agent 配置、问题分析 Schema、工具统一返回协议。
 - 严格文字输入契约，以及无工具、无共享历史的单 Agent 基础对话边界。
+- 冻结的 `IssueAnalysis` JSON Schema 与严格结构化输出解析边界。
 - 自动测试和前端生产构建。
 
 ## 当前明确未实现
