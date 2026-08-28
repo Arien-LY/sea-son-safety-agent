@@ -44,6 +44,18 @@ class TextConsultationInput(BaseModel):
     requester_role: str | None = Field(default=None, min_length=1, max_length=50)
 
 
+class BasicDialogReply(BaseModel):
+    """基础对话返回的已校验文字回答；不携带业务动作。"""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+        strict=True,
+    )
+
+    answer: str = Field(min_length=1, max_length=4_000)
+
+
 class IssueAnalysis(BaseModel):
     """模型分析结果；不能直接创建或修改业务记录。"""
 

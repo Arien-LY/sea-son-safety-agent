@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sea-son-safety-agent.local/contracts/phase1-basic-dialog-reply-v1.schema.json",
+  "additionalProperties": false,
+  "description": "基础对话返回的已校验文字回答；不携带业务动作。",
+  "properties": {
+    "answer": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Answer",
+      "type": "string"
+    }
+  },
+  "required": [
+    "answer"
+  ],
+  "title": "BasicDialogReply",
+  "type": "object"
+}
