@@ -1,0 +1,8 @@
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic==2.11.7
+python-dotenv==1.2.3
+openai==1.109.1
+hello-agents==0.2.9
+# 0.2.9 顶层导入会加载评估数据集，但基础依赖未声明此包。
+huggingface-hub==0.36.2

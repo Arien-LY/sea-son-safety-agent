@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Local configuration and runtime data
+.env
+data/*.json
+uploads/
+*.log
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+
