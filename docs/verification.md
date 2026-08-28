@@ -224,3 +224,51 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - JSON Schema本身未表达全部 Pydantic 跨字段验证；所有调用方必须使用 `parse_issue_analysis`。
 - 解析错误目前只在 Python 边界返回，尚未映射为 HTTP 错误响应或前端提示。
 - 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
+
+## 2026-08-28：Phase 1 六类结构化问题分析
+
+范围：
+
+- 仅完成 Phase 1 第五项，新增无工具、无共享历史的 `IssueAnalyzer`，支持六个主类别协议。
+- 分类系统提示冻结各类别定义，强调类别表示业务归口且与风险等级独立，并嵌入当前
+  `IssueAnalysis` JSON Schema。
+- 模型 JSON 在写入 Hello-Agents 内部历史前通过严格解析守卫；非法类别、Markdown、旧式工具调用
+  和非 JSON 输出均被拒绝。
+- 未实现真实模型准确率验收、风险策略、信息不足/高风险专项行为、API、前端、Function Calling、
+  工作流、RAG、图片上传或多智能体。
+
+Git 启动审计：
+
+- PR #4 已通过 squash merge 合入 `main`，远端基线为 `22c173b`。
+- 本任务从更新后的 `main` 创建独立分支 `phase1-analysis-categories`，没有叠加未合入提交。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_analysis_categories.py tests/test_basic_dialog.py tests/test_issue_analysis_output.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- 分类、基础对话和结构化输出相关测试：45 tests passed，其中新增分类测试 14 项。
+- Python 完整测试：86 tests passed。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 全部分类测试使用预设 Fake LLM；未读取 API Key，未创建真实模型客户端，未访问或调用付费模型。
+
+确定性门禁：
+
+- `consultation/safety/quality/management/logistics/unknown` 六类均经 `IssueAnalyzer` 和
+  `parse_issue_analysis` 端到端往返。
+- 未声明的 `environment` 类别被 Schema 校验拒绝，无法静默降级或扩展枚举。
+- 系统提示固定类别定义、`unknown` 保守语义及类别/风险分离规则，并包含当前 JSON Schema。
+- 项目、区域和咨询者角色仍明确标记为未经核实；连续两次分析不共享用户或模型历史。
+- 模型超时、一般模型错误和结构化输出错误保持独立稳定错误边界，不向外暴露服务商细节。
+
+已知限制和遗留风险：
+
+- Fake LLM 只证明协议和校验路径支持六类，不证明真实模型分类准确率，也没有达到团队行为阈值。
+- 类别交叉场景仍需团队人工复核，尤其是高风险咨询、生活区用电和审批违规等表达。
+- 风险等级、信息不足和高风险行为仍是后续独立任务，不能因当前提示包含相关字段而提前勾选。
+- `IssueAnalyzer` 尚未接入 API 或前端；真实模型连通性、成本、延迟和服务商错误封装未验证。
+- 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
