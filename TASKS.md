@@ -25,7 +25,8 @@
 - [x] 完成 `IssueAnalysis` JSON Schema 输出（见 `docs/phase1-issue-analysis-schema.md`）。
 - [x] 分类支持 `safety/quality/management/logistics/consultation/unknown`（见
   `docs/phase1-analysis-categories.md`）。
-- [ ] 风险支持 `undetermined/low/medium/high/emergency`。
+- [x] 风险支持 `undetermined/low/medium/high/emergency`（见
+  `docs/phase1-analysis-risk-levels.md`）。
 - [ ] 信息不足时输出缺失字段，不猜测地点、人员和责任。
 - [ ] 高风险输出立即避险提示和人工复核标记。
 - [ ] 用 Fake LLM 测试正常、空输入、非法 JSON、超时和模型错误。

@@ -272,3 +272,49 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - 风险等级、信息不足和高风险行为仍是后续独立任务，不能因当前提示包含相关字段而提前勾选。
 - `IssueAnalyzer` 尚未接入 API 或前端；真实模型连通性、成本、延迟和服务商错误封装未验证。
 - 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
+
+## 2026-08-28：Phase 1 五级风险分析协议
+
+范围：
+
+- 仅完成 Phase 1 第六项，在结构化分析提示中冻结五级风险定义和判断边界。
+- 明确 `undetermined` 不是低风险，类别、风险和置信度相互独立，`emergency` 只用于正在发生或
+  人员立即暴露的紧迫危险。
+- Fake LLM 测试覆盖五个合法等级、非法 `critical`、高风险既有人工复核/立即行动门禁，以及高风险
+  咨询和紧急后勤交叉组合。
+- 未实现真实模型风险准确率、信息不足专项行为、高风险完整响应策略、API、前端、Function Calling、
+  工作流、RAG、图片上传或多智能体。
+
+Git 启动审计：
+
+- PR #5 已通过 squash merge 合入 `main`，远端基线为 `8968440`。
+- 本任务从更新后的 `main` 创建独立分支 `phase1-analysis-risk-levels`，没有叠加未合入提交。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_analysis_risk_levels.py tests/test_analysis_categories.py tests/test_issue_analysis_output.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- 风险、分类和结构化输出相关测试：45 tests passed，其中新增风险测试 11 项。
+- Python 完整测试：97 tests passed。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 所有风险测试使用预设 Fake LLM；未读取 API Key，未创建真实模型客户端，未访问或调用付费模型。
+
+确定性门禁：
+
+- `undetermined/low/medium/high/emergency` 五级均经 `IssueAnalyzer` 和严格解析端到端往返。
+- 未声明的 `critical` 被枚举拒绝；证据不足不得在系统提示中降为 `low`。
+- `confidence` 与风险语义分离；`consultation+high` 和 `logistics+emergency` 组合通过。
+- `high` 缺少立即行动、`emergency` 缺少人工复核均被既有 Pydantic 跨字段规则拒绝。
+
+已知限制和遗留风险：
+
+- Fake LLM 只证明协议支持五级风险，不证明真实模型能正确判断严重性或紧迫度。
+- 五级阈值和交叉案例仍需专业人员人工复核；尚未建立真实模型高风险召回指标。
+- 信息不足和高风险完整行为分别是后续任务，不能因当前已有部分安全约束而提前勾选。
+- `IssueAnalyzer` 尚未接入 API 或前端；真实模型的成本、延迟和错误行为未验证。
+- 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
