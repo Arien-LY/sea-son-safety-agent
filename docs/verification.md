@@ -178,3 +178,49 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
   宣称高风险案例已经通过。
 - 真实 `HelloAgentsLLM` 会封装服务商异常；其超时映射和真实连通性需要在独立、明确授权的冒烟测试中验证。
 - 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
+
+## 2026-08-28：Phase 1 IssueAnalysis JSON Schema 输出
+
+范围：
+
+- 仅完成 Phase 1 第四项，冻结 `IssueAnalysis` JSON Schema 并增加严格 JSON 解析器。
+- 12 个字段全部改为显式必填；五个列表允许为空，但不能省略，列表项必须为 1～300 字符。
+- 解析器使用 `model_validate_json(..., strict=True)`，拒绝额外/缺失字段、类型强制转换、Markdown
+  围栏、尾随文字和非法 JSON，并使用稳定错误码。
+- 未实现模型分析 Prompt、分类准确率、风险策略、API、真实模型、Function Calling、工作流、RAG、
+  图片上传或多智能体。
+
+Git 启动审计：
+
+- PR #3 已通过 squash merge 合入 `main`，远端基线为 `272d43e`。
+- 本任务从更新后的 `main` 创建独立分支 `phase1-issue-analysis-schema`，没有叠加未合入提交。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_issue_analysis_output.py tests/test_agent_contract.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- 结构化输出与既有 Agent 契约测试：24 tests passed，其中新增结构化输出测试 20 项。
+- Python 完整测试：72 tests passed。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 测试只解析本地预设字符串和 Schema；未读取 API Key，未创建模型客户端，未访问或调用真实/付费模型。
+
+确定性门禁：
+
+- JSON Schema 与 Pydantic 生成 Schema 一致，字段、必填集合、枚举或长度漂移会使测试失败。
+- 非字符串、空输出、非法 JSON 与契约校验失败分别返回稳定错误码，对外摘要不包含原始模型内容。
+- 字符串形式的布尔值/置信度、非数组列表、额外责任人字段、缺失列表和空白/超长列表项均被拒绝。
+- 既有高风险跨字段校验仍由 Pydantic 解析执行，不能只验证静态 Schema 后绕过解析器。
+
+已知限制和遗留风险：
+
+- 当前没有 Agent 分析 Prompt 或模型调用接入，不能据此宣称模型已经能够生成正确 `IssueAnalysis`。
+- Schema 已固定类别和风险词汇，但尚未运行 20 条案例验证模型选择是否正确，因此 TASKS 中对应行为项
+  仍保持未完成。
+- JSON Schema本身未表达全部 Pydantic 跨字段验证；所有调用方必须使用 `parse_issue_analysis`。
+- 解析错误目前只在 Python 边界返回，尚未映射为 HTTP 错误响应或前端提示。
+- 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
