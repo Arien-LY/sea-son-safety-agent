@@ -21,7 +21,7 @@
   `docs/phase1-acceptance-cases.md`）。
 - [x] 定义输入契约：文字描述、可选项目/区域/角色，不含图片二进制（见
   `docs/phase1-text-input-contract.md`）。
-- [ ] 完成单 Agent 基础对话，普通问题直接回答。
+- [x] 完成单 Agent 基础对话，普通问题直接回答（见 `docs/phase1-basic-dialog.md`）。
 - [ ] 完成 `IssueAnalysis` JSON Schema 输出。
 - [ ] 分类支持 `safety/quality/management/logistics/consultation/unknown`。
 - [ ] 风险支持 `undetermined/low/medium/high/emergency`。

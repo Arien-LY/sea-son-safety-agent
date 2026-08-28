@@ -128,3 +128,53 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - 当前不收集登录身份、联系方式、项目/区域正式 ID；这些能力需在权限和持久化边界明确后单独设计。
 - 字段名和长度仍需产品负责人确认；若修改，必须同步模型、Schema、固定案例和验证记录。
 - 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
+
+## 2026-08-28：Phase 1 单 Agent 基础对话
+
+范围：
+
+- 仅完成 Phase 1 第三项，使用 Hello-Agents `SimpleAgent` 建立普通文字咨询的最小直接回答闭环。
+- 每次请求创建一个无 ToolRegistry、`enable_tool_calling=False`、无共享历史的单 Agent；模型接口
+  必须由调用方注入，普通测试只使用 Fake LLM。
+- 模型回答通过 `BasicDialogReply` Pydantic 契约，空响应、超时、模型错误、超长响应和伪工具调用
+  映射为稳定错误码。
+- 未实现对话 API、前端入口、真实模型、问题分类、风险判断、`IssueAnalysis` 输出、Function Calling、
+  工作流、RAG、图片上传或多智能体。
+
+Git 启动审计：
+
+- PR #2 已通过 squash merge 合入 `main`，远端基线为 `e7c488d`。
+- 本任务从更新后的 `main` 创建独立分支 `phase1-single-agent-dialog`，没有叠加未合入提交。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_basic_dialog.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- 基础对话专项测试：11 tests passed。
+- Python 完整测试：52 tests passed。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 所有对话测试使用本地预设 Fake LLM；未读取 API Key，未创建模型客户端，未访问或调用真实/付费模型。
+
+确定性门禁：
+
+- 普通咨询返回去除首尾空白、长度 1～4000 的 `BasicDialogReply.answer`。
+- 项目、区域和咨询者角色在模型消息中明确标注为用户自报且未经核实。
+- 每次 `reply` 创建独立 `SimpleAgent`，第二次调用不会携带第一次调用的用户或模型消息。
+- 响应守卫在 Hello-Agents 写入内部历史前拦截 `None`、空白响应和旧式工具调用标记。
+- `empty_response`、`invalid_response`、`model_timeout`、`model_error`、`unsupported_tool_call`
+  为稳定错误码，服务商异常细节不写入对外消息。
+- 冻结 JSON Schema 与 Pydantic 生成 Schema 一致，漂移会使专项测试失败。
+
+已知限制和遗留风险：
+
+- 当前只是 Python 模型边界，没有 HTTP 或页面入口，不能从浏览器进行真实对话。
+- 当前刻意不保留多轮历史；引入历史前必须先定义会话 ID、用户隔离、清理策略和隐私期限。
+- 系统提示中的安全要求仍由模型遵循，尚未经过 `IssueAnalysis` 的确定性分类和风险路由，不能据此
+  宣称高风险案例已经通过。
+- 真实 `HelloAgentsLLM` 会封装服务商异常；其超时映射和真实连通性需要在独立、明确授权的冒烟测试中验证。
+- 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
