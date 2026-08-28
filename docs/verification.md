@@ -82,3 +82,49 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - `propose_workflow` 只是未来路由预期，本阶段不创建记录、不派单、不改变业务状态。
 - 行为验收的团队阈值要在单 Agent 接入前另行冻结；高风险漏掉人工复核或立即避险必须单例失败。
 - 保留 Phase 0 已记录的第三方 Pydantic 弃用警告；本任务未升级依赖。
+
+## 2026-08-28：Phase 1 文字咨询输入契约
+
+范围：
+
+- 仅完成 Phase 1 第二项，定义一条纯文字咨询消息及可选项目、区域和咨询者角色上下文。
+- 使用 `grill-with-docs` 明确领域语义并新增根目录 `CONTEXT.md`：输入不是上报表单；咨询者角色
+  不代表权限或责任；项目和区域只是用户提供、未经核实的文字标签。
+- 未实现 API 路由、Agent、Prompt、Function Calling、工作流、RAG、图片上传、多智能体或前端交互。
+
+Git 启动审计：
+
+- 本任务启动时，上一任务分支 `phase1-fixed-acceptance-cases` 尚未合入 `main`，因此本任务分支
+  `phase1-text-input-contract` 最初从上一任务提交创建。
+- 上一任务经 squash merge 合入 `main` 后，其补丁 ID 与原提交相同但提交身份改变，导致 GitHub
+  最初报告 `TASKS.md` 和本文件冲突。本分支随后跳过等价旧提交并变基到最新 `origin/main`；
+  `git merge-tree --write-tree origin/main HEAD` 返回 0，当前 PR 不再叠加或重复上一任务提交。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_text_consultation_input.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- 输入契约专项测试：25 tests passed。
+- Python 完整测试：41 tests passed。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 测试仅使用 Pydantic 和本地文件；未读取 API Key，未访问或调用任何真实/付费模型。
+
+确定性门禁：
+
+- `message` 必填，去除首尾空白后长度为 1～1000；空字符串、纯空白、错误类型和超长输入被拒绝。
+- `project`、`area`、`requester_role` 可省略或为 `null`；显式空白值和超长值被拒绝。
+- 模型启用严格类型和 `extra="forbid"`；图片、文件、二进制、正式 ID 和权限字段均不能混入。
+- 冻结 JSON Schema 与 Pydantic 生成 Schema 逐项一致，字段或边界漂移会使测试失败。
+
+已知限制和遗留风险：
+
+- 当前契约只在模型层校验内存数据；尚未接入 HTTP API、Agent 或前端，不能宣称已经可以对话。
+- 项目、区域和咨询者角色都是未核实的用户陈述；后续不得将其直接用于授权、派单或归责。
+- 当前不收集登录身份、联系方式、项目/区域正式 ID；这些能力需在权限和持久化边界明确后单独设计。
+- 字段名和长度仍需产品负责人确认；若修改，必须同步模型、Schema、固定案例和验证记录。
+- 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。

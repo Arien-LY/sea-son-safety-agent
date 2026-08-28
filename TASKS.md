@@ -19,7 +19,8 @@
 
 - [x] 定义 20 条固定案例：普通咨询、安全、质量、管理、后勤各 4 条（契约与验收说明见
   `docs/phase1-acceptance-cases.md`）。
-- [ ] 定义输入契约：文字描述、可选项目/区域/角色，不含图片二进制。
+- [x] 定义输入契约：文字描述、可选项目/区域/角色，不含图片二进制（见
+  `docs/phase1-text-input-contract.md`）。
 - [ ] 完成单 Agent 基础对话，普通问题直接回答。
 - [ ] 完成 `IssueAnalysis` JSON Schema 输出。
 - [ ] 分类支持 `safety/quality/management/logistics/consultation/unknown`。

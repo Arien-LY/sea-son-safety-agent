@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sea-son-safety-agent.local/contracts/phase1-text-consultation-input-v1.schema.json",
+  "additionalProperties": false,
+  "description": "一条纯文字咨询消息及用户自报的可选上下文。",
+  "properties": {
+    "message": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Message",
+      "type": "string"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
+    "area": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Area"
+    },
+    "requester_role": {
+      "anyOf": [
+        {
+          "maxLength": 50,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Requester Role"
+    }
+  },
+  "required": [
+    "message"
+  ],
+  "title": "TextConsultationInput",
+  "type": "object"
+}
