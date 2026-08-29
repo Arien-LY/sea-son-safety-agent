@@ -318,3 +318,58 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - 信息不足和高风险完整行为分别是后续任务，不能因当前已有部分安全约束而提前勾选。
 - `IssueAnalyzer` 尚未接入 API 或前端；真实模型的成本、延迟和错误行为未验证。
 - 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
+
+## 2026-08-29：Phase 1 实现清单完成
+
+范围：
+
+- 完成 Phase 1 最后三项：信息不足安全边界、高风险立即避险与人工复核边界，以及 Fake LLM
+  成功/失败矩阵。
+- `IssueAnalysis` 新增确定性跨字段门禁；系统提示同步冻结不猜测事实、高风险优先避险和禁止越权
+  行为。
+- 20 条冻结文字案例全部通过同一 `IssueAnalyzer`、严格 JSON 解析和安全校验路径。
+- 未实现或修改 API、前端对话、Function Calling、任务工作流、持久化、RAG、图片上传或多智能体。
+
+Git 启动审计：
+
+- PR #6 已通过 squash merge 合入 `main`，本任务基线为 `59e97ee`。
+- 从更新后的 `main` 创建独立分支 `phase1-completion-safety`，没有叠加未合入提交。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_analysis_safety_boundaries.py tests/test_phase1_fake_llm_matrix.py tests/test_phase1_fixed_case_matrix.py tests/test_analysis_categories.py tests/test_analysis_risk_levels.py tests/test_issue_analysis_output.py tests/test_agent_contract.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- Phase 1 安全边界、失败矩阵、固定案例和既有契约专项测试：63 tests passed。
+- Python 完整测试：111 tests passed；保留 1 条既有 Hello-Agents Pydantic 弃用警告。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 全部新增测试使用本地预设 Fake LLM；未读取 API Key，未创建真实模型客户端，未访问或调用
+  真实/付费模型。
+
+固定案例离线协议阈值：
+
+- 主类别、风险区间、路由、人工复核标记、必须提取或追问的要点、禁止工具副作用六项均为 20/20。
+- 该结果验证冻结预期经过输入、Prompt、严格解析与确定性门禁的协议链，不代表真实模型准确率。
+
+确定性门禁：
+
+- 缺失字段必须伴随不确定性；`unknown` 和 `undetermined` 必须列出缺失字段与不确定性。
+- `collect_more_info` 必须有可追问字段；已有高风险事实即使信息不全也必须路由人工复核。
+- `high/emergency` 必须包含立即行动、人工复核标记和 `human_review` 路由。
+- 系统提示禁止猜测地点、人员、状态和责任，并禁止诱导无资质人员靠近、触碰、带电测试、拆卸或
+  维修危险源。
+- `IssueAnalyzer` 未注册工具；测试确认分析协议不包含建单、派单、处罚或关闭等 Task 副作用。
+
+已知限制和遗留风险：
+
+- Fake LLM 协议矩阵不能证明真实模型的分类准确率、高风险召回率或提示遵循能力。
+- 固定案例的业务归口、风险区间、追问和避险措辞仍需安全、质量、管理和后勤专业人员人工验收。
+- 真实模型冒烟尚未执行；如需执行，必须明确授权并单独记录密钥边界、成本、延迟和服务商错误行为。
+- 当前没有 HTTP 或页面入口，不能从浏览器体验文字咨询；这属于后续明确范围，不影响本次 Python
+  协议验收。
+- Phase 0 的双机安装复现仍待两位队员在各自电脑完成，不能由本机验证代替。
+- 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
