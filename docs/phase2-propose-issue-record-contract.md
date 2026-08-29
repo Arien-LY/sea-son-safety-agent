@@ -42,3 +42,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 
 本任务只冻结并实现唯一工具本身。把经过校验的分析接入原生 `FunctionCallAgent`、呈现页面、处理确认、
 重复调用和审计日志，仍需按 `TASKS.md` 后续条目分别实现与验收。
+
+## 契约演进
+
+- `phase2_issue_record_proposal.v1.schema.json` 保留最初冻结的只读提案结构，不再修改。
+- 页面补充与确认需要可编辑的记录展示字段，因此新增
+  `phase2_issue_record_proposal.v2.schema.json`，增加 `review_fields`。
+- v2 只允许标题、描述、项目、区域和补充说明；`analysis` 仍完整保留，风险、路由和人工复核不可由
+  用户编辑。
+- 当前 API 与页面使用 v2；保留 v1 是为了避免已经冻结的契约发生无声破坏性漂移。

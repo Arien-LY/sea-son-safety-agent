@@ -16,8 +16,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS_SCHEMA_PATH = (
     PROJECT_ROOT / "contracts" / "phase1_issue_analysis.v1.schema.json"
 )
-PROPOSAL_SCHEMA_PATH = (
+PROPOSAL_V1_SCHEMA_PATH = (
     PROJECT_ROOT / "contracts" / "phase2_issue_record_proposal.v1.schema.json"
+)
+PROPOSAL_SCHEMA_PATH = (
+    PROJECT_ROOT / "contracts" / "phase2_issue_record_proposal.v2.schema.json"
 )
 
 
@@ -68,7 +71,8 @@ def test_tool_metadata_and_native_function_schema_are_frozen() -> None:
 
 
 def test_eligible_analysis_returns_unpersisted_proposal() -> None:
-    result = ProposeIssueRecordTool().run(valid_issue_payload())
+    payload = valid_issue_payload()
+    result = ProposeIssueRecordTool().run(payload)
 
     assert result.ok is True
     assert result.error_code is None
@@ -76,6 +80,9 @@ def test_eligible_analysis_returns_unpersisted_proposal() -> None:
         json.dumps(result.data["proposal"], ensure_ascii=False), strict=True
     )
     assert proposal.status == "awaiting_user_confirmation"
+    assert proposal.review_fields.record_title == payload["issue_type"]
+    assert proposal.review_fields.record_description == payload["summary"]
+    assert proposal.review_fields.project is None
     assert proposal.requires_user_confirmation is True
     assert proposal.persisted is False
     assert proposal.dispatched is False
@@ -134,10 +141,34 @@ def test_frozen_proposal_contract_has_only_confirmation_safe_fields() -> None:
     assert frozen_schema["properties"]["analysis"] == {
         "$ref": "phase1_issue_analysis.v1.schema.json"
     }
+    assert frozen_schema["properties"]["review_fields"]["additionalProperties"] is False
+    assert frozen_schema["properties"]["review_fields"]["required"] == [
+        "record_title",
+        "record_description",
+        "project",
+        "area",
+        "reporter_note",
+    ]
     assert frozen_schema["properties"]["requires_user_confirmation"]["const"] is True
     assert frozen_schema["properties"]["persisted"]["const"] is False
     assert frozen_schema["properties"]["dispatched"]["const"] is False
     assert frozen_schema["required"] == [
+        "proposal_type",
+        "status",
+        "analysis",
+        "review_fields",
+        "requires_user_confirmation",
+        "persisted",
+        "dispatched",
+    ]
+
+
+def test_v1_proposal_contract_remains_unchanged_after_v2_extension() -> None:
+    frozen_v1 = json.loads(PROPOSAL_V1_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+    assert frozen_v1["$id"].endswith("phase2-issue-record-proposal-v1.schema.json")
+    assert "review_fields" not in frozen_v1["properties"]
+    assert frozen_v1["required"] == [
         "proposal_type",
         "status",
         "analysis",
@@ -152,6 +183,13 @@ def test_proposal_model_rejects_claimed_side_effects() -> None:
         "proposal_type": "issue_record",
         "status": "awaiting_user_confirmation",
         "analysis": IssueAnalysis.model_validate(valid_issue_payload()),
+        "review_fields": {
+            "record_title": "临边防护",
+            "record_description": "用户报告作业层临边防护缺失，需要现场跟进。",
+            "project": None,
+            "area": None,
+            "reporter_note": None,
+        },
         "requires_user_confirmation": True,
         "persisted": True,
         "dispatched": False,

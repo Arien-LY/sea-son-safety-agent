@@ -463,3 +463,57 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - 当前没有 API 或页面入口，也没有确认、持久化或派单能力。
 - 重复调用、内部异常、审计日志和页面差异展示属于后续 Phase 2 条目。
 - 所有测试使用本地 Fake；未读取 API Key，未创建真实服务商客户端，未调用真实或付费模型。
+
+## 2026-08-29：Phase 2 提案审阅闭环完成
+
+范围：
+
+- 完成 Phase 2 剩余四项：页面建议记录与用户确认、确认前后差异、统一错误矩阵、脱敏工具审计。
+- 保留冻结的提案 v1，新增含五个用户可编辑展示字段的 v2 契约，避免无声破坏已有版本。
+- 新增无持久化 FastAPI 预览/确认边界和 Vue 提案审阅页面。
+- 未实现真实模型、正式记录 Store、数据库、记录编号、派单或整改工作流。
+
+Git 启动审计：
+
+- PR #9 已通过 squash merge 合入 `main`，本任务基线为 `f744a94`。
+- 从更新后的 `main` 创建独立分支 `phase2-complete-proposal-review`，没有叠加未合入提交。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_tool_contract.py tests/test_tool_errors_and_audit.py tests/test_propose_issue_record_tool.py tests/test_validated_analysis_proposal.py tests/test_api.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- 工具错误/审计、提案契约、原生调用和 API 专项测试：39 tests passed。
+- Python 完整测试：145 tests passed；保留 1 条既有 Hello-Agents Pydantic 弃用警告。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 未读取 API Key，未创建真实服务商客户端，未调用真实或付费模型。
+
+本地浏览器验收：
+
+- 桌面页面成功完成建议生成、三项用户补充差异和确认。
+- 确认结果显示 `confirmed_pending_persistence`、`persisted=false`、`dispatched=false`。
+- 390×844 移动视口下单列布局正常；浏览器控制结束前已恢复默认视口。
+- 只访问 `http://127.0.0.1:5173/` 与本地 FastAPI，未访问外部站点。
+
+确定性门禁：
+
+- 用户只能编辑 `review_fields`，确认接口拒绝额外的风险、路由或人工复核字段。
+- 预览响应使用进程级 HMAC-SHA256 令牌保护原提案；回传时篡改锁定分析会使确认失败。
+- 服务端重算差异；前端不能伪造确认变更清单。
+- `ToolResult` 强制成功/错误字段一致，并覆盖 `invalid_arguments/duplicate_call/internal_error`。
+- 同一工具实例重复成功参数以及重复 API 调用标识都返回 `duplicate_call`。
+- 提案构造异常返回脱敏 `internal_error`，不暴露异常详情。
+- 审计只记录 UTC 时间、工具名、参数键名和 SHA-256 摘要、结果摘要与错误码。
+
+已知限制和遗留风险：
+
+- 页面使用手工构造的结构化验收输入，明确不是自然语言真实模型分析入口。
+- API 的重复调用标识和工具审计只存在进程内，重启或多进程之间不共享；正式幂等和持久化属于 Phase 3。
+- 完整性令牌只在当前进程有效且不表达提案所有权；Phase 3 落库前仍需增加身份、所有权和持久化幂等。
+- 审计缓冲区不是持久化审计系统；进程退出后记录消失。
+- 真实模型工具选择、成本、延迟和服务商错误尚未单独授权验证。
+- 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。

@@ -46,12 +46,17 @@
   `docs/phase2-propose-issue-record-contract.md`）。
 - [x] 工具接收经过校验的结构化问题，不直接保存或派单（见
   `docs/phase2-validated-analysis-tool-boundary.md`）。
-- [ ] 页面显示“建议创建记录”，由用户补充和确认。
-- [ ] 确认前后数据差异可见。
-- [ ] 工具返回统一 `ToolResult`，覆盖参数错误、重复调用和内部错误。
-- [ ] 记录工具名、参数摘要、结果、时间和错误码，不记录隐藏思维链。
+- [x] 页面显示“建议创建记录”，由用户补充和确认（见 `docs/phase2-completion.md`）。
+- [x] 确认前后数据差异可见（见 `docs/phase2-completion.md`）。
+- [x] 工具返回统一 `ToolResult`，覆盖参数错误、重复调用和内部错误（见
+  `docs/phase2-completion.md`）。
+- [x] 记录工具名、参数摘要、结果、时间和错误码，不记录隐藏思维链（见
+  `docs/phase2-completion.md`）。
 
 验收：普通咨询不调用工具；只有明确需要留痕/跟进的问题出现记录建议；未确认不落库。
+
+状态：Phase 2 实现清单已完成；页面、错误矩阵和脱敏审计已通过自动及本地浏览器验收。正式落库、
+派单和整改状态属于 Phase 3，当前确认结果仍为 `confirmed_pending_persistence`。
 
 ## Phase 3：整改和后勤工作流
 
