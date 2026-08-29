@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sea-son-safety-agent.local/contracts/phase2-issue-record-proposal-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "尚未保存、派单或进入业务工作流的问题记录提案。",
+  "properties": {
+    "proposal_type": {
+      "const": "issue_record",
+      "type": "string"
+    },
+    "status": {
+      "const": "awaiting_user_confirmation",
+      "type": "string"
+    },
+    "analysis": {
+      "$ref": "phase1_issue_analysis.v1.schema.json"
+    },
+    "requires_user_confirmation": {
+      "const": true,
+      "type": "boolean"
+    },
+    "persisted": {
+      "const": false,
+      "type": "boolean"
+    },
+    "dispatched": {
+      "const": false,
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "proposal_type",
+    "status",
+    "analysis",
+    "requires_user_confirmation",
+    "persisted",
+    "dispatched"
+  ]
+}
