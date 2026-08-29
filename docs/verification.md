@@ -417,3 +417,49 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - 当前没有用户确认、持久化或派单能力；提案只能作为 Python 内存中的受控返回值。
 - 重复调用、内部异常、结构化审计和页面差异展示属于后续 Phase 2 条目。
 - 所有测试使用本地确定性数据；未读取 API Key，未创建模型客户端，未调用真实或付费模型。
+
+## 2026-08-29：Phase 2 已校验分析到原生工具调用
+
+范围：
+
+- 新增 `IssueProposalAgent`，只接受已构造成功的 `IssueAnalysis`。
+- 普通咨询和仅待补充信息的分析在原生模型调用前停止；需要跟进时只暴露
+  `propose_issue_record`，最大工具迭代为 1。
+- 工具调用参数必须与输入分析逐字段一致；合法但被改写的分析返回 `analysis_mismatch`。
+- 未接入 API、页面、确认差异、持久化、派单、重复调用控制或审计日志。
+
+Git 启动审计：
+
+- PR #8 已通过 squash merge 合入 `main`，本任务基线为 `3d06e35`。
+- 从更新后的 `main` 创建独立分支 `phase2-validated-analysis-proposal`，没有叠加未合入提交。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_validated_analysis_proposal.py tests/test_propose_issue_record_tool.py tests/test_issue_analysis_output.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- 已校验分析、提案工具和结构化输出专项测试：39 tests passed。
+- Python 完整测试：130 tests passed；保留 1 条既有 Hello-Agents Pydantic 弃用警告。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 验证过程未读取 API Key，未创建真实服务商客户端，未调用真实或付费模型。
+
+验收关注：
+
+- `direct_answer/collect_more_info` 不调用 Fake 原生模型或工具。
+- `propose_workflow/human_review` 强制选择唯一的 `propose_issue_record` 原生函数。
+- 完整 `IssueAnalysis` JSON Schema 被发送给原生函数调用，且不执行宽松类型转换。
+- 篡改、非法类型、非法 JSON 和未执行工具分别安全失败，不返回伪造提案。
+- 成功输出仍固定等待用户确认、未保存、未派单。
+
+已知限制和遗留风险：
+
+- Fake 原生客户端只证明 FunctionCallAgent 协议与守卫，不证明真实模型能够稳定生成正确工具参数。
+- 当前调用会在一次工具响应后请求一次无工具最终文本；最终文本不作为事实来源，但真实模型成本和
+  延迟仍需单独授权验证。
+- 当前没有 API 或页面入口，也没有确认、持久化或派单能力。
+- 重复调用、内部异常、审计日志和页面差异展示属于后续 Phase 2 条目。
+- 所有测试使用本地 Fake；未读取 API Key，未创建真实服务商客户端，未调用真实或付费模型。

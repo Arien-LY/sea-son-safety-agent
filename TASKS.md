@@ -44,7 +44,8 @@
 
 - [x] 只增加一个 `propose_issue_record` 工具（契约见
   `docs/phase2-propose-issue-record-contract.md`）。
-- [ ] 工具接收经过校验的结构化问题，不直接保存或派单。
+- [x] 工具接收经过校验的结构化问题，不直接保存或派单（见
+  `docs/phase2-validated-analysis-tool-boundary.md`）。
 - [ ] 页面显示“建议创建记录”，由用户补充和确认。
 - [ ] 确认前后数据差异可见。
 - [ ] 工具返回统一 `ToolResult`，覆盖参数错误、重复调用和内部错误。
