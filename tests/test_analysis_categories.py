@@ -38,7 +38,7 @@ def analysis_json(category: str) -> str:
         "issue_type": "测试类型",
         "summary": "用于验证分类协议的结构化输出。",
         "observed_facts": [],
-        "uncertainties": [],
+        "uncertainties": ["无法判断具体问题"] if category == "unknown" else [],
         "missing_fields": ["具体问题"] if category == "unknown" else [],
         "risk_level": risk_level,
         "immediate_actions": [],

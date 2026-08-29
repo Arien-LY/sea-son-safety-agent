@@ -47,6 +47,19 @@ ISSUE_ANALYSIS_SYSTEM_PROMPT = f"""你是施工现场文字输入的结构化问
 3. confidence 表示对当前分析的把握程度，不是风险严重度；高置信度不等于高风险。
 4. high 和 emergency 必须要求人工复核并提供立即避险行动；不得只给一般建议。
 
+信息不足规则：
+1. observed_facts 只能写用户文字和可选上下文中明确出现的事实，不得补写未提供的地点、人员、状态或责任。
+2. 无法确定类别时使用 unknown；无法确定风险时使用 undetermined，不能把“未知”写成“低风险”。
+3. missing_fields 必须逐项列出完成判断所需的信息，例如具体问题、位置、当前状态和人员暴露情况。
+4. 只要 missing_fields 非空，uncertainties 也必须说明这些信息为何影响判断。
+5. 使用 collect_more_info 路由时 missing_fields 不能为空；高风险即使信息不全也必须优先路由人工复核。
+
+高风险规则：
+1. high 和 emergency 的 immediate_actions 必须先降低人员暴露，例如保持距离、警示周边人员并联系现场专业人员或应急人员。
+2. 不得建议无资质用户靠近、触摸、带电测试、拆卸或自行修理危险设施。
+3. high 和 emergency 必须设置 requires_human_review=true 且 recommended_route=human_review。
+4. 不作最终工程定性，不自动归责、处罚、创建记录、派单或关闭问题。
+
 输出要求：
 1. 只输出一个符合下列 JSON Schema 的 JSON 对象，不要 Markdown 围栏、解释前缀或尾随文字。
 2. 所有字段都必须显式输出；没有内容的列表输出 []，不得省略字段或增加字段。

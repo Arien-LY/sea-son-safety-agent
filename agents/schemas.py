@@ -83,9 +83,22 @@ class IssueAnalysis(BaseModel):
 
     @model_validator(mode="after")
     def enforce_safety_boundary(self) -> "IssueAnalysis":
+        if self.missing_fields and not self.uncertainties:
+            raise ValueError("存在缺失字段时必须明确说明不确定性。")
+        if self.category == IssueCategory.UNKNOWN:
+            if not self.missing_fields or not self.uncertainties:
+                raise ValueError("未知类别必须列出缺失字段和不确定性。")
+        if self.risk_level == RiskLevel.UNDETERMINED:
+            if not self.missing_fields or not self.uncertainties:
+                raise ValueError("风险未确定时必须列出缺失字段和不确定性。")
+        if self.recommended_route == RecommendedRoute.COLLECT_MORE_INFO:
+            if not self.missing_fields:
+                raise ValueError("补充信息路由必须列出需要补充的字段。")
         if self.risk_level in {RiskLevel.HIGH, RiskLevel.EMERGENCY}:
             if not self.requires_human_review:
                 raise ValueError("高风险或紧急问题必须要求人工复核。")
             if not self.immediate_actions:
                 raise ValueError("高风险或紧急问题必须提供立即行动建议。")
+            if self.recommended_route != RecommendedRoute.HUMAN_REVIEW:
+                raise ValueError("高风险或紧急问题必须路由人工复核。")
         return self

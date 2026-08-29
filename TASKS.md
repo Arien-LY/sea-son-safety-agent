@@ -27,11 +27,16 @@
   `docs/phase1-analysis-categories.md`）。
 - [x] 风险支持 `undetermined/low/medium/high/emergency`（见
   `docs/phase1-analysis-risk-levels.md`）。
-- [ ] 信息不足时输出缺失字段，不猜测地点、人员和责任。
-- [ ] 高风险输出立即避险提示和人工复核标记。
-- [ ] 用 Fake LLM 测试正常、空输入、非法 JSON、超时和模型错误。
+- [x] 信息不足时输出缺失字段，不猜测地点、人员和责任（见
+  `docs/phase1-completion.md`）。
+- [x] 高风险输出立即避险提示和人工复核标记（见 `docs/phase1-completion.md`）。
+- [x] 用 Fake LLM 测试正常、空输入、非法 JSON、超时和模型错误（见
+  `docs/phase1-completion.md`）。
 
 验收：固定案例分类与路由达到团队约定阈值；无 Task 副作用；真实模型冒烟单独记录。
+
+状态：Phase 1 实现清单已完成；专业人员人工验收和经明确授权的真实模型冒烟仍是进入下一阶段前的
+独立门禁，不能由 Fake LLM 协议测试替代。
 
 ## Phase 2：受控问题上报工具
 
