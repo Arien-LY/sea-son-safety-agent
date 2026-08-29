@@ -373,3 +373,47 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
   协议验收。
 - Phase 0 的双机安装复现仍待两位队员在各自电脑完成，不能由本机验证代替。
 - 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
+
+## 2026-08-29：Phase 2 唯一问题记录提案工具契约
+
+范围：
+
+- 只增加 `propose_issue_record` 一个工具及其最小注册表，参数复用冻结的 `IssueAnalysis` Schema。
+- 冻结 `IssueRecordProposal`：等待用户确认、未保存、未派单，不包含正式记录 ID 或工作流状态。
+- 工具仅接受 `propose_workflow/human_review` 路由；普通咨询和仅待补充信息的分析被确定性拒绝。
+- 未接入 Agent、API、页面、确认流程、持久化、派单、重复调用控制或审计日志。
+
+Git 启动审计：
+
+- PR #7 已通过 squash merge 合入 `main`，本任务基线为 `bdc112a`。
+- 从更新后的 `main` 创建独立分支 `phase2-propose-issue-record-contract`，没有叠加未合入提交。
+- 老大已明确要求进入 Phase 2；Phase 1 专业人员逐条复核仍需补齐，不能视为已由自动测试替代。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_propose_issue_record_tool.py tests/test_tool_contract.py tests/test_issue_analysis_output.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- 工具、既有统一返回和 `IssueAnalysis` 契约专项测试：33 tests passed。
+- Python 完整测试：122 tests passed；保留 1 条既有 Hello-Agents Pydantic 弃用警告。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 验证过程未读取 API Key，未创建模型客户端，未调用真实或付费模型。
+
+验收关注：
+
+- 注册表工具名严格等于 `("propose_issue_record",)`，没有提前加入搜索、保存、派单或工作流工具。
+- Function Calling 参数 Schema 与冻结的 Phase 1 `IssueAnalysis` 契约一致。
+- 成功提案固定 `requires_user_confirmation=true`、`persisted=false`、`dispatched=false`。
+- 非法参数返回 `invalid_arguments`；不需要留痕的路由返回
+  `issue_not_eligible_for_proposal`，均不回显原始敏感字段。
+
+已知限制和遗留风险：
+
+- 当前工具尚未注册到真实 `FunctionCallAgent`，不能据此宣称模型工具选择或原生调用链已经通过。
+- 当前没有用户确认、持久化或派单能力；提案只能作为 Python 内存中的受控返回值。
+- 重复调用、内部异常、结构化审计和页面差异展示属于后续 Phase 2 条目。
+- 所有测试使用本地确定性数据；未读取 API Key，未创建模型客户端，未调用真实或付费模型。

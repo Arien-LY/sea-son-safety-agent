@@ -42,7 +42,8 @@
 
 教程依据：第 7 章 FunctionCallAgent 与工具系统。
 
-- [ ] 只增加一个 `propose_issue_record` 工具。
+- [x] 只增加一个 `propose_issue_record` 工具（契约见
+  `docs/phase2-propose-issue-record-contract.md`）。
 - [ ] 工具接收经过校验的结构化问题，不直接保存或派单。
 - [ ] 页面显示“建议创建记录”，由用户补充和确认。
 - [ ] 确认前后数据差异可见。
