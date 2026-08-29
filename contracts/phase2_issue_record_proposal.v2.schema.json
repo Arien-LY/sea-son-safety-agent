@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sea-son-safety-agent.local/contracts/phase2-issue-record-proposal-v2.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "含用户可编辑展示字段、尚未保存或派单的问题记录提案。",
+  "properties": {
+    "proposal_type": {
+      "const": "issue_record",
+      "type": "string"
+    },
+    "status": {
+      "const": "awaiting_user_confirmation",
+      "type": "string"
+    },
+    "analysis": {
+      "$ref": "phase1_issue_analysis.v1.schema.json"
+    },
+    "review_fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "用户可补充的记录展示字段，不覆盖结构化风险与路由。",
+      "properties": {
+        "record_title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "record_description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "project": {
+          "anyOf": [
+            { "type": "string", "minLength": 1, "maxLength": 100 },
+            { "type": "null" }
+          ]
+        },
+        "area": {
+          "anyOf": [
+            { "type": "string", "minLength": 1, "maxLength": 200 },
+            { "type": "null" }
+          ]
+        },
+        "reporter_note": {
+          "anyOf": [
+            { "type": "string", "minLength": 1, "maxLength": 500 },
+            { "type": "null" }
+          ]
+        }
+      },
+      "required": [
+        "record_title",
+        "record_description",
+        "project",
+        "area",
+        "reporter_note"
+      ]
+    },
+    "requires_user_confirmation": {
+      "const": true,
+      "type": "boolean"
+    },
+    "persisted": {
+      "const": false,
+      "type": "boolean"
+    },
+    "dispatched": {
+      "const": false,
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "proposal_type",
+    "status",
+    "analysis",
+    "review_fields",
+    "requires_user_confirmation",
+    "persisted",
+    "dispatched"
+  ]
+}

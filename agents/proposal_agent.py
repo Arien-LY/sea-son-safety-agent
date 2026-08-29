@@ -11,7 +11,7 @@ from hello_agents.tools import Tool, ToolParameter
 from pydantic import ValidationError
 
 from agents.schemas import IssueAnalysis, RecommendedRoute
-from agents.tools import ProposeIssueRecordTool, ToolResult
+from agents.tools import ProposeIssueRecordTool, ToolAuditLog, ToolResult
 
 
 ELIGIBLE_PROPOSAL_ROUTES = frozenset(
@@ -28,8 +28,11 @@ ISSUE_PROPOSAL_SYSTEM_PROMPT = """你只能处理系统提供的、已经校验�
 class _BoundProposalTool(Tool):
     """把原生工具调用绑定到一个不可被模型改写的已校验分析。"""
 
-    def __init__(self, expected_analysis: IssueAnalysis) -> None:
-        self._controlled_tool = ProposeIssueRecordTool()
+    def __init__(
+        self, expected_analysis: IssueAnalysis, audit_log: ToolAuditLog
+    ) -> None:
+        self._controlled_tool = ProposeIssueRecordTool(audit_log=audit_log)
+        self._audit_log = audit_log
         self._expected_analysis = expected_analysis
         self.last_result: ToolResult | None = None
         super().__init__(
@@ -66,6 +69,11 @@ class _BoundProposalTool(Tool):
                 recoverable=True,
                 error_code="analysis_mismatch",
             )
+            self._audit_log.record(
+                tool_name=self.name,
+                arguments=parameters,
+                result=result,
+            )
             self.last_result = result
             return result.model_dump_json()
 
@@ -98,8 +106,14 @@ class _StrictIssueFunctionCallAgent(FunctionCallAgent):
 class IssueProposalAgent:
     """只为需要跟进的已校验分析执行单轮原生工具调用。"""
 
-    def __init__(self, llm: HelloAgentsLLM) -> None:
+    def __init__(
+        self,
+        llm: HelloAgentsLLM,
+        *,
+        audit_log: ToolAuditLog | None = None,
+    ) -> None:
         self._llm = llm
+        self.audit_log = audit_log or ToolAuditLog()
 
     def propose(self, analysis: IssueAnalysis) -> ToolResult | None:
         if not isinstance(analysis, IssueAnalysis):
@@ -107,7 +121,7 @@ class IssueProposalAgent:
         if analysis.recommended_route not in ELIGIBLE_PROPOSAL_ROUTES:
             return None
 
-        bound_tool = _BoundProposalTool(analysis)
+        bound_tool = _BoundProposalTool(analysis, self.audit_log)
         registry = HelloAgentsToolRegistry()
         registry.register_tool(bound_tool)
         function_schema = ProposeIssueRecordTool().to_openai_schema()

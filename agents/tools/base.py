@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ToolResult(BaseModel):
@@ -18,6 +18,16 @@ class ToolResult(BaseModel):
     data: dict[str, Any] = Field(default_factory=dict)
     recoverable: bool = False
     error_code: str | None = None
+
+    @model_validator(mode="after")
+    def enforce_result_consistency(self) -> "ToolResult":
+        if self.ok and self.error_code is not None:
+            raise ValueError("成功工具结果不能包含错误码。")
+        if self.ok and self.recoverable:
+            raise ValueError("成功工具结果不能标记为可恢复错误。")
+        if not self.ok and self.error_code is None:
+            raise ValueError("失败工具结果必须包含稳定错误码。")
+        return self
 
 
 class AgentTool(ABC):
