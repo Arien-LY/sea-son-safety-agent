@@ -81,4 +81,91 @@ export interface ConfirmedIssueProposal {
   user_confirmed: true;
   persisted: false;
   dispatched: false;
+  confirmation_token: string;
+}
+
+export type WorkflowStatus =
+  | "draft"
+  | "submitted"
+  | "assigned"
+  | "rectifying"
+  | "pending_review"
+  | "closed";
+
+export type RecordDisposition = "active" | "cancelled";
+export type ActorRole =
+  | "reporter"
+  | "coordinator"
+  | "rectifier"
+  | "reviewer"
+  | "professional_reviewer";
+export type ResponsibleRole =
+  | "safety_officer"
+  | "quality_inspector"
+  | "site_manager"
+  | "facilities_staff";
+export type WorkflowAction =
+  | "submit"
+  | "request_more_info"
+  | "supplement_information"
+  | "assign"
+  | "start_rectification"
+  | "submit_rectification"
+  | "reject_review"
+  | "close"
+  | "cancel";
+
+export interface WorkflowActor {
+  actor_id: string;
+  role: ActorRole;
+}
+
+export interface WorkflowEvent {
+  sequence: number;
+  occurred_at: string;
+  action: WorkflowAction | "create_draft";
+  actor_id: string;
+  actor_role: ActorRole;
+  from_status: WorkflowStatus | null;
+  to_status: WorkflowStatus;
+  from_disposition: RecordDisposition | null;
+  to_disposition: RecordDisposition;
+  summary: string;
+  note: string | null;
+}
+
+export interface IssueRecord {
+  schema_version: "phase3-issue-record-v1";
+  record_id: string;
+  analysis: IssueAnalysis;
+  review_fields: IssueRecordReviewFields;
+  status: WorkflowStatus;
+  disposition: RecordDisposition;
+  revision: number;
+  reporter_id: string;
+  suggested_responsible_role: ResponsibleRole;
+  assigned_to: string | null;
+  assigned_role: ResponsibleRole | null;
+  assignment_confirmed_by_human: boolean;
+  information_request: string | null;
+  rectification_note: string | null;
+  review_note: string | null;
+  cancellation_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  events: WorkflowEvent[];
+}
+
+export interface CreateIssueRecordResponse {
+  record: IssueRecord;
+  created: boolean;
+}
+
+export interface WorkflowTransitionInput {
+  action: WorkflowAction;
+  actor: WorkflowActor;
+  expected_revision: number;
+  note?: string;
+  assignee_id?: string;
+  assignee_role?: ResponsibleRole;
 }

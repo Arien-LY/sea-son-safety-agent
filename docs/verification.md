@@ -517,3 +517,67 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - 审计缓冲区不是持久化审计系统；进程退出后记录消失。
 - 真实模型工具选择、成本、延迟和服务商错误尚未单独授权验证。
 - 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
+
+## 2026-08-29：Phase 3 整改和后勤工作流完成
+
+范围：
+
+- 冻结六个主状态、独立取消处置以及补充信息、驳回和重新整改路径。
+- 新增本地原子 JSON Store、持久化幂等键、revision 乐观并发和完整业务事件轨迹。
+- 新增责任角色建议和人工派工边界；建议不会自动填写责任人或改变状态。
+- 新增安全、质量、管理、后勤共用工作流 API 和 Vue 本地验收页面。
+- 未新增 Agent 工具、Prompt、RAG、图片、多智能体、外部派单、通知或真实/付费模型调用。
+
+Git 启动审计：
+
+- PR #10 已通过 squash merge 合入 `main`，本任务基线为 `7df7963`。
+- 从更新后的 `main` 创建独立分支 `phase3-deterministic-workflow`，没有叠加未合入提交。
+
+执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_phase3_contract.py tests/test_phase3_workflow.py tests/test_phase3_api.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+```
+
+结果：
+
+- Phase 3 契约、状态机、Store 和 API 专项测试：18 tests passed。
+- Python 完整测试：163 tests passed；保留 1 条既有 Hello-Agents Pydantic 弃用警告。
+- Vue：TypeScript 检查和 Vite 生产构建通过，32 modules transformed。
+- 验证过程未读取 API Key，未创建真实服务商客户端，未调用真实或付费模型。
+
+本地浏览器验收：
+
+- 高风险安全问题从提案确认、正式草稿、提交、人工派工、整改、待复查走到专业复查关闭；最终
+  revision 为 6，轨迹为 6 个连续事件。
+- 低风险后勤门锁工单复用相同六步闭环，责任角色建议和人工指派均为后勤维修人员。
+- 页面明确区分责任建议与人工指派；记录状态、revision 和事件轨迹均来自服务端响应。
+- 390×844 移动视口下单列布局正常；验收结束前恢复默认视口。
+- 浏览器控制台无 error/warning；只访问本地 Vue 与 FastAPI 服务。
+- 浏览器验收 Store 位于操作系统临时目录，没有写入仓库；本地服务已停止。
+
+确定性门禁：
+
+- 主状态枚举严格为 `draft/submitted/assigned/rectifying/pending_review/closed`；取消只改变独立
+  `disposition` 并终止后续推进。
+- 提案确认结果带 HMAC-SHA256 凭据；正式创建重新校验凭据，篡改风险或正文会失败。
+- 创建幂等键及请求摘要持久化；同键同请求返回原记录，同键不同请求冲突。
+- 同路径 Store 实例共享进程锁；修改前重读，临时文件 `flush + fsync` 后原子替换。
+- 原子替换失败测试证明旧文件保持逐字节不变；24 个并发创建无记录丢失。
+- 损坏的记录键或悬空幂等索引会使 Store 拒绝读取，且不会覆盖原文件。
+- 更新必须携带最新 revision；两个相同 revision 并发提交只有一个成功。
+- 整改动作只允许人工指派的整改人；整改提交、复查、驳回、补充和取消必须保留说明。
+- 高风险关闭只允许独立专业复查人，原报告人即使声明专业复查角色也不能自行关闭。
+- 所有事件包含顺序、UTC 时间、动作人、角色、前后状态/处置和业务说明，不含隐藏思维链。
+
+已知限制和遗留风险：
+
+- JSON Store 只适合单机演示；共享锁只覆盖当前 Python 进程，不提供跨进程、跨主机事务、备份或
+  灾难恢复。正式部署应迁移到有事务和唯一约束的数据库。
+- HMAC 密钥仍为当前进程随机生成；后端重启后尚未保存的确认提案需要重新预览和确认。
+- API 和页面使用演示 actor ID，没有登录、身份真实性、项目成员关系或权限令牌；不能直接用于生产。
+- 当前派工只写本地记录，不调用外部工单、消息或通知系统。
+- 专业人员仍需复核责任角色名称、状态语义、高风险关闭/取消规则和安全/后勤验收措辞。
+- Phase 0 的双机全新克隆验证仍未完成；本机 163 条测试不能替代队友电脑验收。
+- 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。

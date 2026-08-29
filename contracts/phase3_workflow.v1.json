@@ -1,0 +1,90 @@
+{
+  "contract_version": "phase3-workflow-v1",
+  "primary_statuses": [
+    "draft",
+    "submitted",
+    "assigned",
+    "rectifying",
+    "pending_review",
+    "closed"
+  ],
+  "record_dispositions": ["active", "cancelled"],
+  "responsible_role_suggestions": {
+    "safety": "safety_officer",
+    "quality": "quality_inspector",
+    "management": "site_manager",
+    "logistics": "facilities_staff"
+  },
+  "suggestion_is_assignment": false,
+  "transitions": [
+    {
+      "action": "submit",
+      "from": "draft",
+      "to": "submitted",
+      "actors": ["reporter"],
+      "note_required": false
+    },
+    {
+      "action": "request_more_info",
+      "from": "submitted",
+      "to": "draft",
+      "actors": ["coordinator"],
+      "note_required": true
+    },
+    {
+      "action": "supplement_information",
+      "from": "draft",
+      "to": "submitted",
+      "actors": ["reporter"],
+      "note_required": true,
+      "precondition": "information_requested"
+    },
+    {
+      "action": "assign",
+      "from": "submitted",
+      "to": "assigned",
+      "actors": ["coordinator"],
+      "note_required": false,
+      "human_assignment_required": true
+    },
+    {
+      "action": "start_rectification",
+      "from": "assigned",
+      "to": "rectifying",
+      "actors": ["rectifier"],
+      "note_required": false,
+      "precondition": "actor_is_assignee"
+    },
+    {
+      "action": "submit_rectification",
+      "from": "rectifying",
+      "to": "pending_review",
+      "actors": ["rectifier"],
+      "note_required": true,
+      "precondition": "actor_is_assignee"
+    },
+    {
+      "action": "reject_review",
+      "from": "pending_review",
+      "to": "rectifying",
+      "actors": ["reviewer", "professional_reviewer"],
+      "note_required": true
+    },
+    {
+      "action": "close",
+      "from": "pending_review",
+      "to": "closed",
+      "actors": ["reviewer", "professional_reviewer"],
+      "note_required": true,
+      "high_risk_precondition": "professional_reviewer_and_not_reporter"
+    }
+  ],
+  "cancellation": {
+    "primary_status_unchanged": true,
+    "to_disposition": "cancelled",
+    "terminal": true,
+    "note_required": true,
+    "normal_permissions": "reporter_while_draft_or_submitted_or_coordinator",
+    "high_risk_permission": "professional_reviewer_and_not_reporter"
+  }
+}

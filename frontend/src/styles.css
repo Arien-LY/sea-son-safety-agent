@@ -54,7 +54,7 @@ h1 { max-width: 760px; margin: 12px 0 20px; font-size: clamp(38px, 5vw, 64px); l
 .boundary h2 { margin-top: 0; }
 
 .proposal-hero h1 { font-size: clamp(36px, 4.6vw, 58px); }
-.proposal-workbench, .proposal-card, .confirmation-card {
+.proposal-workbench, .proposal-card, .confirmation-card, .workflow-card {
   margin-top: 34px; padding: 30px; border-radius: 20px;
   background: white; border: 1px solid #dce5ef;
   box-shadow: 0 14px 42px rgba(22, 44, 78, .07);
@@ -100,6 +100,40 @@ input:focus, textarea:focus, select:focus { outline: 3px solid #dcecff; border-c
 .confirmation-card strong { color: #08725f; font-size: 19px; }
 .confirmation-card p { color: #4e5d72; }
 .confirmation-card small { color: #6c788b; }
+.workflow-card { border-top: 4px solid #1668e8; }
+.record-summary-grid {
+  margin: 24px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+}
+.record-summary-grid div { padding: 15px; border-radius: 12px; background: #f5f8fc; }
+.record-summary-grid span, .record-summary-grid strong { display: block; }
+.record-summary-grid span { margin-bottom: 7px; color: #758197; font-size: 12px; }
+.workflow-actions {
+  margin-top: 24px; padding: 22px; border: 1px solid #dce5ef; border-radius: 14px; background: #fafcff;
+}
+.workflow-actions > label, .assignment-row label {
+  display: grid; gap: 8px; color: #36445a; font-size: 14px; font-weight: 700;
+}
+.assignment-row { width: min(420px, 100%); margin-top: 16px; }
+.button-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.secondary-button, .danger-button {
+  padding: 12px 18px; border-radius: 11px; font: inherit; font-weight: 800; cursor: pointer;
+}
+.secondary-button { color: #165fc0; background: #eef5ff; border: 1px solid #b9d4f7; }
+.danger-button { color: #a02c25; background: #fff2f0; border: 1px solid #f0b7b2; }
+.secondary-button:disabled, .danger-button:disabled { opacity: .58; cursor: wait; }
+.info-callout, .success-callout {
+  margin-top: 18px; padding: 14px 16px; border-radius: 11px; line-height: 1.6;
+}
+.info-callout { color: #75510a; background: #fff7df; }
+.success-callout { color: #08725f; background: #e4f8f1; }
+.timeline { margin-top: 28px; padding-top: 22px; border-top: 1px solid #e1e7ef; }
+.timeline ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.timeline li {
+  display: grid; grid-template-columns: 1fr .8fr 2fr; gap: 14px; align-items: baseline;
+  padding: 14px; border-radius: 12px; background: #f5f8fc;
+}
+.timeline li span { color: #435168; }
+.timeline li small { color: #6c788b; line-height: 1.5; }
 
 @media (max-width: 800px) {
   .topbar { padding: 0 20px; }
@@ -107,10 +141,11 @@ input:focus, textarea:focus, select:focus { outline: 3px solid #dcecff; border-c
   .page { width: min(92vw, 680px); padding: 48px 0; }
   .hero, .cards { grid-template-columns: 1fr; }
   .hero { gap: 28px; }
-  .form-grid, .analysis-strip { grid-template-columns: 1fr; }
+  .form-grid, .analysis-strip, .record-summary-grid { grid-template-columns: 1fr; }
   .full-field { grid-column: auto; }
   .section-heading { align-items: flex-start; }
   .diff-row { grid-template-columns: 1fr; padding: 10px 0; }
   .diff-row > * { border-bottom: 0; padding: 5px 12px; }
   .diff-head { display: none; }
+  .timeline li { grid-template-columns: 1fr; gap: 5px; }
 }

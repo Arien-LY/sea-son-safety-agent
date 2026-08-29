@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -16,12 +17,34 @@ from backend.app.proposals import (
     ProposalConfirmationRequest,
     ProposalPreviewRequest,
 )
+from backend.app.workflow import IssueWorkflowService, WorkflowRuleError
+from backend.app.workflow_models import (
+    CreateIssueRecordRequest,
+    CreateIssueRecordResponse,
+    IssueRecord,
+    WorkflowTransitionRequest,
+)
+from backend.app.workflow_store import (
+    IdempotencyConflictError,
+    JsonIssueRecordStore,
+    RecordNotFoundError,
+    RevisionConflictError,
+    StoreError,
+)
 
 
 def create_app(
-    *, proposal_service: Phase2ProposalService | None = None
+    *,
+    proposal_service: Phase2ProposalService | None = None,
+    workflow_service: IssueWorkflowService | None = None,
 ) -> FastAPI:
     proposal_boundary = proposal_service or Phase2ProposalService()
+    workflow_boundary = workflow_service or IssueWorkflowService(
+        JsonIssueRecordStore(
+            Path(os.getenv("ISSUE_STORE_PATH", "data/issue-records.json"))
+        ),
+        confirmation_verifier=proposal_boundary.verify_confirmation,
+    )
     app = FastAPI(
         title="海之子 · 安全质量 Agent API",
         version="0.1.0",
@@ -85,7 +108,131 @@ def create_app(
                 detail="提案完整性校验失败。",
             ) from exc
 
+    @app.post(
+        "/api/issue-records",
+        response_model=CreateIssueRecordResponse,
+    )
+    def create_issue_record(payload: dict[str, Any]) -> CreateIssueRecordResponse:
+        try:
+            request = CreateIssueRecordRequest.model_validate_json(
+                json.dumps(payload, ensure_ascii=False),
+                strict=True,
+            )
+        except (TypeError, ValueError, ValidationError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error_code": "invalid_arguments",
+                    "message": "问题记录创建请求参数无效。",
+                },
+            ) from exc
+        try:
+            return workflow_boundary.create_draft(request)
+        except IdempotencyConflictError as exc:
+            raise _workflow_http_error(
+                409,
+                "idempotency_conflict",
+                "相同幂等键不能用于不同的创建请求。",
+                exc,
+            )
+        except WorkflowRuleError as exc:
+            raise _workflow_http_error(400, exc.code, exc.message, exc)
+        except StoreError as exc:
+            raise _workflow_http_error(
+                500,
+                "store_error",
+                "问题记录暂时无法保存。",
+                exc,
+            )
+
+    @app.get(
+        "/api/issue-records/{record_id}",
+        response_model=IssueRecord,
+    )
+    def get_issue_record(record_id: str) -> IssueRecord:
+        try:
+            return workflow_boundary.get(record_id)
+        except RecordNotFoundError as exc:
+            raise _workflow_http_error(
+                404,
+                "record_not_found",
+                "问题记录不存在。",
+                exc,
+            )
+        except StoreError as exc:
+            raise _workflow_http_error(
+                500,
+                "store_error",
+                "问题记录暂时无法读取。",
+                exc,
+            )
+
+    @app.post(
+        "/api/issue-records/{record_id}/actions",
+        response_model=IssueRecord,
+    )
+    def transition_issue_record(
+        record_id: str,
+        payload: dict[str, Any],
+    ) -> IssueRecord:
+        try:
+            request = WorkflowTransitionRequest.model_validate_json(
+                json.dumps(payload, ensure_ascii=False),
+                strict=True,
+            )
+        except (TypeError, ValueError, ValidationError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error_code": "invalid_arguments",
+                    "message": "工作流动作请求参数无效。",
+                },
+            ) from exc
+        try:
+            return workflow_boundary.transition(record_id, request)
+        except RecordNotFoundError as exc:
+            raise _workflow_http_error(
+                404,
+                "record_not_found",
+                "问题记录不存在。",
+                exc,
+            )
+        except RevisionConflictError as exc:
+            raise _workflow_http_error(
+                409,
+                "revision_conflict",
+                "记录已经变化，请刷新后重试。",
+                exc,
+            )
+        except WorkflowRuleError as exc:
+            status_code = 403 if exc.code == "permission_denied" else 409
+            raise _workflow_http_error(
+                status_code,
+                exc.code,
+                exc.message,
+                exc,
+            )
+        except StoreError as exc:
+            raise _workflow_http_error(
+                500,
+                "store_error",
+                "问题记录暂时无法更新。",
+                exc,
+            )
+
     return app
+
+
+def _workflow_http_error(
+    status_code: int,
+    error_code: str,
+    message: str,
+    cause: Exception,
+) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail={"error_code": error_code, "message": message},
+    )
 
 
 app = create_app()
