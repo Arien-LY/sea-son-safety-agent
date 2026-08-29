@@ -51,7 +51,7 @@ class ProposalFieldChange(BaseModel):
 
 
 class ConfirmedIssueProposal(BaseModel):
-    """用户已确认但仍未进入 Phase 3 持久化的提案。"""
+    """用户已确认、可由 Phase 3 校验后持久化的提案。"""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -64,6 +64,7 @@ class ConfirmedIssueProposal(BaseModel):
     user_confirmed: Literal[True] = True
     persisted: Literal[False] = False
     dispatched: Literal[False] = False
+    confirmation_token: str = Field(pattern=r"^hmac-sha256:[0-9a-f]{64}$")
 
 
 class Phase2ProposalService:
@@ -138,18 +139,44 @@ class Phase2ProposalService:
             for field in IssueRecordReviewFields.model_fields
             if before[field] != after[field]
         ]
+        confirmation_data = {
+            "status": "confirmed_pending_persistence",
+            "analysis": request.proposal.analysis.model_dump(mode="json"),
+            "review_fields": request.edited_fields.model_dump(mode="json"),
+            "changes": [change.model_dump(mode="json") for change in changes],
+            "user_confirmed": True,
+            "persisted": False,
+            "dispatched": False,
+        }
         return ConfirmedIssueProposal(
-            analysis=request.proposal.analysis,
-            review_fields=request.edited_fields,
-            changes=changes,
+            **confirmation_data,
+            confirmation_token=self._sign_confirmation(confirmation_data),
+        )
+
+    def verify_confirmation(self, confirmation: ConfirmedIssueProposal) -> bool:
+        expected_token = self._sign_confirmation(
+            confirmation.model_dump(
+                mode="json",
+                exclude={"confirmation_token"},
+            )
+        )
+        return hmac.compare_digest(
+            confirmation.confirmation_token,
+            expected_token,
         )
 
     def audit_snapshot(self) -> tuple[ToolAuditEvent, ...]:
         return self.audit_log.snapshot()
 
     def _sign_proposal(self, proposal: dict[str, object]) -> str:
+        return self._sign_payload(proposal)
+
+    def _sign_confirmation(self, confirmation: dict[str, object]) -> str:
+        return self._sign_payload(confirmation)
+
+    def _sign_payload(self, payload: dict[str, object]) -> str:
         canonical = json.dumps(
-            proposal,
+            payload,
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),

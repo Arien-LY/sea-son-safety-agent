@@ -56,21 +56,26 @@
 验收：普通咨询不调用工具；只有明确需要留痕/跟进的问题出现记录建议；未确认不落库。
 
 状态：Phase 2 实现清单已完成；页面、错误矩阵和脱敏审计已通过自动及本地浏览器验收。正式落库、
-派单和整改状态属于 Phase 3，当前确认结果仍为 `confirmed_pending_persistence`。
+派单和整改状态由 Phase 3 的确定性工作流承接；提案确认本身仍不直接产生持久化副作用。
 
 ## Phase 3：整改和后勤工作流
 
 教程依据：第 4 章 Plan-and-Solve 的分步思想，状态推进由确定性代码负责。
 
-- [ ] 冻结状态：`draft → submitted → assigned → rectifying → pending_review → closed`。
-- [ ] 定义取消、驳回、补充信息和重新整改路径。
-- [ ] 创建本地持久化 Store，并写并发/原子写入测试。
-- [ ] 实现责任角色建议，但禁止 AI 最终归责。
-- [ ] 整改人提交说明，复查人确认关闭。
-- [ ] 高风险问题禁止提交人自行关闭。
-- [ ] 后勤工单复用相同生命周期，只使用不同问题类型和责任角色。
+- [x] 冻结状态：`draft → submitted → assigned → rectifying → pending_review → closed`（见
+  `docs/phase3-workflow-contract.md`）。
+- [x] 定义取消、驳回、补充信息和重新整改路径（见 `docs/phase3-workflow-contract.md`）。
+- [x] 创建本地持久化 Store，并写并发/原子写入测试（见 `tests/test_phase3_workflow.py`）。
+- [x] 实现责任角色建议，但禁止 AI 最终归责（见 `docs/phase3-workflow-contract.md`）。
+- [x] 整改人提交说明，复查人确认关闭（见 `tests/test_phase3_api.py`）。
+- [x] 高风险问题禁止提交人自行关闭（见 `tests/test_phase3_workflow.py`）。
+- [x] 后勤工单复用相同生命周期，只使用不同问题类型和责任角色（见
+  `tests/test_phase3_api.py`）。
 
 验收：一条安全问题和一条后勤问题可以从上报完整走到关闭，所有状态变化可追踪。
+
+状态：Phase 3 实现清单已完成；状态契约、例外路径、本地 Store、权限矩阵、安全/后勤端到端流程已
+通过自动及本地浏览器验收。真实身份鉴权、跨进程并发、外部派单和通知不在本阶段范围。
 
 ## Phase 4：知识检索与依据引用
 

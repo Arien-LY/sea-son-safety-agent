@@ -8,7 +8,7 @@
 | 教程内容 | 本项目采用方式 | 当前阶段 |
 |---|---|---|
 | 第 4 章 ReAct | 理解“思考—工具—观察”循环，但 V0 不暴露思维链 | 规划中 |
-| 第 4 章 Plan-and-Solve | 用于拆解整改步骤；状态仍由代码推进 | 规划中 |
+| 第 4 章 Plan-and-Solve | 用于拆解整改步骤；状态仍由确定性代码推进 | Phase 3 |
 | 第 7 章 SimpleAgent | 先完成普通咨询和单 Agent | Phase 1 |
 | 第 7 章 FunctionCallAgent | 正式工具调用优先采用原生 Function Calling | Phase 2 |
 | 第 7 章 ToolRegistry | 工具注册、参数校验、统一返回 | 已建立底座 |
@@ -35,4 +35,3 @@
 - 本项目开发机参考副本：`../hello-agents-1.0.3参考教程/hello-agents-1.0.3/`
 
 相对路径仅用于本地学习，不作为运行时依赖。
-

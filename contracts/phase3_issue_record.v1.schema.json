@@ -1,0 +1,510 @@
+{
+  "$defs": {
+    "ActorRole": {
+      "enum": [
+        "reporter",
+        "coordinator",
+        "rectifier",
+        "reviewer",
+        "professional_reviewer"
+      ],
+      "title": "ActorRole",
+      "type": "string"
+    },
+    "IssueAnalysis": {
+      "additionalProperties": false,
+      "description": "模型分析结果；不能直接创建或修改业务记录。",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/IssueCategory"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "immediate_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Immediate Actions",
+          "type": "array"
+        },
+        "issue_type": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Issue Type",
+          "type": "string"
+        },
+        "missing_fields": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "observed_facts": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Observed Facts",
+          "type": "array"
+        },
+        "recommended_route": {
+          "$ref": "#/$defs/RecommendedRoute"
+        },
+        "requires_human_review": {
+          "title": "Requires Human Review",
+          "type": "boolean"
+        },
+        "risk_level": {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        "suggested_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Suggested Actions",
+          "type": "array"
+        },
+        "summary": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "uncertainties": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Uncertainties",
+          "type": "array"
+        }
+      },
+      "required": [
+        "category",
+        "issue_type",
+        "summary",
+        "observed_facts",
+        "uncertainties",
+        "missing_fields",
+        "risk_level",
+        "immediate_actions",
+        "suggested_actions",
+        "recommended_route",
+        "requires_human_review",
+        "confidence"
+      ],
+      "title": "IssueAnalysis",
+      "type": "object"
+    },
+    "IssueCategory": {
+      "enum": [
+        "safety",
+        "quality",
+        "management",
+        "logistics",
+        "consultation",
+        "unknown"
+      ],
+      "title": "IssueCategory",
+      "type": "string"
+    },
+    "IssueRecordReviewFields": {
+      "additionalProperties": false,
+      "description": "用户可以补充或修订的记录展示字段，不得覆盖风险与路由。",
+      "properties": {
+        "area": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area"
+        },
+        "project": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project"
+        },
+        "record_description": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Record Description",
+          "type": "string"
+        },
+        "record_title": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Record Title",
+          "type": "string"
+        },
+        "reporter_note": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reporter Note"
+        }
+      },
+      "required": [
+        "record_title",
+        "record_description"
+      ],
+      "title": "IssueRecordReviewFields",
+      "type": "object"
+    },
+    "RecommendedRoute": {
+      "enum": [
+        "direct_answer",
+        "collect_more_info",
+        "propose_workflow",
+        "human_review"
+      ],
+      "title": "RecommendedRoute",
+      "type": "string"
+    },
+    "RecordDisposition": {
+      "enum": [
+        "active",
+        "cancelled"
+      ],
+      "title": "RecordDisposition",
+      "type": "string"
+    },
+    "ResponsibleRole": {
+      "enum": [
+        "safety_officer",
+        "quality_inspector",
+        "site_manager",
+        "facilities_staff"
+      ],
+      "title": "ResponsibleRole",
+      "type": "string"
+    },
+    "RiskLevel": {
+      "enum": [
+        "undetermined",
+        "low",
+        "medium",
+        "high",
+        "emergency"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "WorkflowAction": {
+      "enum": [
+        "create_draft",
+        "submit",
+        "request_more_info",
+        "supplement_information",
+        "assign",
+        "start_rectification",
+        "submit_rectification",
+        "reject_review",
+        "close",
+        "cancel"
+      ],
+      "title": "WorkflowAction",
+      "type": "string"
+    },
+    "WorkflowEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/WorkflowAction"
+        },
+        "actor_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        },
+        "actor_role": {
+          "$ref": "#/$defs/ActorRole"
+        },
+        "from_disposition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordDisposition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "from_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WorkflowStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "note": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 1,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "summary": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "to_disposition": {
+          "$ref": "#/$defs/RecordDisposition"
+        },
+        "to_status": {
+          "$ref": "#/$defs/WorkflowStatus"
+        }
+      },
+      "required": [
+        "sequence",
+        "occurred_at",
+        "action",
+        "actor_id",
+        "actor_role",
+        "from_status",
+        "to_status",
+        "from_disposition",
+        "to_disposition",
+        "summary"
+      ],
+      "title": "WorkflowEvent",
+      "type": "object"
+    },
+    "WorkflowStatus": {
+      "enum": [
+        "draft",
+        "submitted",
+        "assigned",
+        "rectifying",
+        "pending_review",
+        "closed"
+      ],
+      "title": "WorkflowStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "analysis": {
+      "$ref": "#/$defs/IssueAnalysis"
+    },
+    "assigned_role": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ResponsibleRole"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "assigned_to": {
+      "anyOf": [
+        {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Assigned To"
+    },
+    "assignment_confirmed_by_human": {
+      "default": false,
+      "title": "Assignment Confirmed By Human",
+      "type": "boolean"
+    },
+    "cancellation_reason": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cancellation Reason"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "disposition": {
+      "$ref": "#/$defs/RecordDisposition"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/WorkflowEvent"
+      },
+      "maxItems": 1000,
+      "minItems": 1,
+      "title": "Events",
+      "type": "array"
+    },
+    "information_request": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Information Request"
+    },
+    "record_id": {
+      "pattern": "^ISS-[A-F0-9]{12}$",
+      "title": "Record Id",
+      "type": "string"
+    },
+    "rectification_note": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rectification Note"
+    },
+    "reporter_id": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Reporter Id",
+      "type": "string"
+    },
+    "review_fields": {
+      "$ref": "#/$defs/IssueRecordReviewFields"
+    },
+    "review_note": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Review Note"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "phase3-issue-record-v1",
+      "default": "phase3-issue-record-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/WorkflowStatus"
+    },
+    "suggested_responsible_role": {
+      "$ref": "#/$defs/ResponsibleRole"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "record_id",
+    "analysis",
+    "review_fields",
+    "status",
+    "disposition",
+    "revision",
+    "reporter_id",
+    "suggested_responsible_role",
+    "created_at",
+    "updated_at",
+    "events"
+  ],
+  "title": "IssueRecord",
+  "type": "object"
+}

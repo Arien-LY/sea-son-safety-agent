@@ -2,13 +2,19 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { api } from "../api";
 import type {
+  ActorRole,
   ConfirmedIssueProposal,
   IssueAnalysis,
+  IssueCategory,
+  IssueRecord,
   IssueRecordProposal,
   IssueRecordReviewFields,
   ProposalFieldChange,
+  ResponsibleRole,
   RiskLevel,
   RuntimeInfo,
+  WorkflowAction,
+  WorkflowTransitionInput,
 } from "../types";
 
 const runtime = ref<RuntimeInfo | null>(null);
@@ -16,12 +22,18 @@ const runtimeError = ref("");
 const actionError = ref("");
 const previewing = ref(false);
 const confirming = ref(false);
+const saving = ref(false);
+const advancing = ref(false);
 const proposal = ref<IssueRecordProposal | null>(null);
 const proposalToken = ref("");
 const editedFields = ref<IssueRecordReviewFields | null>(null);
 const confirmed = ref<ConfirmedIssueProposal | null>(null);
+const record = ref<IssueRecord | null>(null);
+const actionNote = ref("");
+const selectedRole = ref<ResponsibleRole>("safety_officer");
 
 const analysisForm = reactive({
+  category: "safety" as Extract<IssueCategory, "safety" | "logistics">,
   issueType: "临边防护",
   summary: "作业层临边缺少防护栏杆，需要现场人员核实并跟进。",
   riskLevel: "medium" as RiskLevel,
@@ -35,6 +47,22 @@ const fieldLabels: Record<keyof IssueRecordReviewFields, string> = {
   reporter_note: "补充说明",
 };
 
+const statusLabels = {
+  draft: "草稿",
+  submitted: "已提交",
+  assigned: "已派工",
+  rectifying: "整改中",
+  pending_review: "待复查",
+  closed: "已关闭",
+};
+
+const roleLabels: Record<ResponsibleRole, string> = {
+  safety_officer: "安全管理人员",
+  quality_inspector: "质量检查人员",
+  site_manager: "现场管理人员",
+  facilities_staff: "后勤维修人员",
+};
+
 const liveChanges = computed<ProposalFieldChange[]>(() => {
   if (!proposal.value || !editedFields.value) return [];
   const before = proposal.value.review_fields;
@@ -43,6 +71,10 @@ const liveChanges = computed<ProposalFieldChange[]>(() => {
     .filter((field) => before[field] !== after[field])
     .map((field) => ({ field, before: before[field], after: after[field] }));
 });
+
+const highRiskRecord = computed(() =>
+  record.value ? ["high", "emergency"].includes(record.value.analysis.risk_level) : false,
+);
 
 onMounted(async () => {
   try {
@@ -55,7 +87,7 @@ onMounted(async () => {
 function buildAnalysis(): IssueAnalysis {
   const highRisk = ["high", "emergency"].includes(analysisForm.riskLevel);
   return {
-    category: "safety",
+    category: analysisForm.category,
     issue_type: analysisForm.issueType,
     summary: analysisForm.summary,
     observed_facts: [analysisForm.summary],
@@ -70,16 +102,17 @@ function buildAnalysis(): IssueAnalysis {
   };
 }
 
-function invocationId(): string {
-  return globalThis.crypto?.randomUUID?.() || `preview-${Date.now()}`;
+function uniqueId(prefix: string): string {
+  return globalThis.crypto?.randomUUID?.() || `${prefix}-${Date.now()}`;
 }
 
 async function createPreview() {
   previewing.value = true;
   actionError.value = "";
   confirmed.value = null;
+  record.value = null;
   try {
-    const result = await api.previewIssueProposal(invocationId(), buildAnalysis());
+    const result = await api.previewIssueProposal(uniqueId("preview"), buildAnalysis());
     if (!result.ok) {
       throw new Error(`${result.summary}（${result.error_code || "unknown_error"}）`);
     }
@@ -110,6 +143,75 @@ async function confirmProposal() {
   }
 }
 
+async function saveDraft() {
+  if (!confirmed.value) return;
+  saving.value = true;
+  actionError.value = "";
+  try {
+    const result = await api.createIssueRecord(
+      confirmed.value,
+      uniqueId("create"),
+      { actor_id: "reporter-demo", role: "reporter" },
+    );
+    record.value = result.record;
+    selectedRole.value = result.record.suggested_responsible_role;
+  } catch (error) {
+    actionError.value = error instanceof Error ? error.message : "无法保存草稿";
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function advance(
+  action: WorkflowAction,
+  actorId: string,
+  role: ActorRole,
+  options: { note?: boolean; assign?: boolean } = {},
+) {
+  if (!record.value) return;
+  if (options.note && !actionNote.value.trim()) {
+    actionError.value = "请先填写本次动作说明。";
+    return;
+  }
+  advancing.value = true;
+  actionError.value = "";
+  const input: WorkflowTransitionInput = {
+    action,
+    actor: { actor_id: actorId, role },
+    expected_revision: record.value.revision,
+  };
+  if (options.note) input.note = actionNote.value.trim();
+  if (options.assign) {
+    input.assignee_id = "rectifier-demo";
+    input.assignee_role = selectedRole.value;
+  }
+  try {
+    record.value = await api.transitionIssueRecord(record.value.record_id, input);
+    actionNote.value = "";
+  } catch (error) {
+    actionError.value = error instanceof Error ? error.message : "工作流动作失败";
+  } finally {
+    advancing.value = false;
+  }
+}
+
+function cancelRecord() {
+  if (!record.value) return;
+  if (highRiskRecord.value) {
+    return advance("cancel", "professional-reviewer-demo", "professional_reviewer", { note: true });
+  }
+  if (record.value.status === "draft") {
+    return advance("cancel", "reporter-demo", "reporter", { note: true });
+  }
+  return advance("cancel", "coordinator-demo", "coordinator", { note: true });
+}
+
+function closeRecord() {
+  return highRiskRecord.value
+    ? advance("close", "professional-reviewer-demo", "professional_reviewer", { note: true })
+    : advance("close", "reviewer-demo", "reviewer", { note: true });
+}
+
 function displayValue(value: string | null): string {
   return value || "（未填写）";
 }
@@ -119,9 +221,9 @@ function displayValue(value: string | null): string {
   <section class="hero proposal-hero">
     <div>
       <p class="eyebrow">施工现场问题闭环</p>
-      <h1>先生成建议，再由人补充和确认</h1>
+      <h1>由人确认提案，由代码推进整改</h1>
       <p class="lead">
-        当前 Phase 2 只生成问题记录提案。确认前后均不会保存正式记录、派单或改变整改状态。
+        Phase 3 将已确认提案保存为本地正式记录；责任建议不等于归责，状态只能按权限矩阵推进。
       </p>
     </div>
     <div class="runtime-card">
@@ -133,7 +235,7 @@ function displayValue(value: string | null): string {
       </div>
       <div v-else>
         <strong>{{ runtimeError || "正在检查后端" }}</strong>
-        <p>启动 FastAPI 后可进行提案验收。</p>
+        <p>启动 FastAPI 后可进行工作流验收。</p>
       </div>
     </div>
   </section>
@@ -144,16 +246,19 @@ function displayValue(value: string | null): string {
         <p class="eyebrow">确定性验收入口</p>
         <h2 id="proposal-workbench-title">已校验问题分析</h2>
       </div>
-      <span class="safe-chip">不落库 · 不派单</span>
+      <span class="safe-chip">无真实模型 · 无自动归责</span>
     </div>
     <p class="section-note">
-      本阶段尚未接入真实模型。这里用明确标注的结构化输入验证提案、补充、差异和确认边界。
+      使用结构化本地验收输入验证安全与后勤共用生命周期；这里不是自然语言模型入口。
     </p>
 
     <div class="form-grid">
       <label>
-        问题类型
-        <input v-model.trim="analysisForm.issueType" maxlength="100" />
+        问题类别
+        <select v-model="analysisForm.category">
+          <option value="safety">安全问题</option>
+          <option value="logistics">后勤问题</option>
+        </select>
       </label>
       <label>
         风险等级
@@ -163,6 +268,10 @@ function displayValue(value: string | null): string {
           <option value="high">高</option>
           <option value="emergency">紧急</option>
         </select>
+      </label>
+      <label>
+        问题类型
+        <input v-model.trim="analysisForm.issueType" maxlength="100" />
       </label>
       <label class="full-field">
         已观察问题摘要
@@ -190,7 +299,7 @@ function displayValue(value: string | null): string {
       <div><span>路由</span><strong>{{ proposal.analysis.recommended_route }}</strong></div>
       <div><span>人工复核</span><strong>{{ proposal.analysis.requires_human_review ? "需要" : "否" }}</strong></div>
     </div>
-    <p class="locked-note">以上分析字段已锁定。用户只能补充下面的记录展示字段，不能降低风险或取消人工复核。</p>
+    <p class="locked-note">以上分析字段已锁定。用户只能补充记录展示字段，不能降低风险或取消人工复核。</p>
 
     <div class="form-grid review-form">
       <label>
@@ -231,18 +340,125 @@ function displayValue(value: string | null): string {
     </div>
 
     <button class="primary-button confirm-button" :disabled="confirming" @click="confirmProposal">
-      {{ confirming ? "正在确认…" : "确认提案（仍不落库）" }}
+      {{ confirming ? "正在确认…" : "确认提案" }}
     </button>
   </section>
 
-  <section v-if="confirmed" class="confirmation-card" aria-live="polite">
+  <section v-if="confirmed && !record" class="confirmation-card" aria-live="polite">
     <strong>提案已由用户确认</strong>
-    <p>状态：confirmed_pending_persistence。共记录 {{ confirmed.changes.length }} 项修改。</p>
-    <small>persisted=false · dispatched=false · 正式记录与派单将在后续受控工作流中处理。</small>
+    <p>完整性凭据已生成，但尚未保存正式记录。</p>
+    <button class="primary-button" :disabled="saving" @click="saveDraft">
+      {{ saving ? "正在保存…" : "保存为正式草稿" }}
+    </button>
+  </section>
+
+  <section v-if="record" class="workflow-card" aria-labelledby="workflow-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">本地持久化记录 · revision {{ record.revision }}</p>
+        <h2 id="workflow-title">{{ record.record_id }}</h2>
+      </div>
+      <span :class="record.disposition === 'active' ? 'safe-chip' : 'warning-chip'">
+        {{ record.disposition === "active" ? statusLabels[record.status] : "已取消" }}
+      </span>
+    </div>
+
+    <div class="record-summary-grid">
+      <div><span>责任角色建议</span><strong>{{ roleLabels[record.suggested_responsible_role] }}</strong></div>
+      <div><span>人工指派角色</span><strong>{{ record.assigned_role ? roleLabels[record.assigned_role] : "尚未指派" }}</strong></div>
+      <div><span>整改人</span><strong>{{ record.assigned_to || "尚未指派" }}</strong></div>
+      <div><span>风险</span><strong>{{ record.analysis.risk_level }}</strong></div>
+    </div>
+    <p class="locked-note">责任角色建议只供协调员参考；系统不会根据建议自动归责或自动派工。</p>
+
+    <div v-if="record.disposition === 'active' && record.status !== 'closed'" class="workflow-actions">
+      <label>
+        本次动作说明
+        <textarea v-model.trim="actionNote" maxlength="2000" rows="3" placeholder="补充信息、整改说明、复查结论或取消原因"></textarea>
+      </label>
+
+      <div v-if="record.status === 'submitted'" class="assignment-row">
+        <label>
+          人工选择责任角色
+          <select v-model="selectedRole">
+            <option v-for="(label, value) in roleLabels" :key="value" :value="value">{{ label }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="button-row">
+        <button
+          v-if="record.status === 'draft' && !record.information_request"
+          class="primary-button"
+          :disabled="advancing"
+          @click="advance('submit', 'reporter-demo', 'reporter')"
+        >提交记录</button>
+        <button
+          v-if="record.status === 'draft' && record.information_request"
+          class="primary-button"
+          :disabled="advancing"
+          @click="advance('supplement_information', 'reporter-demo', 'reporter', { note: true })"
+        >补充并重新提交</button>
+        <button
+          v-if="record.status === 'submitted'"
+          class="secondary-button"
+          :disabled="advancing"
+          @click="advance('request_more_info', 'coordinator-demo', 'coordinator', { note: true })"
+        >要求补充信息</button>
+        <button
+          v-if="record.status === 'submitted'"
+          class="primary-button"
+          :disabled="advancing"
+          @click="advance('assign', 'coordinator-demo', 'coordinator', { assign: true })"
+        >人工确认并派工</button>
+        <button
+          v-if="record.status === 'assigned'"
+          class="primary-button"
+          :disabled="advancing"
+          @click="advance('start_rectification', 'rectifier-demo', 'rectifier')"
+        >开始整改</button>
+        <button
+          v-if="record.status === 'rectifying'"
+          class="primary-button"
+          :disabled="advancing"
+          @click="advance('submit_rectification', 'rectifier-demo', 'rectifier', { note: true })"
+        >提交整改说明</button>
+        <button
+          v-if="record.status === 'pending_review'"
+          class="secondary-button"
+          :disabled="advancing"
+          @click="advance('reject_review', 'reviewer-demo', 'reviewer', { note: true })"
+        >驳回并重新整改</button>
+        <button
+          v-if="record.status === 'pending_review'"
+          class="primary-button"
+          :disabled="advancing"
+          @click="closeRecord"
+        >复查确认关闭</button>
+        <button class="danger-button" :disabled="advancing" @click="cancelRecord">取消记录</button>
+      </div>
+      <p v-if="record.information_request" class="info-callout">待补充：{{ record.information_request }}</p>
+    </div>
+
+    <div v-if="record.status === 'closed'" class="success-callout">复查已完成，记录关闭。{{ record.review_note }}</div>
+    <div v-if="record.disposition === 'cancelled'" class="info-callout">
+      记录已终止，不能继续推进。原因：{{ record.cancellation_reason }}
+    </div>
+
+    <div class="timeline" aria-label="状态变化轨迹">
+      <h3>完整状态轨迹</h3>
+      <ol>
+        <li v-for="event in record.events" :key="event.sequence">
+          <strong>#{{ event.sequence }} · {{ event.action }}</strong>
+          <span>{{ event.from_status || "无" }} → {{ event.to_status }}</span>
+          <small>{{ event.note || event.summary }} · {{ event.actor_id }} / {{ event.actor_role }}</small>
+        </li>
+      </ol>
+    </div>
   </section>
 
   <section class="boundary">
     <h2>当前能力边界</h2>
-    <p>页面只完成提案预览、用户补充、差异和确认；没有正式问题记录、数据库、派单或整改状态。</p>
+    <p>记录保存在本地 JSON Store，不含登录鉴权、外部派单、通知、图片、RAG 或真实模型调用；演示角色标识不代表生产身份。</p>
   </section>
 </template>
