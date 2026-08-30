@@ -7,6 +7,7 @@ import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import date
 from threading import RLock
 from uuid import uuid4
 
@@ -67,9 +68,38 @@ def can_propose(reply: TextReply) -> bool:
             and reply.analysis.recommended_route in {"propose_workflow", "human_review"})
 
 
+def quick_chat_reply(answer: str) -> TextReply:
+    return TextReply(
+        answer=answer,
+        follow_up_questions=["如涉及具体现场风险，请切换到“新建咨询”并补充位置、状态和人员暴露情况。"],
+        analysis=IssueAnalysis(
+            category="unknown",
+            issue_type="日常聊天（未执行结构化风险分析）",
+            summary="日常聊天使用轻量模型直接回答，不执行现场风险结构化分析，也不进入工单流程。",
+            observed_facts=[],
+            uncertainties=["日常聊天模式未执行现场风险结构化分析"],
+            missing_fields=["如涉及具体现场风险，需切换到专业咨询并补充现场信息"],
+            risk_level="undetermined",
+            immediate_actions=[],
+            suggested_actions=["涉及现场风险时请使用专业咨询，并由现场专业人员核验"],
+            recommended_route="collect_more_info",
+            requires_human_review=True,
+            confidence=0.0,
+        ),
+    )
+
+
+def default_quick_answerer(mode: str, inputs: list[TextConsultationInput], current: date,
+                           previous_answer: str | None) -> str:
+    if mode == "mock":
+        return "Mock模式未调用真实模型，仅用于验证日常聊天界面。"
+    return DeepSeekTextBackend(text_config()).answer_brief(inputs, current, previous_answer)
+
+
 @dataclass
 class _Session:
     updated: float
+    intent: str = "consult"
     inputs: list[TextConsultationInput] = field(default_factory=list)
     responses: dict[str, tuple[str, TextResponse]] = field(default_factory=dict)
     latest: TextResponse | None = None
@@ -79,8 +109,11 @@ class _Session:
 class TextConsultationService:
     def __init__(self, proposals: Phase2ProposalService, *,
                  assistant_factory: Callable[[str], TextAssistant] = default_text_assistant,
-                 clock: Callable[[], float] = time.monotonic) -> None:
-        self.proposals, self.assistant_factory, self.clock = proposals, assistant_factory, clock
+                 clock: Callable[[], float] = time.monotonic,
+                 today: Callable[[], date] = date.today,
+                 quick_answerer: Callable[[str, list[TextConsultationInput], date, str | None], str] = default_quick_answerer) -> None:
+        self.proposals, self.assistant_factory = proposals, assistant_factory
+        self.clock, self.today, self.quick_answerer = clock, today, quick_answerer
         self._sessions: dict[str, _Session] = {}
         self._lock = RLock()
         self.audit = ToolAuditLog()
@@ -130,6 +163,8 @@ class TextConsultationService:
                 raise TextError("text_configuration_error", "文字模型未正确配置，请核对本地配置。")
             if request.consultation_id:
                 session = self._session(request.consultation_id, request.expected_turn)
+                if session.intent != request.intent:
+                    raise TextError("text_intent_conflict", "聊天与专业咨询不能共用同一会话，请开始新问题。", 409)
                 if session.proposal is not None:
                     raise TextError("consultation_proposed", "已生成提案，请在工单中补充；其他问题请新建咨询。", 409)
                 if len(session.inputs) >= 6:
@@ -138,14 +173,20 @@ class TextConsultationService:
             else:
                 if len(self._sessions) >= 200:
                     raise TextError("text_capacity_limit", "本地咨询容量已满，请稍后重试。", 503)
-                session = _Session(updated=self.clock())
+                session = _Session(updated=self.clock(), intent=request.intent)
                 consultation_id = "TXT-" + uuid4().hex
             inputs = [*session.inputs, request.input]
-            reply = self.assistant_factory(str(runtime["mode"])).reply(
-                inputs, previous_questions=session.latest.reply.follow_up_questions if session.latest else None)
-            reply, retained = apply_boundaries(reply, session.latest.reply if session.latest else None)
+            if request.intent == "chat":
+                reply = quick_chat_reply(self.quick_answerer(
+                    str(runtime["mode"]), inputs, self.today(), session.latest.reply.answer if session.latest else None))
+                retained, response_model = False, str(runtime["model"])
+            else:
+                reply = self.assistant_factory(str(runtime["mode"])).reply(
+                    inputs, previous_questions=session.latest.reply.follow_up_questions if session.latest else None)
+                reply, retained = apply_boundaries(reply, session.latest.reply if session.latest else None)
+                response_model = str(runtime["model"])
             response = TextResponse(consultation_id=consultation_id, turn=len(inputs), mode=runtime["mode"],
-                                    model=runtime["model"], reply=reply, can_propose=can_propose(reply),
+                                    model=response_model, reply=reply, can_propose=can_propose(reply),
                                     risk_retained=retained, remaining_turns=6 - len(inputs))
             session.inputs, session.latest, session.updated = inputs, response, self.clock()
             session.responses[request.request_id] = (digest, response)

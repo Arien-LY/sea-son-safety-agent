@@ -77,6 +77,11 @@ def app():
     texts = TextConsultationService(
         proposals,
         assistant_factory=lambda _mode: TextAssistant(backend),
+        quick_answerer=lambda _mode, inputs, _today, _previous: (
+            time.sleep(2) or "这是 Fake 延迟回答；消息应已进入聊天区，且页面导航仍可使用。"
+            if "模拟加载" in inputs[-1].message
+            else "这是 Fake 轻量聊天回答；未执行真实模型调用。"
+        ),
     )
     return create_app(proposal_service=proposals, workflow_service=workflow, text_service=texts)
 
@@ -84,4 +89,4 @@ def app():
 if __name__ == "__main__":
     os.environ["AGENT_MODE"] = "mock"
     os.environ["PHOTO_STORE_PATH"] = str(Path(os.environ["WORKBENCH_FIXTURE_DIR"]) / "photos")
-    uvicorn.run(app(), host="127.0.0.1", port=8000, log_level="warning")
+    uvicorn.run(app(), host="127.0.0.1", port=int(os.getenv("WORKBENCH_FIXTURE_PORT", "8000")), log_level="warning")

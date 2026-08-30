@@ -12,6 +12,7 @@ class TextRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
 
     request_id: str = Field(min_length=8, max_length=100, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    intent: Literal["chat", "consult"] = "consult"
     input: TextConsultationInput
     consultation_id: str | None = Field(default=None, pattern=r"^TXT-[a-f0-9]{32}$")
     expected_turn: int = Field(default=0, ge=0, le=6)

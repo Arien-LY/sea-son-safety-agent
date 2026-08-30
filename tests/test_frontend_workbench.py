@@ -38,15 +38,27 @@ def test_plain_chat_cannot_enter_the_proposal_api_path() -> None:
     assert "一般问答，不会在此模式生成或提交工单" in panel
 
 
-def test_text_composer_uses_model_picker_action_consent_and_bounded_wait() -> None:
+def test_text_composer_optimistically_moves_message_and_has_no_confirmation_modal() -> None:
     panel = source("frontend/src/components/TextPanel.vue")
     api = source("frontend/src/api.ts")
     assert "允许本次外发" not in panel
     assert "本次允许将问题、背景标签及同一会话" not in panel
     assert 'aria-label="选择模型"' in panel
-    assert "confirmExternal" in panel and "确认并发送" in panel
+    assert "confirmExternal" not in panel and "确认并发送" not in panel
+    send_body = panel[panel.index("async function send"):panel.index("function onComposerKeydown")]
+    assert "pendingMessage.value = input.message" in send_body
+    assert send_body.index('form.message = ""') < send_body.index("await api.sendText")
+    assert "api.sendText(pending, requestController.signal)" in send_body
+    assert 'intent: props.mode' in send_body
     assert "最多约 35 秒" in panel
     assert "35_000" in api and "AbortController" in api
+
+
+def test_text_analysis_does_not_block_route_navigation() -> None:
+    home = source("frontend/src/views/HomeView.vue")
+    assert "routeBlocking" in home
+    route_guard = home[home.index("const routeBlocking"):home.index("const proposal")]
+    assert "textBusy" not in route_guard
 
 
 def test_sidebar_has_local_demo_login_and_avatar_state() -> None:

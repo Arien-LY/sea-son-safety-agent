@@ -25,6 +25,11 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 async function request<T>(path: string, init?: RequestInit, timeoutMs?: number): Promise<T> {
   const controller = timeoutMs ? new AbortController() : null;
+  const abortFromCaller = () => controller?.abort(init?.signal?.reason);
+  if (controller && init?.signal) {
+    if (init.signal.aborted) abortFromCaller();
+    else init.signal.addEventListener("abort", abortFromCaller, { once: true });
+  }
   const timeout = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
     const response = await fetch(`${API_BASE}${path}`, { ...init, signal: controller?.signal ?? init?.signal });
@@ -37,22 +42,24 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs?: number):
       const code = typeof detail === "object" ? detail?.error_code : undefined;
       throw new Error(message ? `${message}${code ? `（${code}）` : ""}` : `请求失败：${response.status}`);
     }
-    return response.json() as Promise<T>;
+    return await response.json() as T;
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === "AbortError") {
+      if (init?.signal?.aborted) throw new Error("请求已取消。");
       throw new Error("分析等待超过 35 秒，已停止等待；可以直接重试，不会自动重复提交。");
     }
     throw cause;
   } finally {
     if (timeout !== null) window.clearTimeout(timeout);
+    init?.signal?.removeEventListener("abort", abortFromCaller);
   }
 }
 
 export const api = {
   getTextRuntime() { return request<VisionRuntime>("/api/text/runtime"); },
-  sendText(input: TextTurnRequest) {
+  sendText(input: TextTurnRequest, signal?: AbortSignal) {
     return request<TextTurnResponse>("/api/text-consultations", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal,
     }, 35_000);
   },
   proposeText(consultationId: string, turn: number) {

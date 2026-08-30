@@ -48,7 +48,9 @@ const saving = ref(false);
 const advancing = ref(false);
 const textBusy = ref(false);
 const imageBusy = ref(false);
+const textProposalBusy = ref(false);
 const working = computed(() => previewing.value || confirming.value || saving.value || advancing.value || textBusy.value || imageBusy.value);
+const routeBlocking = computed(() => previewing.value || confirming.value || saving.value || advancing.value || imageBusy.value || textProposalBusy.value);
 const proposal = ref<IssueRecordProposal | null>(null);
 const proposalToken = ref("");
 const editedFields = ref<IssueRecordReviewFields | null>(null);
@@ -101,8 +103,8 @@ const highRiskRecord = computed(() =>
   record.value ? ["high", "emergency"].includes(record.value.analysis.risk_level) : false,
 );
 
-onBeforeRouteLeave(() => !working.value);
-onBeforeRouteUpdate(() => !working.value);
+onBeforeRouteLeave(() => !routeBlocking.value);
+onBeforeRouteUpdate(() => !routeBlocking.value);
 
 async function loadRecord() {
   const current = ++loadGeneration;
@@ -297,7 +299,7 @@ function displayValue(value: string | null): string {
   <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在恢复工单详情</strong><small>从本地唯一状态源读取记录与轨迹…</small></p></div>
   <p v-if="recordError" class="error-message" role="alert">{{ recordError }}</p>
   <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
-  <TextPanel v-if="isConversation" :mode="workspaceMode === 'chat' ? 'chat' : 'consult'" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @busy="textBusy = $event" @attachment="showImages = true" />
+  <TextPanel v-if="isConversation" :mode="workspaceMode === 'chat' ? 'chat' : 'consult'" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" @attachment="showImages = true" />
 
   <section v-if="isSubmit" class="proposal-workbench direct-submit">
   <section aria-labelledby="proposal-workbench-title">
