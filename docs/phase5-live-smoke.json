@@ -1,0 +1,21 @@
+{
+  "verified_on": "2026-08-30",
+  "authorization": "用户明确同意独立VISION_MODEL和最多2次合成图请求、总预算US$0.01",
+  "executed_calls": 1,
+  "provider": "DeepSeek",
+  "model": "deepseek-v4-flash-vision-exp",
+  "synthetic_image_sha256": "a8636da2d5776ae540a3327ca9a4ef9e077a2c600944a9d95698a8a64f7a669f",
+  "max_output_tokens": 1024,
+  "max_retries": 0,
+  "worst_case_usd_estimate": 0.003794,
+  "ok": true,
+  "candidate_count": 0,
+  "observation_statuses": ["observed", "observed", "observed"],
+  "preliminary_only": true,
+  "requires_human_review": true,
+  "usage": {"prompt_tokens": 1679, "completion_tokens": 140},
+  "elapsed_seconds": 4.48,
+  "peak_price_usd_estimate": 0.000924,
+  "price_source": "https://api-docs.deepseek.com/quick_start/pricing/",
+  "limitations": "仅连通性及结构化输出冒烟；不是现场识别准确率或实际账单。未保存原始模型响应和隐藏思维链。"
+}

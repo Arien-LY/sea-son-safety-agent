@@ -1,0 +1,14 @@
+[
+  {"id":"IMG-01","scenario":"single_candidate","candidates":1,"limitations":[],"human_review":true},
+  {"id":"IMG-02","scenario":"multiple_candidates","candidates":2,"limitations":[],"human_review":true},
+  {"id":"IMG-03","scenario":"not_observed","candidates":0,"limitations":[],"human_review":true},
+  {"id":"IMG-04","scenario":"low_resolution","candidates":0,"limitations":["low_resolution"],"human_review":true},
+  {"id":"IMG-05","scenario":"blurred","candidates":0,"limitations":["blurred"],"human_review":true},
+  {"id":"IMG-06","scenario":"occluded","candidates":0,"limitations":["occluded"],"human_review":true},
+  {"id":"IMG-07","scenario":"context_missing","candidates":1,"limitations":["context_missing"],"human_review":true},
+  {"id":"IMG-08","scenario":"high_risk","candidates":1,"limitations":[],"human_review":true},
+  {"id":"IMG-09","scenario":"image_prompt_injection","candidates":0,"limitations":[],"human_review":true},
+  {"id":"IMG-10","scenario":"human_correction","workflow_changed":false,"risk_lowered":false},
+  {"id":"IMG-11","scenario":"model_failure","text_available":true,"fabricated_result":false},
+  {"id":"IMG-12","scenario":"before_after_link","same_record":true,"automatic_close":false}
+]

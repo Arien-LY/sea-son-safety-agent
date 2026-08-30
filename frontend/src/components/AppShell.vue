@@ -5,7 +5,7 @@
         <span class="brand-mark">安</span>
         <span><strong>海之子</strong><small>安全质量 Agent</small></span>
       </RouterLink>
-      <span class="phase-chip">Phase 4 · 知识与依据</span>
+      <span class="phase-chip">Phase 5 · 图片证据</span>
     </header>
     <main class="page"><slot /></main>
   </div>

@@ -16,6 +16,9 @@ from agents.knowledge_answer import (
 )
 from agents.tools.search_knowledge import SearchKnowledgeTool
 from backend.app.knowledge import answer_for_record
+from backend.app.photo_routes import create_photo_router
+from backend.app.photo_store import PhotoStore
+from backend.app.photos import PhotoService
 from backend.app.proposals import (
     ConfirmedIssueProposal,
     Phase2ProposalService,
@@ -43,6 +46,7 @@ def create_app(
     proposal_service: Phase2ProposalService | None = None,
     workflow_service: IssueWorkflowService | None = None,
     knowledge_tool: SearchKnowledgeTool | None = None,
+    photo_service: PhotoService | None = None,
 ) -> FastAPI:
     proposal_boundary = proposal_service or Phase2ProposalService()
     workflow_boundary = workflow_service or IssueWorkflowService(
@@ -66,6 +70,10 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.include_router(create_photo_router(photo_service or PhotoService(
+        PhotoStore(Path(os.getenv("PHOTO_STORE_PATH", "uploads"))),
+        proposal_boundary, workflow_boundary,
+    )))
 
     @app.get("/health")
     def health() -> dict[str, str]:

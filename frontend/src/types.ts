@@ -5,6 +5,49 @@ export interface RuntimeInfo {
   tutorial_baseline: string;
 }
 
+export interface PhotoMetadata {
+  photo_id: string;
+  content_digest: string;
+  byte_size: number;
+  width: number;
+  height: number;
+  metadata_removed: true;
+  created_at: string;
+}
+
+export interface VisualCandidate {
+  candidate_id: string;
+  observation_ids: string[];
+  analysis: IssueAnalysis;
+}
+
+export interface PhotoAnalysisRecord {
+  analysis_id: string;
+  photo_id: string;
+  mode: "mock" | "real";
+  model: string;
+  result: {
+    preliminary_only: true;
+    requires_human_review: true;
+    observations: { observation_id: string; status: "observed" | "uncertain" | "not_observed"; description: string }[];
+    limitations: string[];
+    follow_up_questions: string[];
+    candidates: VisualCandidate[];
+  };
+}
+
+export interface LinkedPhoto {
+  photo: PhotoMetadata;
+  link: { record_id: string; photo_id: string; stage: "before" | "after"; record_revision: number; created_at: string };
+}
+
+export interface VisionRuntime {
+  mode: "mock" | "real";
+  model: string;
+  configured: boolean;
+  external_provider: string | null;
+}
+
 export type KnowledgeJurisdiction = "unknown" | "cn_mainland" | "overseas";
 
 export interface KnowledgeCitation {
