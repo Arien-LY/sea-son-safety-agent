@@ -38,13 +38,31 @@ def test_plain_chat_cannot_enter_the_proposal_api_path() -> None:
     assert "一般问答，不会在此模式生成或提交工单" in panel
 
 
-def test_text_composer_uses_compact_consent_and_bounded_wait() -> None:
+def test_text_composer_uses_model_picker_action_consent_and_bounded_wait() -> None:
     panel = source("frontend/src/components/TextPanel.vue")
     api = source("frontend/src/api.ts")
-    assert "允许本次外发" in panel
+    assert "允许本次外发" not in panel
     assert "本次允许将问题、背景标签及同一会话" not in panel
+    assert 'aria-label="选择模型"' in panel
+    assert "confirmExternal" in panel and "确认并发送" in panel
     assert "最多约 35 秒" in panel
     assert "35_000" in api and "AbortController" in api
+
+
+def test_sidebar_has_local_demo_login_and_avatar_state() -> None:
+    shell = source("frontend/src/components/AppShell.vue")
+    assert "登录演示身份" in shell
+    assert "user-avatar-shell signed-in" in shell
+    assert "sea-son-demo-user" in shell
+    assert "不代表真实账号、项目权限或审批资质" in shell
+
+
+def test_conversation_breaks_out_of_the_form_width_limit() -> None:
+    home = source("frontend/src/views/HomeView.vue")
+    styles = source("frontend/src/styles.css")
+    assert "'conversation-fields': isConversation" in home
+    assert ".workspace-fields.conversation-fields { width: 100%; max-width: none; }" in styles
+    assert ".conversation-workspace { width: 100%;" in styles
 
 
 def test_direct_submission_keeps_preview_confirm_and_save_steps() -> None:

@@ -19,11 +19,20 @@ const latest = ref<TextTurnResponse | null>(null);
 const turns = ref<{ message: string; result: TextTurnResponse }[]>([]);
 const proposed = ref(false);
 const contextOpen = ref(false);
+const confirmExternal = ref(false);
 let pending: TextTurnRequest | null = null;
 const canSend = computed(() => !busy.value && !proposed.value && runtime.value?.configured && Boolean(form.message.trim())
-  && (latest.value?.remaining_turns ?? 6) > 0 && (runtime.value.mode === "mock" || consent.value));
+  && (latest.value?.remaining_turns ?? 6) > 0);
 const dirty = computed(() => Boolean(form.message.trim()));
 const canCreateProposal = computed(() => props.mode === "consult" && latest.value?.can_propose && !proposed.value);
+const modelLabel = computed(() => {
+  const model = runtime.value?.model;
+  if (!model) return "模型检查中";
+  if (model === "deepseek-v4-flash") return "DeepSeek V4 Flash";
+  if (model === "deepseek-v4-pro") return "DeepSeek V4 Pro";
+  if (runtime.value?.mode === "mock") return "本地 Mock";
+  return model;
+});
 const prompt = computed(() => props.mode === "chat"
   ? "你好！想了解哪项现场安全、质量或管理知识？"
   : "描述现场发生了什么，我会先提取信息、追问并判断风险。");
@@ -32,18 +41,22 @@ onMounted(async () => {
   try { runtime.value = await api.getTextRuntime(); }
   catch { error.value = "文字服务未连接，请启动后端并刷新；已有工单不受影响。"; }
 });
-watch(form, () => { consent.value = false; pending = null; });
+watch(form, () => { consent.value = false; confirmExternal.value = false; pending = null; });
 watch(busy, value => emit("busy", value), { flush: "sync" });
 watch(() => props.mode, reset);
 
 function reset() {
   if (busy.value) return;
   latest.value = null; turns.value = []; proposed.value = false; error.value = "";
-  form.message = ""; pending = null; consent.value = false; contextOpen.value = false; emit("analysis", null);
+  form.message = ""; pending = null; consent.value = false; confirmExternal.value = false; contextOpen.value = false; emit("analysis", null);
 }
 
 async function send() {
   if (!canSend.value) return;
+  if (runtime.value?.mode === "real" && !consent.value) {
+    confirmExternal.value = true;
+    return;
+  }
   busy.value = true; error.value = "";
   const input = { message: form.message.trim(), project: form.project.trim() || null,
     area: form.area.trim() || null, requester_role: form.requester_role.trim() || null };
@@ -57,6 +70,12 @@ async function send() {
     emit("analysis", result.reply.analysis);
   } catch (cause) { error.value = cause instanceof Error ? cause.message : String(cause); }
   finally { busy.value = false; consent.value = false; }
+}
+
+function confirmAndSend() {
+  consent.value = true;
+  confirmExternal.value = false;
+  void send();
 }
 
 function onComposerKeydown(event: KeyboardEvent) {
@@ -135,11 +154,11 @@ async function propose() {
           <div class="composer-tools">
             <button type="button" class="tool-button" :disabled="busy" title="添加图片" @click="emit('attachment')">＋ <span>图片</span></button>
             <button type="button" class="tool-button" :class="{ active: contextOpen }" :disabled="busy" @click="contextOpen = !contextOpen">⌁ <span>背景</span></button>
-            <label v-if="runtime?.mode === 'real'" class="compact-consent" title="仅授权本次发送到 DeepSeek；可能产生模型费用">
-              <input v-model="consent" type="checkbox" /><span>允许本次外发</span>
-            </label>
           </div>
-          <div class="send-controls"><span>{{ form.message.length }}/1000</span><button type="button" class="send-button" :disabled="!canSend" :aria-label="latest ? '发送补充' : '发送消息'" @click="send">↑</button></div>
+          <div class="send-controls">
+            <label class="model-picker" title="模型由服务端安全配置，网页不能覆盖"><span class="sr-only">模型</span><select aria-label="选择模型" :disabled="!runtime?.configured"><option>{{ modelLabel }}</option></select></label>
+            <span>{{ form.message.length }}/1000</span><button type="button" class="send-button" :disabled="!canSend" :aria-label="latest ? '发送补充' : '发送消息'" @click="send">↑</button>
+          </div>
         </div>
       </div>
       <div v-if="contextOpen" class="context-fields">
@@ -151,6 +170,15 @@ async function propose() {
       <p v-if="dirty && canCreateProposal" class="section-note">还有未发送的补充，请先发送，避免使用旧分析生成提案。</p>
       <p v-if="proposed" class="success-callout">待确认提案已生成。会话已冻结，尚未创建正式工单。</p>
       <p v-if="latest && !latest.remaining_turns" class="info-callout">本问题已达 6 轮上限，请由人工核对。</p>
+    </div>
+
+    <div v-if="confirmExternal" class="dialog-backdrop" @click.self="confirmExternal = false">
+      <section class="login-dialog model-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="model-confirm-title">
+        <span class="model-badge">{{ modelLabel }}</span>
+        <h2 id="model-confirm-title">确认发送本次问题</h2>
+        <p>本次问题及同一会话的用户补充将发送至 DeepSeek，可能产生模型费用。系统不会自动重试。</p>
+        <div class="dialog-actions"><button type="button" class="secondary-button" @click="confirmExternal = false">取消</button><button type="button" class="primary-button" @click="confirmAndSend">确认并发送</button></div>
+      </section>
     </div>
   </section>
 </template>

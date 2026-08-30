@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { api } from "../api";
 import type { RecordListItem } from "../types";
@@ -8,6 +8,13 @@ const route = useRoute();
 const drawerOpen = ref(false);
 const recent = ref<RecordListItem[]>([]);
 const historyBusy = ref(false);
+const loginOpen = ref(false);
+const userMenuOpen = ref(false);
+const loginName = ref("");
+const currentUser = ref<{ name: string } | null>(null);
+const userInitial = computed(() => currentUser.value?.name?.trim().slice(0, 1).toUpperCase() || "用");
+
+const DEMO_USER_KEY = "sea-son-demo-user";
 
 async function loadRecent() {
   historyBusy.value = true;
@@ -23,9 +30,36 @@ async function loadRecent() {
 
 watch(() => route.fullPath, () => {
   drawerOpen.value = false;
+  userMenuOpen.value = false;
   void loadRecent();
 });
-onMounted(loadRecent);
+
+function restoreUser() {
+  try {
+    const saved = window.localStorage.getItem(DEMO_USER_KEY);
+    const parsed = saved ? JSON.parse(saved) as { name?: unknown } : null;
+    if (typeof parsed?.name === "string" && parsed.name.trim() && parsed.name.length <= 30) {
+      currentUser.value = { name: parsed.name.trim() };
+    }
+  } catch { currentUser.value = null; }
+}
+
+function login() {
+  const name = loginName.value.trim();
+  if (!name) return;
+  currentUser.value = { name };
+  try { window.localStorage.setItem(DEMO_USER_KEY, JSON.stringify(currentUser.value)); } catch { /* UI-only identity still works. */ }
+  loginName.value = "";
+  loginOpen.value = false;
+}
+
+function logout() {
+  currentUser.value = null;
+  userMenuOpen.value = false;
+  try { window.localStorage.removeItem(DEMO_USER_KEY); } catch { /* Ignore unavailable local storage. */ }
+}
+
+onMounted(() => { restoreUser(); void loadRecent(); });
 </script>
 
 <template>
@@ -53,8 +87,29 @@ onMounted(loadRecent);
         <RouterLink v-for="item in recent" :key="item.record_id" :to="`/records/${item.record_id}`" class="history-link"><span>{{ item.title }}</span><small>{{ item.record_id }} · {{ item.status }}</small></RouterLink>
         <RouterLink to="/records" class="all-history">查看全部历史 <span>→</span></RouterLink>
       </section>
-      <div class="sidebar-foot"><span class="privacy-dot"></span><p><strong>本地演示环境</strong><small>人工确认后才会写入正式记录</small></p></div>
+      <div class="sidebar-account">
+        <button v-if="!currentUser" type="button" class="login-entry" @click="loginOpen = true">
+          <span class="user-avatar-shell">用</span><span><strong>登录</strong><small>使用本地演示身份</small></span><b>→</b>
+        </button>
+        <div v-else class="signed-in-account">
+          <button type="button" class="login-entry" :aria-expanded="userMenuOpen" @click="userMenuOpen = !userMenuOpen">
+            <span class="user-avatar-shell signed-in">{{ userInitial }}</span><span><strong>{{ currentUser.name }}</strong><small>本地演示身份</small></span><b>⌄</b>
+          </button>
+          <div v-if="userMenuOpen" class="account-menu"><p>仅保存在本机浏览器，不代表生产账号或工单权限。</p><button type="button" @click="logout">退出登录</button></div>
+        </div>
+      </div>
     </aside>
     <main class="workspace"><slot /></main>
+
+    <div v-if="loginOpen" class="dialog-backdrop" @click.self="loginOpen = false">
+      <form class="login-dialog" role="dialog" aria-modal="true" aria-labelledby="login-title" @submit.prevent="login">
+        <span class="dialog-mark" aria-hidden="true">用</span>
+        <p class="workspace-kicker">本地工作台</p>
+        <h2 id="login-title">登录演示身份</h2>
+        <p>该身份仅用于显示头像与称呼，不代表真实账号、项目权限或审批资质。</p>
+        <label>显示名称<input v-model="loginName" maxlength="30" autocomplete="name" autofocus placeholder="请输入姓名或昵称" /></label>
+        <div class="dialog-actions"><button type="button" class="secondary-button" @click="loginOpen = false">取消</button><button type="submit" class="primary-button" :disabled="!loginName.trim()">登录</button></div>
+      </form>
+    </div>
   </div>
 </template>

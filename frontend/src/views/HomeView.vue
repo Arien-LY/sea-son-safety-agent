@@ -292,7 +292,7 @@ function displayValue(value: string | null): string {
     <div class="connection-pill" :class="{ online: runtime }"><span></span>{{ runtime ? `服务已连接 · ${runtime.agent_mode}` : runtimeError || "正在检查服务" }}</div>
   </section>
 
-  <fieldset class="workspace-fields" :disabled="working || loadingRecord" aria-label="咨询和工单操作区">
+  <fieldset class="workspace-fields" :class="{ 'conversation-fields': isConversation }" :disabled="working || loadingRecord" aria-label="咨询和工单操作区">
   <div v-if="isDetail" class="record-toolbar"><RouterLink to="/records" class="secondary-button">← 返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新详情</button></div>
   <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在恢复工单详情</strong><small>从本地唯一状态源读取记录与轨迹…</small></p></div>
   <p v-if="recordError" class="error-message" role="alert">{{ recordError }}</p>
