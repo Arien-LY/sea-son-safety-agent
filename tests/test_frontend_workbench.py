@@ -48,7 +48,7 @@ def test_text_composer_optimistically_moves_message_and_has_no_confirmation_moda
     send_body = panel[panel.index("async function send"):panel.index("function onComposerKeydown")]
     assert "pendingMessage.value = input.message" in send_body
     assert send_body.index('form.message = ""') < send_body.index("await api.sendText")
-    assert "api.sendText(pending, requestController.signal)" in send_body
+    assert "api.sendText(pending, requestController.signal, receiveProgress)" in send_body
     assert 'intent: props.mode' in send_body
     assert "最多约 35 秒" in panel
     assert "35_000" in api and "AbortController" in api

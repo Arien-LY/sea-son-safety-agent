@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { api } from "../api";
-import type { IssueAnalysis, IssueProposalPreviewData, TextTurnRequest, TextTurnResponse, VisionRuntime } from "../types";
+import type { IssueAnalysis, IssueProposalPreviewData, TextTurnRequest, TextTurnResponse, VisionRuntime, TextProgress } from "../types";
 
 const props = defineProps<{ mode: "chat" | "consult" }>();
 const emit = defineEmits<{
@@ -16,13 +16,42 @@ const form = reactive({ message: "", project: "", area: "", requester_role: "" }
 const busy = ref(false);
 const error = ref("");
 const latest = ref<TextTurnResponse | null>(null);
-const turns = ref<{ message: string; result: TextTurnResponse }[]>([]);
+const turns = ref<{ message: string; result: TextTurnResponse; seconds: number; steps: TextProgress[] }[]>([]);
 const proposed = ref(false);
 const contextOpen = ref(false);
 const pendingMessage = ref("");
 const messageStage = ref<HTMLElement | null>(null);
 let pending: TextTurnRequest | null = null;
 let activeRequest: AbortController | null = null;
+const elapsedSeconds = ref(0);
+const steps = ref<TextProgress[]>([]);
+let startedAt = 0;
+let ticker: ReturnType<typeof setInterval> | null = null;
+const stageLabels: Record<TextProgress["stage"], string> = {
+  queued: "服务端已接收，等待执行", preparing: "正在校验请求与整理上下文",
+  model_running: "等待模型回复", validating: "正在校验结果与安全边界",
+  tool_running: "正在生成待确认提案", completed: "处理完成",
+};
+function stageLabel(step: TextProgress) {
+  return step.stage === "model_running" && runtime.value?.mode === "mock"
+    ? "正在执行 Mock 验证（未调用真实模型）" : stageLabels[step.stage];
+}
+const currentStep = computed(() => steps.value.at(-1));
+const activeStepLabel = computed(() => currentStep.value ? stageLabel(currentStep.value) : "正在发送，等待服务端接收");
+function beginProgress() {
+  stopProgress(); steps.value = []; elapsedSeconds.value = 0; startedAt = performance.now();
+  ticker = setInterval(() => { elapsedSeconds.value = Math.floor((performance.now() - startedAt) / 1000); }, 250);
+}
+function stopProgress() {
+  if (ticker !== null) {
+    elapsedSeconds.value = Math.floor((performance.now() - startedAt) / 1000);
+    clearInterval(ticker); ticker = null;
+  }
+}
+function requestId(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join("");
+}
 const canSend = computed(() => !busy.value && !proposed.value && runtime.value?.configured && Boolean(form.message.trim())
   && (latest.value?.remaining_turns ?? 6) > 0);
 const dirty = computed(() => Boolean(form.message.trim()));
@@ -53,6 +82,7 @@ watch([pendingMessage, () => turns.value.length], async () => {
 onBeforeUnmount(cancelActiveRequest);
 
 function cancelActiveRequest() {
+  stopProgress();
   activeRequest?.abort();
   activeRequest = null;
   busy.value = false;
@@ -65,6 +95,7 @@ function reset(force = false) {
   busy.value = false;
   latest.value = null; turns.value = []; proposed.value = false; error.value = "";
   form.message = ""; pending = null; pendingMessage.value = ""; contextOpen.value = false; emit("analysis", null);
+  steps.value = []; elapsedSeconds.value = 0;
 }
 
 async function send() {
@@ -72,27 +103,33 @@ async function send() {
   busy.value = true; error.value = "";
   const input = { message: form.message.trim(), project: form.project.trim() || null,
     area: form.area.trim() || null, requester_role: form.requester_role.trim() || null };
-  pending ||= { request_id: crypto.randomUUID(), intent: props.mode, input,
-    consultation_id: latest.value?.consultation_id || null, expected_turn: latest.value?.turn || 0,
-    allow_external: runtime.value?.mode === "real" };
   pendingMessage.value = input.message;
   form.message = "";
   const requestController = new AbortController();
   activeRequest = requestController;
   try {
-    const result = await api.sendText(pending, requestController.signal);
+    beginProgress();
+    pending ||= { request_id: requestId(), intent: props.mode, input,
+      consultation_id: latest.value?.consultation_id || null, expected_turn: latest.value?.turn || 0,
+      allow_external: runtime.value?.mode === "real" };
+    const receiveProgress = (step: TextProgress) => {
+      if (!requestController.signal.aborted) steps.value.push(step);
+    };
+    const result = await api.sendText(pending, requestController.signal, receiveProgress);
     if (requestController.signal.aborted) return;
     latest.value = result;
-    turns.value.push({ message: input.message, result });
+    stopProgress();
+    turns.value.push({ message: input.message, result, seconds: elapsedSeconds.value, steps: [...steps.value] });
     pendingMessage.value = ""; pending = null;
     emit("analysis", result.reply.analysis);
   } catch (cause) {
     if (requestController.signal.aborted) return;
-    error.value = cause instanceof Error ? cause.message : String(cause);
+    error.value = !pending ? "发送准备失败，请刷新页面或更换浏览器后重试。" : cause instanceof Error ? cause.message : String(cause);
     form.message = pendingMessage.value;
     pendingMessage.value = "";
   } finally {
     if (activeRequest === requestController) {
+      stopProgress();
       activeRequest = null;
       busy.value = false;
     }
@@ -111,11 +148,12 @@ async function propose() {
   busy.value = true; error.value = "";
   emit("proposing", true);
   try {
-    const result = await api.proposeText(latest.value.consultation_id, latest.value.turn);
+    beginProgress();
+    const result = await api.proposeText(latest.value.consultation_id, latest.value.turn, step => steps.value.push(step));
     if (!result.ok) throw new Error(result.summary);
     proposed.value = true; emit("proposal", result.data);
   } catch (cause) { error.value = cause instanceof Error ? cause.message : String(cause); }
-  finally { busy.value = false; emit("proposing", false); }
+  finally { stopProgress(); busy.value = false; emit("proposing", false); }
 }
 </script>
 
@@ -127,7 +165,7 @@ async function propose() {
         <h1 :id="mode === 'chat' ? 'chat-title' : 'consult-title'">{{ mode === "chat" ? "新建聊天" : "新建咨询" }}</h1>
         <p>{{ mode === "chat" ? "用于一般问答，不会在此模式生成或提交工单。" : "先理解事实与风险；满足受控条件后，才会出现工单步骤。" }}</p>
       </div>
-      <div class="connection-pill" :class="{ online: runtime?.configured }"><span></span>{{ runtime?.configured ? "服务已连接" : "连接检查中" }}</div>
+      <div class="connection-pill" :class="{ online: runtime?.configured }" title="仅检查本地配置，不代表模型已成功回复"><span></span>{{ runtime?.configured ? runtime.mode === 'mock' ? "Mock 已配置" : "模型已配置" : error ? "服务未连接" : "连接检查中" }}</div>
     </header>
 
     <div ref="messageStage" class="message-stage">
@@ -153,7 +191,8 @@ async function propose() {
           <div class="message-row assistant-row">
             <div class="message-avatar assistant-avatar">安</div>
             <div class="message-body assistant-message">
-              <div class="message-meta"><strong>{{ turn.result.mode === "mock" ? "Mock 助手" : mode === "chat" ? "海之子助手" : "安全质量助手" }}</strong><span>第 {{ turn.result.turn }} 轮</span></div>
+              <div class="message-meta"><strong>{{ turn.result.mode === "mock" ? "Mock 助手" : mode === "chat" ? "海之子助手" : "安全质量助手" }}</strong><span>第 {{ turn.result.turn }} 轮 · 用时 {{ turn.seconds }} 秒</span></div>
+              <details v-if="turn.steps.length" class="execution-history"><summary>执行步骤 · 未调用业务工具</summary><ol><li v-for="step in turn.steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}</li></ol></details>
               <p class="preserve-lines">{{ turn.result.reply.answer }}</p>
               <div v-if="mode === 'consult' || turn.result.reply.analysis.risk_level === 'high' || turn.result.reply.analysis.risk_level === 'emergency'" class="analysis-summary">
                 <span>类别 {{ turn.result.reply.analysis.category }}</span><span>风险 {{ turn.result.reply.analysis.risk_level }}</span><span>{{ turn.result.reply.analysis.requires_human_review ? "必须人工复核" : "需结合现场判断" }}</span>
@@ -168,7 +207,12 @@ async function propose() {
           <div class="message-row user-row"><div class="message-avatar user-avatar">你</div><div class="message-body user-message"><p>{{ pendingMessage }}</p></div></div>
         </li>
       </ol>
-      <div v-if="busy" class="typing-row" role="status"><span></span><span></span><span></span><em>{{ mode === 'chat' ? '正在回复…' : '正在分析，最多约 35 秒' }}</em></div>
+      <div v-if="busy" class="execution-status" role="status" aria-live="polite">
+        <div class="execution-current"><span class="execution-spinner" aria-hidden="true"></span><strong>{{ activeStepLabel }}</strong><span class="elapsed-time" aria-live="off">已等待 {{ elapsedSeconds }} 秒</span></div>
+        <p>{{ currentStep?.tool ? `正在调用工具：${currentStep.tool}` : '当前未调用业务工具' }} · 最多约 35 秒</p>
+        <details v-if="steps.length"><summary>查看已执行步骤</summary><ol><li v-for="step in steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ` · ${step.tool}` : '' }}</li></ol></details>
+      </div>
+      <p v-else-if="proposed" class="execution-finished">提案工具 propose_issue_record 已完成 · 用时 {{ elapsedSeconds }} 秒 · 尚未保存工单</p>
     </div>
 
     <div class="composer-dock">

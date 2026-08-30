@@ -290,3 +290,10 @@ export interface WorkflowTransitionInput {
   assignee_id?: string;
   assignee_role?: ResponsibleRole;
 }
+export interface TextProgress {
+  type: "progress";
+  seq: number;
+  elapsed_ms: number;
+  stage: "queued" | "preparing" | "model_running" | "validating" | "tool_running" | "completed";
+  tool: "propose_issue_record" | null;
+}

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from agents.text_assistant import TextError
 from backend.app.text_consultations import TextConsultationService, text_runtime
 from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse
+from backend.app.text_progress import stream_operation
 from backend.app.workflow import IssueWorkflowService
 from backend.app.workflow_models import RecordDisposition, WorkflowStatus
 from backend.app.workflow_store import StoreError
@@ -68,6 +69,14 @@ def create_product_router(texts: TextConsultationService, workflow: IssueWorkflo
     @router.post("/api/text-consultations", response_model=TextResponse)
     def send(payload: dict):
         return call(texts.send, parse(TextRequest, payload))
+
+    @router.post("/api/text-consultations/stream")
+    def send_stream(payload: dict):
+        return stream_operation(texts.send, parse(TextRequest, payload))
+
+    @router.post("/api/text-consultations/{consultation_id}/proposal/stream")
+    def propose_stream(consultation_id: str, payload: dict):
+        return stream_operation(texts.propose, consultation_id, parse(TextProposalRequest, payload))
 
     @router.post("/api/text-consultations/{consultation_id}/proposal")
     def propose(consultation_id: str, payload: dict):
