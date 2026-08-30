@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.main import create_app
@@ -277,3 +278,31 @@ def test_api_high_risk_submitter_cannot_close_own_record(tmp_path: Path) -> None
     assert response.json()["detail"]["error_code"] == (
         "submitter_cannot_close_high_risk"
     )
+
+
+@pytest.mark.parametrize(
+    "action,role,max_length",
+    [
+        ("request_more_info", "coordinator", 500),
+        ("supplement_information", "reporter", 500),
+        ("submit_rectification", "rectifier", 2_000),
+        ("reject_review", "reviewer", 1_000),
+        ("close", "reviewer", 1_000),
+        ("cancel", "coordinator", 2_000),
+    ],
+)
+def test_action_note_limits_are_rejected_before_record_access(
+    tmp_path: Path, action: str, role: str, max_length: int
+) -> None:
+    client = phase3_client(tmp_path)
+    endpoint = "/api/issue-records/ISS-000000000000/actions"
+    base = {
+        "action": action,
+        "actor": {"actor_id": "length-check", "role": role},
+        "expected_revision": 1,
+    }
+    accepted = client.post(endpoint, json={**base, "note": "界" * max_length})
+    rejected = client.post(endpoint, json={**base, "note": "界" * (max_length + 1)})
+    assert accepted.status_code == 404
+    assert rejected.status_code == 400
+    assert rejected.json()["detail"]["error_code"] == "invalid_arguments"

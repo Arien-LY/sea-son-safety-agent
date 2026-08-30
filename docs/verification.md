@@ -1166,6 +1166,34 @@ product-text-records-contract.md,architecture.md,tutorial-compliance.md,verifica
 
 收尾：加上工作台契约的最终专项87 passed；本次隔离浏览器页和8018/5178进程已关闭，原8000/5173服务未停止。
 
+## 2026-08-31：工作流动作说明长度预校验
+
+范围与门禁：`fix/workflow-note-validation`基于已合并PR #20的main 6075169。按代码质量工作流选择
+`Local Fix` / `Local Fix Only`；行为契约先写入TASKS。本任务只改变过长动作说明的拒绝时点和错误类型，
+不改状态迁移、角色权限、Store字段、API成功响应、前端、依赖或模型配置。
+
+审计结论与失败基线：
+
+- TASKS原列3项P2；`confirmed: 1`在main已经由严格Pydantic和`test_chat_progress.py`拒绝为400，
+  属于过期待办，已同步勾选，不重复修改。
+- `WorkflowTransitionRequest.note`统一允许2000字，但request_more_info和supplement_information最终字段为500字，
+  reject_review和close最终字段为1000字。请求校验与持久字段契约矛盾，可能在状态更新时变成500。
+- 新API回归在不存在的合成record_id上先检查请求边界：精确上限通过解析后为404，超1字必须在读取记录前400。
+  修复前9项Phase3 API中4项失败、5项通过，精确定位为上述4个动作；2000字动作原行为正确。
+
+实现与验证：
+
+- `WorkflowTransitionRequest`按目标字段增加确定性上限：请求补充/补充信息500，驳回/关闭1000，
+  提交整改/取消2000。空值要求、角色、状态和通用2000字上限不变。
+- 专项`pytest tests/test_phase3_api.py tests/test_phase3_contract.py tests/test_phase3_workflow.py -q`：24 passed。
+- `scripts/verify.ps1`：407项Python、30项前端行为测试、vue-tsc和Vite生产构建（66 modules）通过；
+  保留1条既有Hello-Agents/Pydantic弃用警告。无外部或付费模型调用。
+- 原local-fix默认2文件预算因仓库强制TASKS记录产生1条文件数警告；任务门禁预先声明自定义4文件/120行。
+  最终在写验证记录前为3文件59行、无未知文件；完成记录后重新执行最终范围门禁。
+
+遗留：前端仍显示通用2000字计数，超出动作上限会得到明确API错误但不按动作提前提示；这是独立体验改进，
+不影响服务端安全边界。PhotoStore视觉调用持锁、Phase6真实指标/双机/演示发布材料及Phase0队员复现仍待完成。
+
 ## 2026-08-31：聊天阅读与 Markdown 安全重构
 
 范围与契约：

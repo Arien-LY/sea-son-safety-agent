@@ -210,6 +210,16 @@ class WorkflowTransitionRequest(BaseModel):
             raise ValueError("当前动作必须提供说明。")
         if self.action not in actions_requiring_note and self.note is not None:
             raise ValueError("当前动作不接收说明字段。")
+        note_limits = {
+            WorkflowAction.REQUEST_MORE_INFO: 500,
+            WorkflowAction.SUPPLEMENT_INFORMATION: 500,
+            WorkflowAction.REJECT_REVIEW: 1_000,
+            WorkflowAction.CLOSE: 1_000,
+            WorkflowAction.SUBMIT_RECTIFICATION: 2_000,
+            WorkflowAction.CANCEL: 2_000,
+        }
+        if self.note is not None and len(self.note) > note_limits[self.action]:
+            raise ValueError("动作说明超过目标字段允许的长度。")
         return self
 
 
