@@ -2,10 +2,12 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { api } from "../api";
 import KnowledgePanel from "../components/KnowledgePanel.vue";
+import ImagePanel from "../components/ImagePanel.vue";
 import type {
   ActorRole,
   ConfirmedIssueProposal,
   IssueAnalysis,
+  IssueProposalPreviewData,
   IssueCategory,
   IssueRecord,
   IssueRecordProposal,
@@ -105,6 +107,15 @@ function buildAnalysis(): IssueAnalysis {
 
 function uniqueId(prefix: string): string {
   return globalThis.crypto?.randomUUID?.() || `${prefix}-${Date.now()}`;
+}
+
+function usePhotoProposal(data: IssueProposalPreviewData) {
+  proposal.value = data.proposal;
+  proposalToken.value = data.proposal_token;
+  editedFields.value = { ...data.proposal.review_fields };
+  confirmed.value = null;
+  record.value = null;
+  actionError.value = "";
 }
 
 async function createPreview() {
@@ -224,7 +235,7 @@ function displayValue(value: string | null): string {
       <p class="eyebrow">施工现场问题闭环</p>
       <h1>由人确认提案，由代码推进整改</h1>
       <p class="lead">
-        Phase 4 增加只读知识依据；建议、来源和人工结论分开展示，既有整改状态仍由确定性代码推进。
+        Phase 5 支持单张图片补充证据；观察、人工采纳、记录确认和整改照片分步处理，图片不作最终认定。
       </p>
     </div>
     <div class="runtime-card">
@@ -460,10 +471,11 @@ function displayValue(value: string | null): string {
     </div>
   </section>
 
-  <KnowledgePanel :analysis="record?.analysis || buildAnalysis()" :record="record" />
+  <ImagePanel :record="record" @proposal="usePhotoProposal" />
+  <KnowledgePanel :analysis="record?.analysis || proposal?.analysis || buildAnalysis()" :record="record" />
 
   <section class="boundary">
     <h2>当前能力边界</h2>
-    <p>记录保存在本地 JSON Store，知识使用小规模本地关键词检索，不含向量库、登录鉴权、外部派单、通知、图片或真实模型调用；演示角色标识不代表生产身份。</p>
+    <p>图片可在独立real模式下调用已配置视觉模型；上方文字表单仍为结构化验收输入。数据保存在本地，无生产登录鉴权、外部派单或自动关闭；不得直接暴露公网。</p>
   </section>
 </template>

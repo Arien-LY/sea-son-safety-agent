@@ -659,3 +659,110 @@ git diff --check
   页面使用结构化演示输入，没有完整自然语言模型入口；真实模型准确率、工具选择和成本均未验收。
 - 审计缓冲区在内存中，检索快照不写业务记录；不是生产级持久化证据链。
 - 保留 Phase 3 的无真实身份认证、单机/单进程 Store 限制，以及 Phase 0 双机验证和专业人工验收门禁。
+
+## 2026-08-30：Phase 5 单张图片上传与分析完成
+
+范围与教程依据：
+
+- 先冻结 `docs/phase5-image-contract.md`、12 个场景和严格视觉/照片索引 Schema，再实现单图路径。
+- 遵循 Hello-Agents V1.0.3 第7/9/12章及 Extra09：单 Agent、一次有限调用、原生图像消息、严格输出
+  校验、有限上下文、脱敏审计、人工确认；没有增加多智能体或赋予模型业务状态写权限。
+- 支持 JPEG/PNG 安全上传、元数据清除、多候选人工纠正/采纳/驳回，以及同一问题的整改前后照片关联。
+- 仅新增独立视觉模型配置；文字页面仍为结构化验收入口，不宣称已接通自然语言文字聊天。
+
+Git 与配置审计：
+
+- Phase 4 PR #12 已 squash merge，基线为 `db08fcf81cab0aca857baa24266ba4a2d1647aaf`。
+- 从更新后的 main 创建 `phase5-single-image-analysis`；不在 main 开发，不自动合并 PR。
+- GitHub 目标 `Arien-LY/sea-son-safety-agent` 为私人仓库；原 unborn main 启动限制已不适用。
+- 经用户明确确认，仅在本地已忽略的 `.env` 新增 `VISION_MODEL=deepseek-v4-flash-vision-exp`；
+  原有文字模型与密钥不变。`git check-ignore .env` 命中，`git ls-files .env` 无输出。
+- 修正启动脚本没有加载 `.env` 的问题：有文件时通过 uvicorn `--env-file` 加载；已有进程环境优先。
+  用户已运行的服务未被停止或重启，需要自行重启后端才会加载新配置。
+- 新增必要的固定依赖 `Pillow==12.3.0`；复用既有模型 SDK，不增加 multipart、向量库或其他模型服务。
+
+验证命令与结果：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_phase5_images.py tests/test_phase5_api.py tests/test_phase5_transport.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+git diff --check
+git check-ignore .env
+git ls-files .env
+```
+
+- Phase 5 图片、API、原生传输专项：70 tests passed。
+- 完整 Python：299 tests passed，1 条既有 Hello-Agents Pydantic 弃用警告。
+- TypeScript 检查与 Vite 生产构建通过：38 modules transformed。
+- `git diff --check` 无空白错误；Windows LF/CRLF 提示不影响验证。
+- 常规 pytest/verify 使用 Fake/Mock，`.env=real` 不会使这些测试调用真实模型；真实冒烟独立执行。
+
+确定性门禁：
+
+- 每次仅一张 JPEG/PNG，最多5MiB、每边4096像素、总计1600万像素；核对实际格式、完整解码，拒绝
+  MIME伪造、坏图、多帧和超限。EXIF方向归一、透明铺白、重新编码，清除EXIF/GPS/ICC/文本等元数据。
+- 随机 PHOTO-ID，不接受客户端路径、原文件名或外部图片URL；读取校验路径、符号链接和内容摘要。
+- 索引原子替换失败不会破坏旧数据；失败时仅清理本次新增图片；并发上传、损坏索引及容量边界有回归。
+- 视觉结果拒绝多余字段和伪造布尔确认；最多5个候选、20项观察；未观察到不能作为确有问题的依据。
+- 低分辨率有确定性补充标记；有局限必须追问。所有候选保留不确定性、缺失字段及人工复核路由，
+  高风险保留立即避险提示。Mock 明确未执行识别，不生成貌似真实的施工隐患。
+- real 模式每次须确认外发才可调用；只允许已核验的官方 HTTPS 端点和视觉模型，30秒超时、零自动重试。
+- 原生消息使用 user content 的 image_url/base64；JSON响应校验后才保存；不读取或记录隐藏思维链，
+  错误只返回安全代码，审计不保存图片、用户上下文、原始响应或密钥。
+- 采纳只生成既有待确认提案，纠正不能降低原风险/复核要求；驳回不建单；原候选与人工说明保留。
+  提案生成失败不消耗候选决定，重复决定被拒绝，未确认不会创建正式工作流记录。
+- 前后关联校验记录存在、角色、阶段和revision；同图不可换记录或阶段，关联不推进状态或revision。
+  关闭/取消后不得追加关联；高风险关闭仍须既有专业人工复查流程。
+- 模型超时、非法输出和上传失败不影响原文字提案/工作流路径。
+
+独立真实模型冒烟（用户明确授权后执行）：
+
+- 授权上限为2次合成图请求、每次1024输出token、总预算US$0.01；实际仅执行1次，无重试。
+- 使用程序生成的512×512白底红色方块/蓝色圆形，无现场资料或个人信息；只向 DeepSeek 官方接口发送。
+- 模型 `deepseek-v4-flash-vision-exp` 返回3项 observed、0个问题候选；结构校验通过，
+  `preliminary_only=true`、`requires_human_review=true`。
+- 实测4.48秒；prompt 1679、completion 140 tokens；按官网高峰价格保守估算US$0.000924，
+  不是账户实际账单。请求前最坏情况估算US$0.003794，低于授权总预算。
+- 可复现脚本 `scripts/verify-vision-live.py` 必须显式付费确认；普通验证不执行它。
+- 脱敏结果、图片摘要及价格来源见 `docs/phase5-live-smoke.json`。此次仅证明连接与结构化输出，
+  不能证明施工现场识别准确率、高风险召回率或专业工程判断正确。
+
+本地浏览器验收（browser 技能）：
+
+- 隔离端口8015/5175、临时目录 Store 与明确 Fake 视觉后端；没有使用用户现有8000/5173服务的数据。
+- 未勾选上传授权不能上传；上传后显示服务器重新编码的512×512图片与元数据清除提示。
+- 两个预设高风险候选：第一项修改摘要并填写说明后采纳，第二项填写说明后驳回；风险与复核要求不变。
+- 采纳转入既有提案确认，补齐项目/区域后人工保存草稿；整改前照片在revision1关联，整改后照片在
+  revision4关联同一记录；人工提交/派工/整改/复查后到revision6关闭，没有自动状态变化。
+- 关闭后关联请求被409拒绝；据浏览器检查清除过期成功提示，并禁用关闭/取消及阶段不匹配的关联按钮。
+- 390×844移动视口有效内容宽度375像素，scrollWidth同为375，无横向溢出；合成图片缩略图正常。
+- real环境通过 `.env` 加载验证，页面显示独立视觉模型和逐次费用提醒；未勾选外发确认时分析按钮禁用。
+  此项仍使用Fake后端，没有额外真实推理调用。
+- 浏览器控制台无 warning/error；临时视口已恢复、页面已关闭，本次隔离服务均停止。
+  用户原有服务未被停止，临时合成图片和工作流记录未写入仓库。
+
+修改文件分组：
+
+- Agent：`agents/vision.py`。
+- 后端：`backend/app/photo_models.py`、`photo_store.py`、`photos.py`、`photo_routes.py`、`main.py`、
+  `workflow_store.py`（仅增加持锁快照，不改冻结状态和记录Schema）。
+- 前端：`frontend/src/components/ImagePanel.vue`、`AppShell.vue`、`KnowledgePanel.vue`、
+  `views/HomeView.vue`、`api.ts`、`types.ts`。
+- 契约/测试：`contracts/phase5_*.schema.json`、`tests/fixtures/phase5_image_cases.v1.json`、
+  `tests/test_phase5_images.py`、`test_phase5_api.py`、`test_phase5_transport.py`。
+- 配置/脚本：`.env.example`、`backend/requirements.txt`、`scripts/start-backend.ps1`、
+  `scripts/verify-vision-live.py`；本地 `.env` 不提交。
+- 文档：`README.md`、`CONTEXT.md`、`TASKS.md`、`docs/architecture.md`、`tutorial-compliance.md`、
+  `phase5-image-contract.md`、`phase5-human-review.md`、`phase5-live-smoke.json`、本验证记录。
+
+遗留风险和人工评审重点：
+
+- 视觉模型为实验型号；固定12场景与Fake测试验证协议和边界，不是实际现场图片标注集。
+  `docs/phase5-human-review.md` 的专业现场复核仍待填写，不宣称模型效果达到比赛或生产指标。
+- 元数据清除不等于像素打码；人脸、工牌、铭牌和项目细节须用户自行遮盖并确认上传/外发授权。
+- 无生产登录、照片所有权、真实资质、速率限制和按用户配额；不可直接暴露公网。候选自由文本仍需核验，
+  单张照片不能形成最终安全、质量或责任认定。
+- 工作流和照片为本地独立Store；锁仅覆盖同一Python进程，不是跨进程事务。异常进程退出仍可能留下
+  未入索引的图片；上限200张/每张10份分析，无自动保留期、删除界面、备份与灾难恢复。
+- 文字页面仍为结构化演示，不是自然语言真实模型聊天入口；Phase 6 的指标、比赛材料和发布验收未启动。
+- 保留 Phase 0 双机全新克隆未完成、既有Pydantic警告，以及资料专业复核和生产身份安全门禁。

@@ -12,6 +12,10 @@ import type {
   WorkflowTransitionInput,
   KnowledgeAnswer,
   KnowledgeJurisdiction,
+  PhotoMetadata,
+  PhotoAnalysisRecord,
+  LinkedPhoto,
+  VisionRuntime,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
@@ -31,6 +35,35 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getVisionRuntime() { return request<VisionRuntime>("/api/vision/runtime"); },
+  uploadPhoto(file: File) {
+    return request<PhotoMetadata>("/api/photos", {
+      method: "POST", headers: { "Content-Type": file.type, "X-Upload-Authorized": "true" }, body: file,
+    });
+  },
+  photoContentUrl(photoId: string) { return `${API_BASE}/api/photos/${encodeURIComponent(photoId)}/content`; },
+  analyzePhoto(photoId: string, context: string, allowExternal: boolean) {
+    return request<PhotoAnalysisRecord>(`/api/photos/${encodeURIComponent(photoId)}/analysis`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ context, allow_external: allowExternal }),
+    });
+  },
+  decidePhotoCandidate(analysisId: string, candidateId: string, decision: "accept" | "reject", correctedSummary: string, note: string) {
+    return request<ToolResult<IssueProposalPreviewData>>(`/api/photo-analyses/${encodeURIComponent(analysisId)}/decisions`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ candidate_id: candidateId, decision, corrected_summary: correctedSummary, note, confirmed: true }),
+    });
+  },
+  linkPhoto(record: IssueRecord, photoId: string, stage: "before" | "after") {
+    return request(`/api/issue-records/${encodeURIComponent(record.record_id)}/photos`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photo_id: photoId, stage, expected_revision: record.revision, confirmed: true,
+        actor: stage === "before" ? { actor_id: record.reporter_id, role: "reporter" }
+          : { actor_id: record.assigned_to, role: "rectifier" },
+      }),
+    });
+  },
+  getRecordPhotos(recordId: string) { return request<LinkedPhoto[]>(`/api/issue-records/${encodeURIComponent(recordId)}/photos`); },
   getKnowledgeAnswer(query: string, jurisdiction: KnowledgeJurisdiction, analysis: IssueAnalysis, recordId?: string) {
     return request<KnowledgeAnswer>(
       recordId ? `/api/issue-records/${encodeURIComponent(recordId)}/knowledge` : "/api/knowledge/answer",

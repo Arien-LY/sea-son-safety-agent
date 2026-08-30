@@ -41,10 +41,10 @@ async function search() {
   <section class="knowledge-panel" aria-labelledby="knowledge-title">
     <div class="section-heading">
       <div><p class="eyebrow">Phase 4 · 只读知识</p><h2 id="knowledge-title">建议、依据与人工结论</h2></div>
-      <span class="safe-chip">8 条释义摘编 · 无真实模型</span>
+      <span class="safe-chip">8 条释义摘编 · 检索不额外调用模型</span>
     </div>
     <p class="section-note">
-      {{ record ? `读取记录 ${record.record_id} 的分析与复查事件` : "使用上方结构化验收输入；尚未关联正式记录" }}。
+      {{ record ? `读取记录 ${record.record_id} 的分析与复查事件` : "使用当前已校验分析；尚未关联正式记录" }}。
       仅候选资料检索，不做法律适用、处罚或责任认定。
     </p>
     <div class="form-grid">
@@ -63,7 +63,7 @@ async function search() {
     <p v-if="error" class="error-message" role="alert">{{ error }}。检索失败不影响上方工作流，请由专业人员核对依据。</p>
     <div v-if="answer" class="knowledge-sections" aria-live="polite">
       <section aria-labelledby="model-advice-title">
-        <h3 id="model-advice-title">模型建议（当前为结构化演示输入）</h3>
+        <h3 id="model-advice-title">模型建议（未经人工事实核验）</h3>
         <p class="section-note">{{ answer.suggestion_notice }}</p>
         <p>风险：{{ answer.analysis.risk_level }} · 人工复核：{{ answer.analysis.requires_human_review ? "必须" : "按现场情况" }}</p>
         <p v-for="action in answer.analysis.immediate_actions" :key="action" class="error-message">{{ action }}</p>

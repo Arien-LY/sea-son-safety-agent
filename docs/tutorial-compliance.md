@@ -36,6 +36,12 @@ Phase 4 落地：第 8 章采用小规模本地候选检索，不把向量数据
 Function Calling Schema 和统一 ToolResult；Extra09 复用有容量上限的脱敏工具审计。
 实现与验收见 `docs/phase4-knowledge-contract.md`，未进行真实模型工具选择或开放域检索效果评估。
 
+## Phase 5 落地
+
+Phase 5 延续单Agent和结构化输出原则：临时SimpleAgent只做一次视觉调用，不启用其自然语言工具
+标记解析；适配层使用官方原生多模态content块。图片安全解码、确认、证据关联和主状态权限由代码
+负责；Fake协议测试、合成图连通性和专业现场评估分开记录，不把图片模型升级当成自动判断权升级。
+
 ## 教程源码
 
 - 上游仓库：https://github.com/datawhalechina/hello-agents

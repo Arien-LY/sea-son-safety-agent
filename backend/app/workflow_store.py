@@ -6,6 +6,7 @@ import json
 import os
 import tempfile
 from collections.abc import Callable
+from contextlib import contextmanager
 from pathlib import Path
 from threading import Lock, RLock
 from typing import Literal, TypeVar
@@ -90,6 +91,19 @@ class JsonIssueRecordStore:
             if record is None:
                 raise RecordNotFoundError(record_id)
             return record.model_copy(deep=True)
+
+    @contextmanager
+    def locked_snapshot(self, record_id: str, *, expected_revision: int):
+        """Keep a same-process record snapshot stable while attaching evidence.
+
+        This does not update the record or replace the workflow authority.
+        Callers must acquire the workflow lock before any photo-store lock.
+        """
+        with self._lock:
+            record = self.get(record_id)
+            if record.revision != expected_revision:
+                raise RevisionConflictError(record_id)
+            yield record
 
     def create(
         self,

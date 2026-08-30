@@ -1,0 +1,566 @@
+{
+  "$defs": {
+    "ActorRole": {
+      "enum": [
+        "reporter",
+        "coordinator",
+        "rectifier",
+        "reviewer",
+        "professional_reviewer"
+      ],
+      "title": "ActorRole",
+      "type": "string"
+    },
+    "CandidateDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_id": {
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "request": {
+          "$ref": "#/$defs/CandidateDecisionRequest"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "analysis_id",
+        "request",
+        "created_at"
+      ],
+      "title": "CandidateDecision",
+      "type": "object"
+    },
+    "CandidateDecisionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "pattern": "^CAND-[1-5]$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "accept",
+            "reject"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "corrected_summary": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Corrected Summary"
+        },
+        "note": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Note",
+          "type": "string"
+        },
+        "confirmed": {
+          "const": true,
+          "title": "Confirmed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "decision",
+        "note",
+        "confirmed"
+      ],
+      "title": "CandidateDecisionRequest",
+      "type": "object"
+    },
+    "IssueAnalysis": {
+      "additionalProperties": false,
+      "description": "模型分析结果；不能直接创建或修改业务记录。",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/IssueCategory"
+        },
+        "issue_type": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Issue Type",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "observed_facts": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Observed Facts",
+          "type": "array"
+        },
+        "uncertainties": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Uncertainties",
+          "type": "array"
+        },
+        "missing_fields": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "risk_level": {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        "immediate_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Immediate Actions",
+          "type": "array"
+        },
+        "suggested_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Suggested Actions",
+          "type": "array"
+        },
+        "recommended_route": {
+          "$ref": "#/$defs/RecommendedRoute"
+        },
+        "requires_human_review": {
+          "title": "Requires Human Review",
+          "type": "boolean"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "category",
+        "issue_type",
+        "summary",
+        "observed_facts",
+        "uncertainties",
+        "missing_fields",
+        "risk_level",
+        "immediate_actions",
+        "suggested_actions",
+        "recommended_route",
+        "requires_human_review",
+        "confidence"
+      ],
+      "title": "IssueAnalysis",
+      "type": "object"
+    },
+    "IssueCategory": {
+      "enum": [
+        "safety",
+        "quality",
+        "management",
+        "logistics",
+        "consultation",
+        "unknown"
+      ],
+      "title": "IssueCategory",
+      "type": "string"
+    },
+    "PhotoAnalysisRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_id": {
+          "pattern": "^VIS-[A-F0-9]{24}$",
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "photo_id": {
+          "pattern": "^PHOTO-[A-F0-9]{24}$",
+          "title": "Photo Id",
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "mock",
+            "real"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/VisionAnalysis"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "analysis_id",
+        "photo_id",
+        "mode",
+        "model",
+        "result",
+        "created_at"
+      ],
+      "title": "PhotoAnalysisRecord",
+      "type": "object"
+    },
+    "PhotoLink": {
+      "additionalProperties": false,
+      "properties": {
+        "record_id": {
+          "pattern": "^ISS-[A-F0-9]{12}$",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "photo_id": {
+          "pattern": "^PHOTO-[A-F0-9]{24}$",
+          "title": "Photo Id",
+          "type": "string"
+        },
+        "stage": {
+          "enum": [
+            "before",
+            "after"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/WorkflowActor"
+        },
+        "record_revision": {
+          "minimum": 1,
+          "title": "Record Revision",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "record_id",
+        "photo_id",
+        "stage",
+        "actor",
+        "record_revision",
+        "created_at"
+      ],
+      "title": "PhotoLink",
+      "type": "object"
+    },
+    "PhotoMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "photo_id": {
+          "pattern": "^PHOTO-[A-F0-9]{24}$",
+          "title": "Photo Id",
+          "type": "string"
+        },
+        "content_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Content Digest",
+          "type": "string"
+        },
+        "media_type": {
+          "const": "image/jpeg",
+          "default": "image/jpeg",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "byte_size": {
+          "exclusiveMinimum": 0,
+          "maximum": 5242880,
+          "title": "Byte Size",
+          "type": "integer"
+        },
+        "width": {
+          "maximum": 4096,
+          "minimum": 1,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "maximum": 4096,
+          "minimum": 1,
+          "title": "Height",
+          "type": "integer"
+        },
+        "metadata_removed": {
+          "const": true,
+          "default": true,
+          "title": "Metadata Removed",
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "photo_id",
+        "content_digest",
+        "byte_size",
+        "width",
+        "height",
+        "created_at"
+      ],
+      "title": "PhotoMetadata",
+      "type": "object"
+    },
+    "RecommendedRoute": {
+      "enum": [
+        "direct_answer",
+        "collect_more_info",
+        "propose_workflow",
+        "human_review"
+      ],
+      "title": "RecommendedRoute",
+      "type": "string"
+    },
+    "RiskLevel": {
+      "enum": [
+        "undetermined",
+        "low",
+        "medium",
+        "high",
+        "emergency"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "VisionAnalysis": {
+      "additionalProperties": false,
+      "properties": {
+        "preliminary_only": {
+          "const": true,
+          "title": "Preliminary Only",
+          "type": "boolean"
+        },
+        "requires_human_review": {
+          "const": true,
+          "title": "Requires Human Review",
+          "type": "boolean"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/VisualObservation"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Observations",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "enum": [
+              "low_resolution",
+              "blurred",
+              "occluded",
+              "context_missing"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "follow_up_questions": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Follow Up Questions",
+          "type": "array"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/VisualCandidate"
+          },
+          "maxItems": 5,
+          "title": "Candidates",
+          "type": "array"
+        }
+      },
+      "required": [
+        "preliminary_only",
+        "requires_human_review",
+        "observations",
+        "limitations",
+        "follow_up_questions",
+        "candidates"
+      ],
+      "title": "VisionAnalysis",
+      "type": "object"
+    },
+    "VisualCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "pattern": "^CAND-[1-5]$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Observation Ids",
+          "type": "array"
+        },
+        "analysis": {
+          "$ref": "#/$defs/IssueAnalysis"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "observation_ids",
+        "analysis"
+      ],
+      "title": "VisualCandidate",
+      "type": "object"
+    },
+    "VisualObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "observation_id": {
+          "maxLength": 6,
+          "pattern": "^OBS-[1-9][0-9]?$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "observed",
+            "uncertain",
+            "not_observed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "status",
+        "description"
+      ],
+      "title": "VisualObservation",
+      "type": "object"
+    },
+    "WorkflowActor": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/ActorRole"
+        }
+      },
+      "required": [
+        "actor_id",
+        "role"
+      ],
+      "title": "WorkflowActor",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "phase5-photo-store-v1",
+      "default": "phase5-photo-store-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "photos": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PhotoMetadata"
+      },
+      "maxProperties": 200,
+      "title": "Photos",
+      "type": "object"
+    },
+    "analyses": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PhotoAnalysisRecord"
+      },
+      "maxProperties": 2000,
+      "title": "Analyses",
+      "type": "object"
+    },
+    "decisions": {
+      "items": {
+        "$ref": "#/$defs/CandidateDecision"
+      },
+      "maxItems": 10000,
+      "title": "Decisions",
+      "type": "array"
+    },
+    "links": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PhotoLink"
+      },
+      "maxProperties": 200,
+      "title": "Links",
+      "type": "object"
+    }
+  },
+  "title": "PhotoDocument",
+  "type": "object"
+}

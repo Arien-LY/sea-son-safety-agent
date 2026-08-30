@@ -6,3 +6,5 @@ openai==1.109.1
 hello-agents==0.2.9
 # 0.2.9 顶层导入会加载评估数据集，但基础依赖未声明此包。
 huggingface-hub==0.36.2
+# Phase 5: decode/re-encode untrusted single images and discard metadata.
+Pillow==12.3.0
