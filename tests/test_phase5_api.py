@@ -1,5 +1,7 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Event, Lock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -189,4 +191,61 @@ def test_analysis_count_is_bounded_before_extra_model_call(tmp_path):
     photo = upload(client)
     for _ in range(10): analyze(client, photo)
     assert client.post(f"/api/photos/{photo['photo_id']}/analysis", json={"context": "context"}).status_code == 409
+    assert len(fake.calls) == 10
+
+
+def test_slow_vision_call_does_not_block_photo_reads(tmp_path, monkeypatch):
+    client, service, fake = photo_client(tmp_path)
+    photo = upload(client)
+    started, release = Event(), Event()
+    original = fake.complete
+
+    def blocked_complete(messages, jpeg):
+        started.set()
+        assert release.wait(5), "test did not release the blocking Fake vision call"
+        return original(messages, jpeg)
+
+    monkeypatch.setattr(fake, "complete", blocked_complete)
+    endpoint = f"/api/photos/{photo['photo_id']}/analysis"
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        analysis = pool.submit(client.post, endpoint, json={"context": "blocking Fake"})
+        assert started.wait(1), "Fake vision call did not start"
+        photo_read = pool.submit(service.store.read, photo["photo_id"])
+        try:
+            metadata, jpeg = photo_read.result(timeout=0.5)
+            assert metadata.photo_id == photo["photo_id"] and jpeg
+        finally:
+            release.set()
+        assert analysis.result(timeout=2).status_code == 200
+
+
+def test_same_photo_analysis_stays_serial_and_does_not_exceed_capacity(tmp_path, monkeypatch):
+    client, _, fake = photo_client(tmp_path)
+    photo = upload(client)
+    endpoint = f"/api/photos/{photo['photo_id']}/analysis"
+    for _ in range(9):
+        assert client.post(endpoint, json={"context": "seed"}).status_code == 200
+
+    first_started, second_started, release = Event(), Event(), Event()
+    counter_lock, blocked_calls = Lock(), 0
+    original = fake.complete
+
+    def blocked_complete(messages, jpeg):
+        nonlocal blocked_calls
+        with counter_lock:
+            blocked_calls += 1
+            (first_started if blocked_calls == 1 else second_started).set()
+        assert release.wait(5), "test did not release the blocking Fake vision call"
+        return original(messages, jpeg)
+
+    monkeypatch.setattr(fake, "complete", blocked_complete)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        tenth = pool.submit(client.post, endpoint, json={"context": "tenth"})
+        assert first_started.wait(1), "first Fake vision call did not start"
+        eleventh = pool.submit(client.post, endpoint, json={"context": "eleventh"})
+        try:
+            assert not second_started.wait(0.3), "same-photo analysis was not serialized"
+        finally:
+            release.set()
+        assert sorted([tenth.result(timeout=2).status_code, eleventh.result(timeout=2).status_code]) == [200, 409]
     assert len(fake.calls) == 10
