@@ -1070,3 +1070,46 @@ chat-prompt-guide.md,verification.md}；TASKS.md；README.md。
 Mock不执行真实提示词等注意事项已写入编辑指南。PR依赖#16，未自动合并。
 
 收尾：本轮创建的隔离浏览器页已关闭，8018/5178验收服务已停止；原用户页面和服务保持不变。
+
+## 2026-08-30：普通聊天重复回答的逐轮上下文修复
+
+基线dc6216c，独立分支`fix/chat-turn-history`，依赖仍开放的PR #17。
+实现前冻结`docs/chat-turn-history-contract.md`（H01–H06）。本轮不改前端视觉、公共Schema或工单流程。
+
+依据与复现：
+
+- 复用紧邻诊断轮的Chrome DevTools只读证据：用户三轮“你是谁→今天几号了→围栏断裂”，对应三次POST；
+  第三轮原始result.answer已经包含身份和日期，DOM与接口一致，排除重复发送与前端拼接。
+- 离线捕获answer_brief确认：只有system/user两条消息，user内有全部user_statements和last_answer。
+  上轮只约束语气的修订未改该结构，不能消除旧问题被当成本轮输入的诱因。
+- diagnose回归走HTTP（JSON和NDJSON）→真实服务与适配器→Fake SDK，逐轮捕获消息，而非只检查提示词字串。
+  测试开发时曾误将错误码视为顶层字段；按既有detail.error_code协议修正测试后，修前稳定14 failed /
+  5 passed；第三轮得到2条消息而非6条，非法历史也未在外发前拒绝。未将测试自身错误算作产品故障。
+
+实现：
+
+- chat改为system、逐轮user/assistant、最后一条当前user；每个user是独立TextConsultationInput的JSON，
+  保留背景标签。历史assistant只含成功回复answer，不含analysis或隐藏推理，仍不成为系统指令。
+- 从既有session.responses按turn读取答案，与inputs配对；不新增历史存储。失败不提交历史，幂等重放
+  直接返回原响应；最大6轮/12条消息。历史数量不符、空/非字符串/超长答案在构造SDK客户端前拒绝。
+- system明确只回答最新user，相关指代/明确回顾仍可使用历史；不通过删词或强制固定答案掩盖模型行为。
+- consult的累计事实/上轮追问、高风险保留和人工确认不变；chat仍无工具/无提案权限，10秒/256token/零重试。
+- 更新提示词指南、产品契约、教程映射、架构和README，说明历史答案也会作为上下文发送。
+
+验证：
+
+- 新增19项：三轮JSON/NDJSON角色与当前问题、代词追问及伪role标签、失败重试/旧新幂等重放、会话隔离、
+  6轮上限、伪造客户端历史拒绝、9类非法历史，以及空/超长/截断/工具/超时结果处理。
+- `pytest tests/test_chat_turn_history.py tests/test_product_text.py tests/test_chat_progress.py -q`：65 passed。
+- `scripts/verify.ps1`：389 passed，1条既有Hello-Agents/Pydantic弃用警告；21项前端行为测试和
+  vue-tsc/Vite生产构建（45 modules）通过；git diff --check通过。
+- Fake答案只验证透传和历史配对，不将预设“无重复”文本当作真实模型质量证据。本轮未新发浏览器模型请求，
+  未读取/修改.env或密钥；真实文字/图片模型调用均0次，也未启动额外后台服务。
+
+遗留与人工验证：需在后端重载后清空旧问题，主动重新发送固定三轮检查真实重复行为；不承诺所有生成
+完全无重复。历史最多增加4条更早答案，相比旧结构可能增加输入成本/耗时（未实测），仍有6轮与每条
+1000字上限。重载丢失未保存会话的既有规则不变；生产身份、现场评估及此前三项P2仍为独立待办。
+
+修改文件：agents/text_assistant.py；backend/app/text_consultations.py；
+tests/{test_chat_turn_history.py,test_product_text.py}；docs/{chat-turn-history-contract.md,chat-prompt-guide.md,
+product-text-records-contract.md,architecture.md,tutorial-compliance.md,verification.md}；TASKS.md；README.md。

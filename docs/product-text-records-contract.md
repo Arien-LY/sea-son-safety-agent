@@ -23,7 +23,9 @@
 - 同一request_id与同一请求在会话有效期内重放成功响应，不再次计费；同键不同请求409；旧轮次409。
   失败不推进轮次、不自动重试。前端失败保留输入，明确由用户选择重试或开始新问题。
 - `chat` 每轮使用同一模型的轻量直答：10秒超时、0重试、最多256输出token，不要求JSON；服务器日期注入
-  system语境，最多6轮用户陈述与上轮回答只作为不可信上下文。返回中的analysis为代码生成的保守
+  system语境；按 `system → user → assistant → … → 当前user` 排列最多6轮对话，历史仅作语境。
+  assistant答案从已有成功responses按turn读取；当前user只含本轮输入和标签，不把历史重新打包为本轮问题。
+  具体边界见 `docs/chat-turn-history-contract.md`。返回中的analysis为代码生成的保守
   unknown/undetermined占位，不用于工单、风险认定或提案。
 - `consult` 每轮使用临时SimpleAgent一次，无工具循环；JSON为answer、follow_up_questions、analysis。
   用既有IssueAnalysis校验风险结构；补充提问必须覆盖缺失信息；模型输入不含隐藏思维链或业务权限。

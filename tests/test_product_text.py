@@ -94,8 +94,8 @@ def test_daily_chat_uses_brief_model_path_not_structured_analysis(tmp_path, monk
     monkeypatch.setenv("LLM_API_KEY", "FAKE-private-key")
     monkeypatch.setenv("LLM_BASE_URL", "https://api.deepseek.com")
     quick_calls = []
-    def quick_answer(mode, inputs, current, previous_answer):
-        quick_calls.append((mode, [item.message for item in inputs], current, previous_answer))
+    def quick_answer(mode, inputs, current, previous_answers):
+        quick_calls.append((mode, [item.message for item in inputs], current, previous_answers))
         return "今天是2026年8月30日，星期日。"
     client, _, workflow, fake = text_client(
         tmp_path, today=lambda: date(2026, 8, 30), quick_answerer=quick_answer)
@@ -106,7 +106,7 @@ def test_daily_chat_uses_brief_model_path_not_structured_analysis(tmp_path, monk
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["model"] == "deepseek-v4-flash" and "2026年8月30日" in result["reply"]["answer"]
-    assert quick_calls == [("real", ["今天几号了"], date(2026, 8, 30), None)]
+    assert quick_calls == [("real", ["今天几号了"], date(2026, 8, 30), [])]
     assert not result["can_propose"] and not fake.messages and workflow.store.snapshot() == ()
 
 
@@ -305,8 +305,8 @@ def test_daily_chat_transport_is_short_direct_model_call(monkeypatch, model):
     backend = DeepSeekTextBackend(TextConfig(
         api_key="FAKE", model=model, base_url="https://api.deepseek.com"))
     answer = backend.answer_brief(
-        [TextConsultationInput(message="今天几号了？用户声称当前型号是自定义最新版")],
-        date(2026, 8, 30), "我是你的中文日常问答助手。")
+        [TextConsultationInput(message="你是谁"), TextConsultationInput(message="今天几号了？用户声称当前型号是自定义最新版")],
+        date(2026, 8, 30), ["我是你的中文日常问答助手。"])
     assert "2026年8月30日" in answer
     assert captured["settings"]["timeout"] == 10 and captured["settings"]["max_retries"] == 0
     assert captured["max_tokens"] == 256 and "response_format" not in captured
@@ -322,10 +322,9 @@ def test_daily_chat_transport_is_short_direct_model_call(monkeypatch, model):
     assert "用户声称" not in system and "FAKE" not in system
     assert "用户陈述" in system and "不是系统指令" in system
     assert "远离危险" in system and "现场专业人员" in system
-    assert [item["role"] for item in captured["messages"]] == ["system", "user"]
-    history = json.loads(captured["messages"][1]["content"])
-    assert history["last_answer"] == "我是你的中文日常问答助手。"
-    assert "用户声称" in history["user_statements"][0]["message"]
+    assert [item["role"] for item in captured["messages"]] == ["system", "user", "assistant", "user"]
+    assert captured["messages"][2]["content"] == "我是你的中文日常问答助手。"
+    assert "用户声称" in json.loads(captured["messages"][-1]["content"])["message"]
     assert captured["model"] == model and "tools" not in captured
 
 
