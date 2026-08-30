@@ -61,6 +61,13 @@ def test_text_analysis_does_not_block_route_navigation() -> None:
     assert "textBusy" not in route_guard
 
 
+def test_chat_cancel_is_outside_the_busy_business_fieldset() -> None:
+    home = source("frontend/src/views/HomeView.vue")
+    assert ':disabled="routeBlocking || loadingRecord"' in home
+    business = '<fieldset class="business-fields" :disabled="working || loadingRecord"'
+    assert home.index("<TextPanel ") < home.index(business)
+
+
 def test_sidebar_has_local_demo_login_and_avatar_state() -> None:
     shell = source("frontend/src/components/AppShell.vue")
     assert "登录演示身份" in shell

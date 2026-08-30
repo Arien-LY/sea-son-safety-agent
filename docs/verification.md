@@ -1113,3 +1113,55 @@ Mock不执行真实提示词等注意事项已写入编辑指南。PR依赖#16�
 修改文件：agents/text_assistant.py；backend/app/text_consultations.py；
 tests/{test_chat_turn_history.py,test_product_text.py}；docs/{chat-turn-history-contract.md,chat-prompt-guide.md,
 product-text-records-contract.md,architecture.md,tutorial-compliance.md,verification.md}；TASKS.md；README.md。
+
+## 2026-08-31：普通聊天深度思考与容量升级
+
+基线：main 09b4f62（此前PR #16/#17/#18已合并），独立分支feat/expanded-chat。
+先冻结docs/deep-chat-contract.md D01–D07，再实现；依据Hello-Agents V1.0.3第7/9/12章和Extra09。
+
+原限制与变化：
+
+- 代码原先关闭思考，只有256输出token、10秒模型等待、1000字输入/答案、6轮；这限制了复杂聊天能力。
+  本轮不是声称“每次快答都没有思考”，而是移除已证实的快捷短答配置限制。
+- 普通chat使用thinking enabled/reasoning_effort high、32768token、180秒SDK/190秒页面截止。
+  预算不要求写满，简单问题仍可快速回答；专业consult的disabled/4096/30秒和风险规则不变。
+- 新ChatInput/ChatReply、产品v2快照支持16000字输入、64000字最终答案、50轮；不改Phase1/3/v1冻结文件。
+- 只向模型发送最近最多12对完整历史且正文≤120000字，当前输入始终保留；context_trimmed向页面说明省略。
+  每次调用前累计会话输入/答案加当前输入≤400000字，已生成答案照常保存；超过后下一轮拒绝，旧请求重放仍成功。
+- 非空预算截断答案保留并明确提示可继续；无最终答案、超长、意外工具和超时仍失败，零自动重试。
+  只读content，测试用reasoning_content访问即报错的Fake对象证明没有读取隐藏推理。
+- 停止等待恢复原输入及请求ID，晚到回调不回填；外层表单只按业务操作禁用，内部业务fieldset仍按所有忙碌状态禁用。
+  Chrome首次验收发现旧外层fieldset连停止按钮也禁用，已修复并补布局契约回归；单组件测试不能替代真实DOM验收。
+
+验证证据：
+
+- 适配旧限制的测试最初11 failed/54 passed，属于新契约替代旧容量断言；同步契约并新增10项D系列后，
+  `pytest tests/test_product_text.py tests/test_chat_turn_history.py tests/test_chat_progress.py tests/test_deep_chat.py -q`：75 passed。
+- D系列覆盖16000字输入/56000字答案的JSON与NDJSON透传、专业咨询拒绝超长、64000字截断末尾提示、
+  字符容量裁剪与最新输入、累计会话超限仍可重放、v1原界限不变。原逐轮测试升级为50轮/51轮拒绝。
+- 前端新增4项行为回归：190/35秒正文截止、64000个中文字符流解码、停止等待/原ID重试与晚到响应、按intent输入限制。
+- 最终`scripts/verify.ps1`：400 passed；25项Node行为测试、vue-tsc与Vite生产构建（45 modules）通过。
+  保留1条既有Hello-Agents/Pydantic弃用警告；git diff --check通过。
+- Chrome DevTools使用隔离Mock/Fake临时Store（8018/5178），未在real服务发送消息。
+  桌面1146像素宽：停止按钮可点、输入恢复；稍后手动重试获得已完成的幂等答案；
+  2006字输入和6448字回复完整显示、头像0、scrollWidth=clientWidth=1146。
+- 同一浏览器会话连续14轮成功，第14轮显示“本轮仅参考最近的部分对话”，旧消息仍在页面。
+  390×844设备模拟：6448字回答正常换行、输入框仍在视口内，scrollWidth=clientWidth=390；截图已检查。
+  手机页控制台无error/warn，文字流HTTP200。模拟4秒延迟不代表真实推理速度。
+
+遗留风险和人工确认：
+
+- 本轮真实文字/图片调用0次，未读取/修改.env或密钥；官方参数核对来源写在任务契约。
+  协议通过不等于真实质量、延迟或成本通过；更大预算可能增加时间和费用，不保证与商业聊天网页全部功能一致。
+- 当前仍最终答案一次显示，不逐token输出、不显示隐藏推理、不提供普通聊天业务工具。
+  页面停止等待不保证服务端或供应商停算/停费；SDK timeout也不是严格的总计费上限。
+- 既有服务使用单进程全局文字锁，长请求期间其他文字请求可能收到text_busy；生产并发优化需独立任务。
+- 最近历史会省略，30分钟惰性过期、刷新/重启丢失未保存会话的规则不变；专业现场评估、生产身份和此前3项P2仍待办。
+
+修改文件：agents/{chat_settings.py,text_assistant.py}；backend/app/{text_models.py,text_consultations.py}；
+contracts/product_text_{request,response}.v2.schema.json；frontend/src/{api.ts,types.ts,components/TextPanel.vue,views/HomeView.vue}；
+frontend/tests/{api.test.cjs,text-panel.test.cjs}；tests/{test_deep_chat.py,test_chat_turn_history.py,test_product_text.py,test_frontend_workbench.py}；
+scripts/run-workbench-browser-fixture.py；docs/{deep-chat-contract.md,chat-prompt-guide.md,chat-turn-history-contract.md,
+product-text-records-contract.md,architecture.md,tutorial-compliance.md,verification.md}；TASKS.md；README.md。
+
+收尾：加上工作台契约的最终专项87 passed；本次隔离浏览器页和8018/5178进程已关闭，原8000/5173服务未停止。

@@ -34,7 +34,8 @@ const stageLabels: Record<TextProgress["stage"], string> = {
 };
 function stageLabel(step: TextProgress) {
   return step.stage === "model_running" && runtime.value?.mode === "mock"
-    ? "正在执行 Mock 验证（未调用真实模型）" : stageLabels[step.stage];
+    ? "正在执行 Mock 验证（未调用真实模型）"
+    : step.stage === "model_running" && props.mode === "chat" ? "模型处理中（已开启深度思考）" : stageLabels[step.stage];
 }
 const currentStep = computed(() => steps.value.at(-1));
 const activeStepLabel = computed(() => currentStep.value ? stageLabel(currentStep.value) : "正在发送，等待服务端接收");
@@ -52,8 +53,10 @@ function requestId(): string {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
   return Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join("");
 }
+const maxInput = computed(() => props.mode === "chat" ? 16_000 : 1000);
+const maxTurns = computed(() => props.mode === "chat" ? 50 : 6);
 const canSend = computed(() => !busy.value && !proposed.value && runtime.value?.configured && Boolean(form.message.trim())
-  && (latest.value?.remaining_turns ?? 6) > 0);
+  && form.message.length <= maxInput.value && (latest.value?.remaining_turns ?? maxTurns.value) > 0);
 const dirty = computed(() => Boolean(form.message.trim()));
 const canCreateProposal = computed(() => props.mode === "consult" && latest.value?.can_propose && !proposed.value);
 const modelLabel = computed(() => {
@@ -87,6 +90,16 @@ function cancelActiveRequest() {
   activeRequest = null;
   busy.value = false;
   emit("busy", false);
+}
+
+function stopWaiting() {
+  const savedRequest = pending;
+  const message = pendingMessage.value;
+  cancelActiveRequest();
+  form.message = message;
+  pendingMessage.value = "";
+  pending = savedRequest;
+  error.value = "已停止等待，服务端可能仍在处理或计费；原请求已保留，可稍后手动重试";
 }
 
 function reset(force = false) {
@@ -215,20 +228,22 @@ async function propose() {
       <div v-if="busy" class="execution-status" role="status" aria-live="polite">
         <div class="execution-current"><span class="execution-spinner" aria-hidden="true"></span><strong>{{ activeStepLabel }}</strong><span class="elapsed-time" aria-live="off">已等待 {{ elapsedSeconds }} 秒</span></div>
         <p v-if="currentStep?.tool">正在调用工具：{{ currentStep.tool }}</p>
-        <details><summary>查看执行步骤</summary><p>最多约 35 秒 · {{ currentStep?.tool ? '业务工具执行中' : '当前未调用业务工具' }}</p><ol v-if="steps.length"><li v-for="step in steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ` · ${step.tool}` : '' }}</li></ol></details>
+        <button v-if="pendingMessage" type="button" class="tool-button" @click="stopWaiting">停止等待</button>
+        <details><summary>查看执行步骤</summary><p>{{ mode === 'chat' ? '最多约 190 秒' : '最多约 35 秒' }} · {{ currentStep?.tool ? '业务工具执行中' : '当前未调用业务工具' }}</p><ol v-if="steps.length"><li v-for="step in steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ` · ${step.tool}` : '' }}</li></ol></details>
       </div>
       <p v-else-if="proposed" class="execution-finished">提案工具 propose_issue_record 已完成 · 用时 {{ elapsedSeconds }} 秒 · 尚未保存工单</p>
     </div>
 
     <div class="composer-dock">
       <p v-if="error" class="composer-error" role="alert">{{ error }}。未自动重试，输入已保留。</p>
+      <p v-if="latest?.context_trimmed" class="section-note">本轮仅参考最近的部分对话；早期内容仍显示在页面，但未全部发送给模型。需要时请重新补充。</p>
       <p v-if="latest?.risk_retained" class="risk-retained">此前高风险已由服务端保留，补充文字不能自行降级或宣告解除。</p>
       <div v-if="canCreateProposal" class="proposal-ready">
         <div><strong>最新分析已满足受控工单条件</strong><span>仍需生成提案、核对字段并人工确认后才能保存。</span></div>
         <button type="button" class="primary-button" :disabled="busy || dirty" @click="propose">生成待确认提案</button>
       </div>
       <div class="composer">
-        <textarea v-model="form.message" maxlength="1000" rows="1" :disabled="busy || proposed" :placeholder="latest ? '补充同一问题…' : mode === 'chat' ? '输入你的问题…' : '描述现场情况…'" aria-label="会话输入" @keydown="onComposerKeydown"></textarea>
+        <textarea v-model="form.message" :maxlength="maxInput" rows="1" :disabled="busy || proposed" :placeholder="mode === 'chat' ? '输入你的问题，或继续追问…' : latest ? '补充同一问题…' : '描述现场情况…'" aria-label="会话输入" @keydown="onComposerKeydown"></textarea>
         <div class="composer-toolbar">
           <div class="composer-tools">
             <button type="button" class="tool-button" :disabled="busy" title="添加图片" @click="emit('attachment')">＋ <span>图片</span></button>
@@ -236,7 +251,7 @@ async function propose() {
           </div>
           <div class="send-controls">
             <label class="model-picker" title="模型由服务端安全配置，网页不能覆盖"><span class="sr-only">模型</span><select aria-label="选择模型" :disabled="!runtime?.configured"><option>{{ modelLabel }}</option></select></label>
-            <span>{{ form.message.length }}/1000</span><button type="button" class="send-button" :disabled="!canSend" :aria-label="latest ? '发送补充' : '发送消息'" @click="send">↑</button>
+            <span>{{ form.message.length }}/{{ maxInput }}</span><button type="button" class="send-button" :disabled="!canSend" :aria-label="latest ? '发送补充' : '发送消息'" @click="send">↑</button>
           </div>
         </div>
       </div>
@@ -248,7 +263,7 @@ async function propose() {
       <div class="composer-foot"><span>Enter 发送 · Shift+Enter 换行</span><button type="button" :disabled="busy" @click="reset()">清空并开始新问题</button></div>
       <p v-if="dirty && canCreateProposal" class="section-note">还有未发送的补充，请先发送，避免使用旧分析生成提案。</p>
       <p v-if="proposed" class="success-callout">待确认提案已生成。会话已冻结，尚未创建正式工单。</p>
-      <p v-if="latest && !latest.remaining_turns" class="info-callout">本问题已达 6 轮上限，请由人工核对。</p>
+      <p v-if="latest && !latest.remaining_turns" class="info-callout">本会话已达 {{ maxTurns }} 轮上限，请开始新问题。</p>
     </div>
 
   </section>

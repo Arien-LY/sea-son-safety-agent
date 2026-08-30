@@ -5,7 +5,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from agents.schemas import TextConsultationInput
-from agents.text_assistant import TextReply
+from agents.text_assistant import TextReply, ChatInput, ChatReply
+from agents.chat_settings import CHAT_MAX_TURNS
 
 
 class TextRequest(BaseModel):
@@ -13,13 +14,17 @@ class TextRequest(BaseModel):
 
     request_id: str = Field(min_length=8, max_length=100, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
     intent: Literal["chat", "consult"] = "consult"
-    input: TextConsultationInput
+    input: ChatInput
     consultation_id: str | None = Field(default=None, pattern=r"^TXT-[a-f0-9]{32}$")
-    expected_turn: int = Field(default=0, ge=0, le=6)
+    expected_turn: int = Field(default=0, ge=0, le=CHAT_MAX_TURNS)
     allow_external: bool = False
 
     @model_validator(mode="after")
     def turn_matches_session(self) -> "TextRequest":
+        if self.intent == "consult":
+            TextConsultationInput.model_validate(self.input.model_dump())
+            if self.expected_turn > 6:
+                raise ValueError("Consultation is limited to six turns.")
         if (self.consultation_id is None) != (self.expected_turn == 0):
             raise ValueError("Initial requests use turn zero; follow-ups require a session.")
         return self
@@ -32,10 +37,11 @@ class TextResponse(BaseModel):
     turn: int
     mode: Literal["mock", "real"]
     model: str
-    reply: TextReply
+    reply: TextReply | ChatReply
     can_propose: bool
     risk_retained: bool
     remaining_turns: int
+    context_trimmed: bool = False
 
 
 class TextProposalRequest(BaseModel):

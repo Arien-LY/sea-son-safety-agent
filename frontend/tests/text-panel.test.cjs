@@ -175,7 +175,7 @@ test('elapsed time never invents steps; only server events update the work statu
     assert.equal(panel.state.steps.length, 0);
     assert.match(panel.state.activeStepLabel, /等待服务端接收/);
     panel.requests[0].onProgress({ type: 'progress', seq: 1, elapsed_ms: 10, stage: 'model_running', tool: null });
-    assert.equal(panel.state.activeStepLabel, '等待模型回复');
+    assert.equal(panel.state.activeStepLabel, '模型处理中（已开启深度思考）');
     now = 4300;
     panel.requests[0].resolve(result);
     await sent;
@@ -198,4 +198,47 @@ test('late progress after navigation cannot refill the new conversation', async 
   panel.requests[0].resolve(result);
   await sent;
   panel.app.unmount();
+});
+
+test('stop waiting restores input and reuses the idempotent request; late callbacks are ignored', async () => {
+  const panel = await mountPanel();
+  try {
+    panel.state.form.message = '复杂问题';
+    const first = panel.state.send();
+    panel.state.stopWaiting();
+    assert.equal(panel.state.busy, false);
+    assert.equal(panel.state.form.message, '复杂问题');
+    assert.equal(panel.state.pendingMessage, '');
+    assert.equal(panel.requests[0].signal.aborted, true);
+    assert.match(panel.state.error, /可能仍在处理或计费/);
+    const retry = panel.state.send();
+    assert.equal(panel.requests[1].input.request_id, panel.requests[0].input.request_id);
+    panel.requests[0].onProgress({ type: 'progress', seq: 1, elapsed_ms: 10, stage: 'model_running', tool: null });
+    panel.requests[0].resolve(result);
+    await first;
+    assert.equal(panel.state.steps.length, 0);
+    assert.equal(panel.state.turns.length, 0);
+    assert.equal(panel.state.busy, true);
+    panel.requests[1].resolve(result);
+    await retry;
+    assert.equal(panel.state.turns.length, 1);
+  } finally { panel.app.unmount(); }
+});
+
+test('expanded input and turn capacity apply only to chat', async () => {
+  const panel = await mountPanel();
+  try {
+    panel.state.form.message = '文'.repeat(16000);
+    assert.equal(panel.state.canSend, true);
+    assert.equal(panel.state.maxInput, 16000);
+    assert.equal(panel.state.maxTurns, 50);
+    panel.state.form.message += '文';
+    assert.equal(panel.state.canSend, false);
+    panel.mode.value = 'consult';
+    await vue.nextTick();
+    panel.state.form.message = '文'.repeat(1001);
+    assert.equal(panel.state.maxInput, 1000);
+    assert.equal(panel.state.maxTurns, 6);
+    assert.equal(panel.state.canSend, false);
+  } finally { panel.app.unmount(); }
 });

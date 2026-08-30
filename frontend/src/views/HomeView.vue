@@ -294,12 +294,13 @@ function displayValue(value: string | null): string {
     <div class="connection-pill" :class="{ online: runtime }"><span></span>{{ runtime ? `服务已连接 · ${runtime.agent_mode}` : runtimeError || "正在检查服务" }}</div>
   </section>
 
-  <fieldset class="workspace-fields" :class="{ 'conversation-fields': isConversation }" :disabled="working || loadingRecord" aria-label="咨询和工单操作区">
+  <fieldset class="workspace-fields" :class="{ 'conversation-fields': isConversation }" :disabled="routeBlocking || loadingRecord" aria-label="咨询和工单操作区">
+  <TextPanel v-if="isConversation" :mode="workspaceMode === 'chat' ? 'chat' : 'consult'" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" @attachment="showImages = true" />
+  <fieldset class="business-fields" :disabled="working || loadingRecord" aria-label="工单和附件操作区">
   <div v-if="isDetail" class="record-toolbar"><RouterLink to="/records" class="secondary-button">← 返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新详情</button></div>
   <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在恢复工单详情</strong><small>从本地唯一状态源读取记录与轨迹…</small></p></div>
   <p v-if="recordError" class="error-message" role="alert">{{ recordError }}</p>
   <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
-  <TextPanel v-if="isConversation" :mode="workspaceMode === 'chat' ? 'chat' : 'consult'" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" @attachment="showImages = true" />
 
   <section v-if="isSubmit" class="proposal-workbench direct-submit">
   <section aria-labelledby="proposal-workbench-title">
@@ -545,6 +546,7 @@ function displayValue(value: string | null): string {
   <ImagePanel v-if="isDetail" :record="record" evidence-only @proposal="usePhotoProposal" @busy="imageBusy = $event" />
   <KnowledgePanel v-if="activeAnalysis && (isDetail || isSubmit || workspaceMode === 'consult')" :analysis="activeAnalysis" :record="record" />
   </fieldset>
+  </fieldset>
 
   <section v-if="isDetail || isSubmit" class="boundary">
     <h2>受控边界</h2>
@@ -554,6 +556,7 @@ function displayValue(value: string | null): string {
 
 <style scoped>
 .workspace-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.business-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
 .record-toolbar { display: flex; gap: 10px; margin-bottom: 18px; }
 .attachment-surface { margin-top: 24px; }
 .attachment-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }

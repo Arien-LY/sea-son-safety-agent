@@ -12,13 +12,13 @@ function apiHarness(fetch) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const exports = {};
-  let deadline, cleared = false;
+  let deadline, timeoutMs, cleared = false;
   const timers = {
-    setTimeout: callback => { deadline = callback; return 1; },
+    setTimeout: (callback, delay) => { deadline = callback; timeoutMs = delay; return 1; },
     clearTimeout: () => { cleared = true; },
   };
   new Function('exports', 'window', 'fetch', js)(exports, timers, fetch);
-  return { api: exports.api, expire: () => deadline(), cleared: () => cleared };
+  return { api: exports.api, expire: () => deadline(), cleared: () => cleared, timeout: () => timeoutMs };
 }
 
 test('request timeout covers the response body, not only response headers', async () => {
@@ -117,4 +117,24 @@ test('successful stream drains to EOF instead of aborting a completed network re
   }), { headers: { 'Content-Type': 'application/x-ndjson' } }));
   assert.deepEqual(await harness.api.sendText({}, undefined, () => {}), { ok: true });
   assert.equal(cancelled, false);
+});
+
+test('chat has a 190 second body deadline while consult retains 35 seconds', async () => {
+  for (const [intent, duration] of [['chat', 190000], ['consult', 35000]]) {
+    const harness = apiHarness(async (_url, init) => new Response(new ReadableStream({ start(controller) {
+      init.signal.addEventListener('abort', () => controller.error(new DOMException('abort', 'AbortError')));
+    } }), { headers: { 'Content-Type': 'application/x-ndjson' } }));
+    const request = harness.api.sendText({ intent }, undefined, () => {});
+    await Promise.resolve();
+    assert.equal(harness.timeout(), duration);
+    harness.expire();
+    await assert.rejects(request, new RegExp(`${duration / 1000} 秒`));
+    assert.equal(harness.cleared(), true);
+  }
+});
+
+test('maximum Chinese final answer fits the bounded stream decoder', async () => {
+  const answer = '文'.repeat(64000);
+  const harness = apiHarness(async () => eventResponse([progress, { type: 'result', data: { answer } }], 1024));
+  assert.deepEqual(await harness.api.sendText({ intent: 'chat' }, undefined, () => {}), { answer });
 });
