@@ -23,6 +23,7 @@ export interface TextTurnResponse {
   can_propose: boolean;
   risk_retained: boolean;
   remaining_turns: number;
+  context_trimmed?: boolean;
 }
 
 export interface RecordListItem {

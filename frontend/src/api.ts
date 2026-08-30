@@ -113,7 +113,7 @@ export const api = {
   sendText(input: TextTurnRequest, signal?: AbortSignal, onProgress?: (event: TextProgress) => void) {
     return request<TextTurnResponse>(`/api/text-consultations${onProgress ? "/stream" : ""}`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal,
-    }, 35_000, onProgress ? response => readEvents(response, onProgress) : undefined);
+    }, input.intent === "chat" ? 190_000 : 35_000, onProgress ? response => readEvents(response, onProgress) : undefined);
   },
   proposeText(consultationId: string, turn: number, onProgress?: (event: TextProgress) => void) {
     return request<ToolResult<IssueProposalPreviewData>>(`/api/text-consultations/${encodeURIComponent(consultationId)}/proposal${onProgress ? "/stream" : ""}`, {

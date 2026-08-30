@@ -13,7 +13,8 @@ from threading import RLock
 from uuid import uuid4
 
 from agents.schemas import IssueAnalysis, TextConsultationInput
-from agents.text_assistant import DeepSeekTextBackend, MockTextBackend, TextAssistant, TextConfig, TextError, TextReply
+from agents.text_assistant import DeepSeekTextBackend, MockTextBackend, TextAssistant, TextConfig, TextError, TextReply, ChatReply, select_chat_context
+from agents.chat_settings import CHAT_MAX_TURNS, CHAT_SESSION_CHARS
 from agents.tools import ToolAuditLog, ToolResult
 from backend.app.proposals import Phase2ProposalService, ProposalPreviewRequest
 from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse
@@ -70,14 +71,14 @@ def can_propose(reply: TextReply) -> bool:
             and reply.analysis.recommended_route in {"propose_workflow", "human_review"})
 
 
-def quick_chat_reply(answer: str) -> TextReply:
-    return TextReply(
+def quick_chat_reply(answer: str) -> ChatReply:
+    return ChatReply(
         answer=answer,
         follow_up_questions=["如涉及具体现场风险，请切换到“新建咨询”并补充位置、状态和人员暴露情况。"],
         analysis=IssueAnalysis(
             category="unknown",
             issue_type="日常聊天（未执行结构化风险分析）",
-            summary="日常聊天使用轻量模型直接回答，不执行现场风险结构化分析，也不进入工单流程。",
+            summary="日常聊天启用深度思考，不执行现场风险结构化分析，也不进入工单流程。",
             observed_facts=[],
             uncertainties=["日常聊天模式未执行现场风险结构化分析"],
             missing_fields=["如涉及具体现场风险，需切换到专业咨询并补充现场信息"],
@@ -181,8 +182,9 @@ class TextConsultationService:
                     raise TextError("text_intent_conflict", "聊天与专业咨询不能共用同一会话，请开始新问题。", 409)
                 if session.proposal is not None:
                     raise TextError("consultation_proposed", "已生成提案，请在工单中补充；其他问题请新建咨询。", 409)
-                if len(session.inputs) >= 6:
-                    raise TextError("text_turn_limit", "本问题已达6轮上限，请人工核对或开始新问题。", 409)
+                limit = CHAT_MAX_TURNS if request.intent == "chat" else 6
+                if len(session.inputs) >= limit:
+                    raise TextError("text_turn_limit", f"本会话已达{limit}轮上限，请开始新问题。", 409)
                 consultation_id = request.consultation_id
             else:
                 if len(self._sessions) >= 200:
@@ -190,16 +192,22 @@ class TextConsultationService:
                 session = _Session(updated=self.clock(), intent=request.intent)
                 consultation_id = "TXT-" + uuid4().hex
             inputs = [*session.inputs, request.input]
-            progress("model_running", None)
+            context_trimmed = False
             if request.intent == "chat":
                 # Reuse committed responses: failures and idempotent replays add no history.
                 completed = sorted((response for _, response in session.responses.values()), key=lambda response: response.turn)
+                answers = [response.reply.answer for response in completed]
+                if sum(len(item.model_dump_json()) for item in inputs) + sum(map(len, answers)) > CHAT_SESSION_CHARS:
+                    raise TextError("chat_capacity_limit", "本会话内容已达到容量上限，请开始新问题；已有消息未删除。", 409)
+                selected_inputs, selected_answers, context_trimmed = select_chat_context(inputs, answers)
+                progress("model_running", None)
                 answer = self.quick_answerer(
-                    str(runtime["mode"]), inputs, self.today(), [response.reply.answer for response in completed])
+                    str(runtime["mode"]), selected_inputs, self.today(), selected_answers)
                 progress("validating", None)
                 reply = quick_chat_reply(answer)
                 retained, response_model = False, str(runtime["model"])
             else:
+                progress("model_running", None)
                 reply = self.assistant_factory(str(runtime["mode"])).reply(
                     inputs, previous_questions=session.latest.reply.follow_up_questions if session.latest else None)
                 progress("validating", None)
@@ -207,7 +215,8 @@ class TextConsultationService:
                 response_model = str(runtime["model"])
             response = TextResponse(consultation_id=consultation_id, turn=len(inputs), mode=runtime["mode"],
                                     model=response_model, reply=reply, can_propose=can_propose(reply),
-                                    risk_retained=retained, remaining_turns=6 - len(inputs))
+                                    risk_retained=retained, remaining_turns=(CHAT_MAX_TURNS if request.intent == "chat" else 6) - len(inputs),
+                                    context_trimmed=context_trimmed)
             session.inputs, session.latest, session.updated = inputs, response, self.clock()
             session.responses[request.request_id] = (digest, response)
             self._sessions[consultation_id] = session

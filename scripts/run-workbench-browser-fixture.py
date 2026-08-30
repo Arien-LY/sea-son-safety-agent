@@ -66,6 +66,15 @@ class WorkbenchFakeBackend:
         return json.dumps(payload, ensure_ascii=False)
 
 
+def chat_answer(_mode, inputs, _today, _previous):
+    if "模拟加载" in inputs[-1].message:
+        time.sleep(4)
+        return "这是 Fake 延迟回答；消息应已进入聊天区，且页面导航仍可使用。"
+    if "模拟长回复" in inputs[-1].message:
+        return "Fake 长回复验收段落：复杂问题可以提供更充分的解释，但本段不代表真实模型理解。\n\n" * 150
+    return "这是 Fake 聊天回答；未执行真实模型调用。"
+
+
 def app():
     fixture_root = Path(os.environ["WORKBENCH_FIXTURE_DIR"]).resolve()
     proposals = Phase2ProposalService(integrity_key=b"browser-fixture-integrity-key-32")
@@ -77,11 +86,7 @@ def app():
     texts = TextConsultationService(
         proposals,
         assistant_factory=lambda _mode: TextAssistant(backend),
-        quick_answerer=lambda _mode, inputs, _today, _previous: (
-            time.sleep(4) or "这是 Fake 延迟回答；消息应已进入聊天区，且页面导航仍可使用。"
-            if "模拟加载" in inputs[-1].message
-            else "这是 Fake 轻量聊天回答；未执行真实模型调用。"
-        ),
+        quick_answerer=chat_answer,
     )
     return create_app(proposal_service=proposals, workflow_service=workflow, text_service=texts)
 
