@@ -1165,3 +1165,57 @@ scripts/run-workbench-browser-fixture.py；docs/{deep-chat-contract.md,chat-prom
 product-text-records-contract.md,architecture.md,tutorial-compliance.md,verification.md}；TASKS.md；README.md。
 
 收尾：加上工作台契约的最终专项87 passed；本次隔离浏览器页和8018/5178进程已关闭，原8000/5173服务未停止。
+
+## 2026-08-31：聊天阅读与 Markdown 安全重构
+
+范围与契约：
+
+- 基线为已合并 PR #19 的 `origin/main`（a9d6b20）；从最新主线创建独立
+  `style/readable-chat-workbench`，没有覆盖深度思考、长回复、16000字输入、50轮、停止等待或上下文裁剪。
+- 实现前冻结 `docs/chat-visual-contract.md` 的 V01–V10 / S01–S06；不改 `.env`、密钥、
+  `CHAT_SYSTEM_PROMPT`、DeepSeek运行时、专业咨询Schema、工单权限、状态机或人工确认。
+- 核对OpenAI官方文章和公开仓库：Codex开源harness/仓库为Apache-2.0，核心是对话状态、工具、审批、
+  沙箱和执行事件，不符合本次Vue消息呈现范围；未复制Codex App未公开UI、品牌资源、提示词或隐藏提示词，
+  未引入CLI、App Server、SDK、Shell、权限或工具系统，只参考截图的通用排版关系。
+
+实现与安全：
+
+- 页头、消息、执行状态和composer共享约860px阅读轴；助手正文使用中文系统字体栈、17px/1.78行高，
+  无头像、名称、卡片、底色或阴影。用户消息保持右侧16px浅灰气泡；composer为底部圆角浮动面板。
+- 新增`markdown-it` 15.0.1（MIT）唯一直接运行时依赖，用于CommonMark标题、粗体、段落、列表、引用、
+  行内代码、代码块、表格和链接；不增加语法高亮或其它重量级插件。
+- `html:false`关闭原始HTML；链接进一步只允许`http:`、`https:`、`mailto:`，外部链接固定
+  `target=_blank`及`rel="noopener noreferrer"`；远程图片只显示转义后的alt文本，不发起资源请求。
+- 新增5项Markdown/XSS测试，覆盖脚本/iframe/事件属性、危险及混淆协议、协议相对/相对URL、
+  属性逃逸、远程图片、换行、代码和安全链接。完整MIT归属见`THIRD_PARTY_NOTICES.md`；运行时传递依赖
+  的许可证标识保留在lockfile（PSF-2.0、BSD-2-Clause、MIT）。
+
+自动验证：
+
+- `powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1`：401 passed；保留1条既有
+  Hello-Agents/Pydantic弃用警告。新增1项Python源契约检查，原400项基线不回退。
+- `npm test --prefix frontend`：30 passed（原25项行为 + 5项Markdown/XSS）。
+- `vue-tsc -b`与Vite生产构建通过：66 modules transformed；`git diff --check`通过。
+- `npm ls markdown-it --depth=1`确认15.0.1。npm官方审计报告2项既有工具链告警：
+  `postcss@8.5.22`（moderate）与其`nanoid@3.3.16`（high）；两版本均已存在于基线lockfile，
+  不来自markdown-it依赖链。本主题不夹带依赖升级，后续应单独评估修复。
+
+隔离浏览器（本地Mock/Fake，8018/5178）：
+
+- 1280×720实测header/composer宽860px；助手正文17px、行高30.26px（1.78），透明无卡片背景；
+  用户气泡16px、浅灰`rgb(241,241,241)`且靠右。页面`clientWidth=scrollWidth=1280`。
+- Fake Markdown回答实际生成标题、粗体、列表、行内/块代码及安全链接；`window.fixtureXss`未定义，
+  `.markdown-body script`与`img`数量均为0，安全链接具备目标和rel属性，远程图片未加载。
+- 专业咨询首轮信息不足时提案按钮0个；补充合成高风险后按钮1个，并继续显示必须人工复核、立即避险、
+  追问、分析详情和知识区。未点击生成提案，未创建正式工单。
+- 390×844长回答下文档`clientWidth=scrollWidth=390`，message-stage内部滚动，代码块自身无溢出，
+  composer底边为844；侧栏保持移动抽屉。控制台warning/error为0。
+- 真实文字/图片模型调用0次；没有读取/修改`.env`或密钥。隔离浏览器和两个服务已停止；验收临时目录为空。
+
+已知限制：模型不一定总输出规范Markdown；无语法高亮、复制按钮、逐token流式显示或持久聊天。
+停止等待仍不保证供应商停止计算/计费；真实回答质量、延迟、费用、现场专业判断和生产身份仍需独立验收。
+
+修改文件：`frontend/package{,-lock}.json`、`frontend/src/{markdown.ts,styles.css}`、
+`frontend/src/components/TextPanel.vue`、`frontend/tests/{markdown,text-panel}.test.cjs`、
+`tests/test_frontend_workbench.py`、`scripts/run-workbench-browser-fixture.py`、`docs/chat-visual-contract.md`、
+`THIRD_PARTY_NOTICES.md`、`TASKS.md`、`README.md`、`docs/verification.md`。

@@ -71,7 +71,24 @@ def chat_answer(_mode, inputs, _today, _previous):
         time.sleep(4)
         return "这是 Fake 延迟回答；消息应已进入聊天区，且页面导航仍可使用。"
     if "模拟长回复" in inputs[-1].message:
-        return "Fake 长回复验收段落：复杂问题可以提供更充分的解释，但本段不代表真实模型理解。\n\n" * 150
+        return (
+            "## 长回答排版验收\n\n"
+            "Fake 长回复只用于检查段落、列表、代码和移动端换行，不代表真实模型理解。\n\n"
+            "- **第一项：** 正文保持可读宽度。\n"
+            "- **第二项：** 风险判断仍须人工核验。\n\n"
+            "```text\nSAFE_FIXTURE_ONLY=true\n```\n\n"
+            + "这是用于滚动验收的普通段落。\n\n" * 150
+        )
+    if "Markdown验收" in inputs[-1].message:
+        return (
+            "## Markdown 展示\n\n"
+            "这是带有 **粗体**、`行内代码` 和[安全链接](https://example.com)的 Fake 回答。\n\n"
+            "1. 标题和段落应有清晰层级\n"
+            "2. 列表应保持舒适间距\n\n"
+            "```js\nconst safe = true;\n```\n\n"
+            "<script>window.fixtureXss = true</script>\n\n"
+            "![远程图片](https://tracker.example/pixel.png)"
+        )
     return "这是 Fake 聊天回答；未执行真实模型调用。"
 
 

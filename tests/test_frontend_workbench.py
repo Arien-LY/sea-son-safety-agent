@@ -110,12 +110,30 @@ def test_minimal_message_template_has_no_avatars_and_keeps_pending_role() -> Non
     assert "第 {{ turn.result.turn }} 轮" not in panel
     assert "Mock 验证，未调用真实模型" in panel
     assert "step.tool" in panel and "activeStepLabel" in panel
+    assert 'class="markdown-body" v-html="renderAssistantMarkdown(turn.result.reply.answer)"' in panel
+    assert "preserve-lines" not in panel
 
 
 def test_minimal_message_styles_align_user_right_without_avatar_gutter() -> None:
     styles = source("frontend/src/styles.css")
     assert ".user-row { justify-content: flex-end; }" in styles
-    assert ".assistant-message { width: 100%; }" in styles
+    assert ".assistant-message { width: 100%;" in styles
     assert ".conversation > li" in styles
     assert ".message-avatar" not in styles and ".message-meta" not in styles
     assert ".workspace:has(.conversation-workspace) { background: #fff; }" in styles
+
+
+def test_readable_chat_contract_keeps_a_shared_axis_and_safe_markdown_styles() -> None:
+    styles = source("frontend/src/styles.css")
+    markdown = source("frontend/src/markdown.ts")
+    contract = source("docs/chat-visual-contract.md")
+    assert "width: min(860px, 100%)" in styles
+    assert ".conversation-header-inner" in styles
+    assert ".assistant-message { width: 100%; color: #202124; font-size: 17px; line-height: 1.78; }" in styles
+    assert ".composer { border: 1px solid #d6d8da; border-radius: 22px" in styles
+    assert ".markdown-body pre { max-width: 100%" in styles
+    assert 'html: false' in markdown
+    assert 'SAFE_LINK_PROTOCOL = /^(https?:|mailto:)/i' in markdown
+    assert 'markdown.renderer.rules.image' in markdown
+    for scenario in ("V01", "V10", "S01", "S06"):
+        assert scenario in contract

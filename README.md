@@ -13,6 +13,7 @@
 ## 当前能力
 
 - Vue 3 + TypeScript + Vite 会话工作台、响应式侧栏、历史工单列表和可刷新详情。
+- 约860px长文阅读轴、安全Markdown回答（标题、列表、代码、链接）及390×844响应式消息布局。
 - FastAPI 健康检查和运行时信息接口。
 - Hello-Agents V1.0.3 教程兼容依赖基线（框架包固定为 `hello-agents==0.2.9`）。
 - Pydantic 安全质量问题结构化契约。
@@ -80,7 +81,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - [图片人工复核表](docs/phase5-human-review.md)
 - [文字入口与历史工单契约](docs/product-text-records-contract.md)
 - [会话工作台体验契约](docs/conversation-workbench-contract.md)
+- [聊天阅读与Markdown安全契约](docs/chat-visual-contract.md)
 - [聊天提示词位置与修改方法](docs/chat-prompt-guide.md)
+- [第三方许可证与归属](THIRD_PARTY_NOTICES.md)
 
 ## 文字咨询与历史工单
 
@@ -109,6 +112,12 @@ real模式右下角持续显示目标模型；每次点击发送箭头即确认�
 
 Mock模式明确不执行真实文字理解；如只需离线演示流程，可从“提交工单”进入结构化路径（不调用模型）。
 本轮自动/浏览器测试均用Fake或Mock，没有实调付费文字模型，不宣称真实文字准确率已达标。
+
+助手回答使用 `markdown-it` 15.0.1（MIT）进行 CommonMark 渲染。页面关闭原始HTML与远程图片，
+只允许显式 `http:`、`https:`、`mailto:` 链接，并为外部链接添加 opener 隔离；因此模型输出中的
+`<script>`、事件属性、危险协议或图片像素不会成为可执行/可请求节点。用户消息仍按纯文本显示。
+依赖来源、完整归属与安全验收见[第三方许可证](THIRD_PARTY_NOTICES.md)和
+[聊天阅读契约](docs/chat-visual-contract.md)。
 
 ## 只读知识演示
 

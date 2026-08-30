@@ -35,7 +35,11 @@ async function mountPanel(cryptoApi = crypto, clock = performance) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const exports = {};
-  new Function('require', 'exports', 'crypto', 'performance', js)(name => name === '../api' ? { api } : require(name), exports, cryptoApi, clock);
+  new Function('require', 'exports', 'crypto', 'performance', js)(name => {
+    if (name === '../api') return { api };
+    if (name === '../markdown') return { renderAssistantMarkdown: source => source };
+    return require(name);
+  }, exports, cryptoApi, clock);
   const component = exports.default;
   component.render = () => null;
   const renderer = vue.createRenderer({
