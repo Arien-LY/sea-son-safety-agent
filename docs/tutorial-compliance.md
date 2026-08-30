@@ -58,6 +58,10 @@ Phase 5 延续单Agent和结构化输出原则：临时SimpleAgent只做一次�
 风险字段由程序保守标为未分析，不能生成提案；`consult` 仍使用原 SimpleAgent 严格 JSON 路径。
 第12章/Extra09验收增加真实 Vue 组件行为测试和隔离延迟 Fake 浏览器测试，不以 Fake 耗时声称真实模型性能。
 
+普通聊天逐轮上下文修复落实第9章历史与当前任务分离：历史使用服务端成功响应配对user/assistant，
+当前问题是独立末条user；不把咨询用的累计问题包当作普通聊天当前问题。第12章通过HTTP→实际适配器→
+Fake SDK检查三轮角色顺序、失败重试及幂等，不以预设回答声称真实模型重复率已降低。
+
 ## 教程源码
 
 - 上游仓库：https://github.com/datawhalechina/hello-agents

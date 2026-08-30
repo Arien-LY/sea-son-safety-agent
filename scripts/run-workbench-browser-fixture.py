@@ -78,7 +78,7 @@ def app():
         proposals,
         assistant_factory=lambda _mode: TextAssistant(backend),
         quick_answerer=lambda _mode, inputs, _today, _previous: (
-            time.sleep(2) or "这是 Fake 延迟回答；消息应已进入聊天区，且页面导航仍可使用。"
+            time.sleep(4) or "这是 Fake 延迟回答；消息应已进入聊天区，且页面导航仍可使用。"
             if "模拟加载" in inputs[-1].message
             else "这是 Fake 轻量聊天回答；未执行真实模型调用。"
         ),

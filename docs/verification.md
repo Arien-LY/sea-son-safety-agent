@@ -950,3 +950,166 @@ git diff --check
   通过，保留1条既有Pydantic弃用警告。`verify.ps1`现在同时执行前端行为测试。
 - 限制：取消只终止浏览器等待，不保证服务端或供应商已取消计算/计费；服务端会话仍有6轮限制，
   模型调用在既有进程锁内串行执行。未增加流式输出，未测量真实模型响应时间或回答质量。
+
+### 2026-08-30：局域网发送卡住、真实步骤与等待时间
+
+诊断与审计方法：按diagnose建立真实Vue组件反馈环；code-quality-workflow执行全项目分面只读扫描，
+只将“文字请求生命周期”进入Local Fix门禁；先冻结`docs/chat-progress-contract.md`，不重写Agent。
+基于已合并PR #15的`bb4206f`创建独立`fix/chat-progress`，未把新主题加到旧PR。
+
+确认根因（P1）：
+
+- 最初localhost延迟Fake可正常显示消息，但只显示静态“正在回复”；无法据此判定用户标签页版本。
+- 用户指定Chrome DevTools MCP后，在用户已有局域网HTTP页面只读观察到：`isSecureContext=false`、
+  `typeof crypto.randomUUID === 'undefined'`，输入仍为“你好”、等待文字仍存在。
+- 代码在`busy=true`之后、try之前直接调用randomUUID；因此准备阶段抛错，输入未清空、HTTP请求尚未
+  发出，finally也未执行。这不是模型正在长时间生成答案。工具连接时没有捕获历史console记录，
+  不把“无历史console”当成未发生异常；缺API真实页面状态与Vue组件失败测试共同构成证据。
+- 新增回归在修复前稳定失败：`'你好' !== ''`及`TypeError: crypto.randomUUID is not a function`。
+  修复后，优先randomUUID，局域网HTTP改用getRandomValues生成128位ID；编号准备纳入try/finally，
+  随机源失败也恢复输入、释放busy并显示安全错误，不用时间戳制造幂等键。
+- 并发Fake还复现文字全局锁无限等待：第二个请求2秒未完成。现锁竞争最多1秒，繁忙明确text_busy；
+  并不宣称后端变为并行模型服务，也不把此风险混称为截图直接原因。
+
+实现与边界：
+
+- 保留两个原JSON端点，新增文字与文字提案的`/stream`端点，输入复用严格契约。
+- 服务端NDJSON进度字段只有seq、elapsed_ms、白名单stage/tool；终态为原契约result或安全error。
+  工具名仅在已通过提案资格且实际调用preview工具路径时出现，普通聊天/咨询回复tool为null。
+- 浏览器展示“已等待N秒”、真实阶段和可展开步骤；完成后保留用时及步骤。计时器只算时间，
+  不定时编造“思考/检索/派单”，不泄漏隐藏思维链。模型仍在完整结果通过校验后才展示回答。
+- 客户端校验递增序列、时间及工具/阶段对应，限制总字节262144与16事件；UTF-8分块正确解码。
+  断流、非法事件、超时明确失败；不自动降级重新调用付费接口。35秒截止覆盖连接与正文读取。
+- DevTools发现一次成功消费result后立即cancel reader会把网络标成ERR_ABORTED；已改为读至EOF后
+  正常完成，并加入成功流不调用cancel的回归，修后网络响应正文可完整观察。
+- runtime徽标改为“模型已配置/Mock已配置”，不再暗示凭据已实调验证；runtime读取5秒截止。
+- 模式切换/卸载释放计时器、监听与等待；晚到进度和回答不回填新会话。取消不保证供应商停止计算/计费。
+
+验证：
+
+- 修改前文字/工作台专项49 passed；原前端7项通过。新增缺随机API/准备错误2项先失败后通过。
+- 新增Python5项涵盖事件顺序、幂等无重复模型、错误脱敏、锁队列上限、提案工具及原确认资格。
+- 最终`powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1`：367 passed，1条既有
+  Hello-Agents Pydantic弃用警告；前端21项行为测试通过；vue-tsc/Vite构建通过（45 modules）。
+- 前端覆盖非安全上下文、准备异常、发送即显、失败复用请求ID、卸载/模式切换、计时停止、晚到事件，
+  以及UTF-8单字节分块、断流/非法事件/伪工具/乱序/负时间/未知步骤、错误事件和正文超时。
+- git diff --check及完整默认视图范围检查通过；预算16文件/1100行，不包含依赖、.env或业务状态Schema。
+
+Chrome DevTools MCP隔离浏览器：
+
+- 使用临时Store、8018 Fake后端与5178前端，局域网HTTP复制原故障条件；实际调用真实模型0次。
+  用户原5173/8000服务未停止，.env未读取/修改；原端点OpenAPI只读检查确认热重载已包含stream路由。
+- 同样`randomUUID=undefined`时，“你好，模拟加载”立即成为用户气泡，composer为空；等待先显示
+  model_running、随后显示已等待1/2/3秒。4秒Fake响应后显示用时4秒，无业务工具调用。
+- DevTools网络记录显示约3ms取得头、约4010ms完成（一次Fake样本）；正文依次含queued、preparing、
+  model_running、validating、completed、result。该数据不代表DeepSeek真实性能。
+- 专业咨询首轮信息不足不建单；补充合成高风险后出现提案；人工点击产生tool_running /
+  propose_issue_record，随后展示待确认提案和“尚未保存”。未创建正式工单。
+- 390×844模拟设备下clientWidth/scrollWidth均为390；等待、消息和composer可见，切换/提交入口可用。
+  初次窗口resize受浏览器缩放影响测得502宽，未将其当作390验收；改用明确设备模拟后重新验收。
+- Fake错误显示安全错误码并恢复原输入，busy=false；控制台无error/warn。
+- 最终范围检查：16文件、678行变化（检查时）；无未知二进制、无预算警告。隔离浏览器页面已关闭，
+  8018/5178验收进程已停止；原用户页面保留，未在其中发送真实消息。
+
+全项目扫描的其余发现（既有P2、独立待办，本补丁不修）：
+
+| 位置 | 可复现实证 | 后续门禁 |
+|---|---|---|
+| backend/app/workflow_models.py:188；frontend/src/views/HomeView.vue:458 | note允许2000字；request_more_info的501字和close的1001字实测500，保存字段分别只允500/1000字 | 按动作验证上限并同步UI，不能静默截断 |
+| backend/app/proposals.py:42 | 旧确认接口confirmed:1实测200并user_confirmed=true；不等于绕过生产身份认证 | 精确布尔验证与回归 |
+| backend/app/photos.py:70/79、123/134；photo_store.py:118 | 阻塞Fake证实视觉调用持全库锁时图片读取等待；关联先持workflow锁再等photo锁可扩大影响 | 独立缩短锁范围并验证照片结果提交一致性 |
+
+非文字后台独立检查168项相关pytest通过；没有发现需重写整个后台的证据，没有做无关删减。
+生产鉴权、照片所有权、跨进程锁、专业现场评估和真实模型性能依旧未验收，不能把本次扫描说成完整上线审计。
+
+修改文件：backend/app/{product_routes.py,text_consultations.py,text_progress.py}；
+frontend/src/{api.ts,types.ts,styles.css,components/TextPanel.vue}；
+frontend/tests/{api.test.cjs,text-panel.test.cjs}；tests/{test_chat_progress.py,test_frontend_workbench.py}；
+scripts/run-workbench-browser-fixture.py；docs/{chat-progress-contract.md,architecture.md,verification.md}；TASKS.md。
+
+## 2026-08-30：极简消息与普通聊天提示词修订
+
+范围与基线：`style/minimal-chat`基于9d87720 / `fix/chat-progress`，PR #16仍未合并；
+本主题冻结在会话工作台契约M01–M06，不重写Agent、不改专业咨询JSON或工单权限。
+
+提示词诊断与限制：
+
+- 用户截图提供了重复“中文日常问答助手”和自称“DeepSeek最新版”的实际样本。
+- 排查顺序为system角色称呼、上轮回答延续、前端固定拼接；代码排除前端拼接。
+  Fake SDK捕获实际answer_brief请求，确认旧system确有该称呼且未提供模型标识，last_answer亦带入旧回答。
+- 按diagnose建立请求边界回归；修前两个模型参数案例及两个布局契约检查失败（4 failed / 48 passed），
+  修后52 passed。该反馈环验证请求构造和布局约束，不声称复现真实模型生成的概率或建立完整因果实验。
+- 新CHAT_SYSTEM_PROMPT禁止主动自我介绍/规则复述，不沿用历史中的型号猜测；日期和模型标识由服务端追加，
+  用户陈述与上轮回答仍只放在user资料。没有以删词、关键词应答或前端替换的方式篡改模型输出。
+- 保留无工具、10秒超时、256输出token、零重试与原安全边界；没有读取/修改.env、模型配置或任何密钥。
+
+界面与Chrome DevTools验收：
+
+- 取消消息头像、助手标题、轮数和会话网格背景；用户气泡靠右、助手正文靠左；保留无视觉噪声的可访问消息分组。
+- “用时N秒”是默认折叠的原生details入口，展开后显示实际服务端步骤、工具和Mock说明。
+  等待仍显示实际经过时间与服务端阶段；仅真正调用业务工具时单独显示工具名，没有伪造思考过程。
+- 使用独立临时Store、8018 Fake服务和5178前端；用户原5173/8000服务未停止，未在real页面发送消息。
+- 桌面CSS视口2048×962：延迟Fake发送后输入立即为空、pending气泡立即靠右，头像数量0；
+  4秒后显示用时4秒，展开可见queued/preparing/model_running/validating/completed对应文案。
+  连续两轮用户消息全部靠右、助手左对齐，所有历史步骤默认折叠，无横向溢出。
+- 390×844设备模拟：较长中文消息换行且靠右，clientWidth/scrollWidth均390；时间折叠项可点击展开。
+  4秒为人为Fake延迟，不能代表真实供应商速度；移动消息/输入框截图已人工检查。
+- 专业咨询Fake错误恢复原输入，发送按钮重新可用；合成高风险回复仍显示必须人工复核和立即避险。
+  人工点击提案后出现propose_issue_record已完成/尚未保存提示及确认界面，没有创建正式工单。
+- 验收页控制台无error/warn；文字和提案流HTTP200，错误场景仍通过流内error事件明确失败。
+
+验证结果：`scripts/verify.ps1`通过，370项Python、21项前端行为测试、vue-tsc/Vite构建（45 modules）；
+1条既有Hello-Agents/Pydantic弃用警告；git diff --check通过。真实文字/图片模型调用均0次。
+
+修改文件：agents/text_assistant.py；frontend/src/{components/TextPanel.vue,styles.css}；
+tests/{test_product_text.py,test_frontend_workbench.py}；docs/{conversation-workbench-contract.md,
+chat-prompt-guide.md,verification.md}；TASKS.md；README.md。
+
+遗留风险：真实模型可能仍重复或幻觉；型号标识是程序配置而非供应商内部运行版本证明。生产鉴权、
+现场效果与此前三项独立P2不在本修订范围。提示词编辑后的新会话比较、重载丢失未保存上下文、
+Mock不执行真实提示词等注意事项已写入编辑指南。PR依赖#16，未自动合并。
+
+收尾：本轮创建的隔离浏览器页已关闭，8018/5178验收服务已停止；原用户页面和服务保持不变。
+
+## 2026-08-30：普通聊天重复回答的逐轮上下文修复
+
+基线dc6216c，独立分支`fix/chat-turn-history`，依赖仍开放的PR #17。
+实现前冻结`docs/chat-turn-history-contract.md`（H01–H06）。本轮不改前端视觉、公共Schema或工单流程。
+
+依据与复现：
+
+- 复用紧邻诊断轮的Chrome DevTools只读证据：用户三轮“你是谁→今天几号了→围栏断裂”，对应三次POST；
+  第三轮原始result.answer已经包含身份和日期，DOM与接口一致，排除重复发送与前端拼接。
+- 离线捕获answer_brief确认：只有system/user两条消息，user内有全部user_statements和last_answer。
+  上轮只约束语气的修订未改该结构，不能消除旧问题被当成本轮输入的诱因。
+- diagnose回归走HTTP（JSON和NDJSON）→真实服务与适配器→Fake SDK，逐轮捕获消息，而非只检查提示词字串。
+  测试开发时曾误将错误码视为顶层字段；按既有detail.error_code协议修正测试后，修前稳定14 failed /
+  5 passed；第三轮得到2条消息而非6条，非法历史也未在外发前拒绝。未将测试自身错误算作产品故障。
+
+实现：
+
+- chat改为system、逐轮user/assistant、最后一条当前user；每个user是独立TextConsultationInput的JSON，
+  保留背景标签。历史assistant只含成功回复answer，不含analysis或隐藏推理，仍不成为系统指令。
+- 从既有session.responses按turn读取答案，与inputs配对；不新增历史存储。失败不提交历史，幂等重放
+  直接返回原响应；最大6轮/12条消息。历史数量不符、空/非字符串/超长答案在构造SDK客户端前拒绝。
+- system明确只回答最新user，相关指代/明确回顾仍可使用历史；不通过删词或强制固定答案掩盖模型行为。
+- consult的累计事实/上轮追问、高风险保留和人工确认不变；chat仍无工具/无提案权限，10秒/256token/零重试。
+- 更新提示词指南、产品契约、教程映射、架构和README，说明历史答案也会作为上下文发送。
+
+验证：
+
+- 新增19项：三轮JSON/NDJSON角色与当前问题、代词追问及伪role标签、失败重试/旧新幂等重放、会话隔离、
+  6轮上限、伪造客户端历史拒绝、9类非法历史，以及空/超长/截断/工具/超时结果处理。
+- `pytest tests/test_chat_turn_history.py tests/test_product_text.py tests/test_chat_progress.py -q`：65 passed。
+- `scripts/verify.ps1`：389 passed，1条既有Hello-Agents/Pydantic弃用警告；21项前端行为测试和
+  vue-tsc/Vite生产构建（45 modules）通过；git diff --check通过。
+- Fake答案只验证透传和历史配对，不将预设“无重复”文本当作真实模型质量证据。本轮未新发浏览器模型请求，
+  未读取/修改.env或密钥；真实文字/图片模型调用均0次，也未启动额外后台服务。
+
+遗留与人工验证：需在后端重载后清空旧问题，主动重新发送固定三轮检查真实重复行为；不承诺所有生成
+完全无重复。历史最多增加4条更早答案，相比旧结构可能增加输入成本/耗时（未实测），仍有6轮与每条
+1000字上限。重载丢失未保存会话的既有规则不变；生产身份、现场评估及此前三项P2仍为独立待办。
+
+修改文件：agents/text_assistant.py；backend/app/text_consultations.py；
+tests/{test_chat_turn_history.py,test_product_text.py}；docs/{chat-turn-history-contract.md,chat-prompt-guide.md,
+product-text-records-contract.md,architecture.md,tutorial-compliance.md,verification.md}；TASKS.md；README.md。

@@ -6,6 +6,7 @@ import hashlib
 import os
 import time
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date
 from threading import RLock
@@ -16,6 +17,7 @@ from agents.text_assistant import DeepSeekTextBackend, MockTextBackend, TextAssi
 from agents.tools import ToolAuditLog, ToolResult
 from backend.app.proposals import Phase2ProposalService, ProposalPreviewRequest
 from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse
+from backend.app.text_progress import ProgressSink, ignore_progress
 
 WORKFLOW_CATEGORIES = {"safety", "quality", "management", "logistics"}
 
@@ -90,10 +92,10 @@ def quick_chat_reply(answer: str) -> TextReply:
 
 
 def default_quick_answerer(mode: str, inputs: list[TextConsultationInput], current: date,
-                           previous_answer: str | None) -> str:
+                           previous_answers: list[str]) -> str:
     if mode == "mock":
         return "Mock模式未调用真实模型，仅用于验证日常聊天界面。"
-    return DeepSeekTextBackend(text_config()).answer_brief(inputs, current, previous_answer)
+    return DeepSeekTextBackend(text_config()).answer_brief(inputs, current, previous_answers)
 
 
 @dataclass
@@ -111,7 +113,7 @@ class TextConsultationService:
                  assistant_factory: Callable[[str], TextAssistant] = default_text_assistant,
                  clock: Callable[[], float] = time.monotonic,
                  today: Callable[[], date] = date.today,
-                 quick_answerer: Callable[[str, list[TextConsultationInput], date, str | None], str] = default_quick_answerer) -> None:
+                 quick_answerer: Callable[[str, list[TextConsultationInput], date, list[str]], str] = default_quick_answerer) -> None:
         self.proposals, self.assistant_factory = proposals, assistant_factory
         self.clock, self.today, self.quick_answerer = clock, today, quick_answerer
         self._sessions: dict[str, _Session] = {}
@@ -131,14 +133,26 @@ class TextConsultationService:
             raise TextError("text_turn_conflict", "咨询已更新，请使用最新结果或开始新问题。", 409)
         return session
 
-    def send(self, request: TextRequest) -> TextResponse:
+    @contextmanager
+    def _operation(self, progress: ProgressSink):
+        progress("queued", None)
+        if not self._lock.acquire(timeout=1):
+            raise TextError("text_busy", "文字服务繁忙，前一次请求可能仍在运行；请稍后手动重试。", 429)
+        try:
+            progress("preparing", None)
+            yield
+        finally:
+            self._lock.release()
+
+    def send(self, request: TextRequest, *, progress: ProgressSink = ignore_progress) -> TextResponse:
         started = time.monotonic()
         try:
-            response = self._send(request)
+            response = self._send(request, progress)
         except TextError as exc:
             self._audit(request, False, exc.code, started)
             raise
         self._audit(request, True, None, started)
+        progress("completed", None)
         return response
 
     def _audit(self, request: TextRequest, ok: bool, code: str | None, started: float) -> None:
@@ -146,9 +160,9 @@ class TextConsultationService:
             tool_name="text_consultation", ok=ok, error_code=code, recoverable=not ok,
             summary=f"文字请求{'完成' if ok else '失败'}；耗时{round(time.monotonic() - started, 2)}秒；无业务状态变化。"))
 
-    def _send(self, request: TextRequest) -> TextResponse:
+    def _send(self, request: TextRequest, progress: ProgressSink) -> TextResponse:
         digest = hashlib.sha256(request.model_dump_json().encode()).hexdigest()
-        with self._lock:
+        with self._operation(progress):
             self._expire()
             for session in self._sessions.values():
                 previous = session.responses.get(request.request_id)
@@ -176,13 +190,19 @@ class TextConsultationService:
                 session = _Session(updated=self.clock(), intent=request.intent)
                 consultation_id = "TXT-" + uuid4().hex
             inputs = [*session.inputs, request.input]
+            progress("model_running", None)
             if request.intent == "chat":
-                reply = quick_chat_reply(self.quick_answerer(
-                    str(runtime["mode"]), inputs, self.today(), session.latest.reply.answer if session.latest else None))
+                # Reuse committed responses: failures and idempotent replays add no history.
+                completed = sorted((response for _, response in session.responses.values()), key=lambda response: response.turn)
+                answer = self.quick_answerer(
+                    str(runtime["mode"]), inputs, self.today(), [response.reply.answer for response in completed])
+                progress("validating", None)
+                reply = quick_chat_reply(answer)
                 retained, response_model = False, str(runtime["model"])
             else:
                 reply = self.assistant_factory(str(runtime["mode"])).reply(
                     inputs, previous_questions=session.latest.reply.follow_up_questions if session.latest else None)
+                progress("validating", None)
                 reply, retained = apply_boundaries(reply, session.latest.reply if session.latest else None)
                 response_model = str(runtime["model"])
             response = TextResponse(consultation_id=consultation_id, turn=len(inputs), mode=runtime["mode"],
@@ -193,17 +213,21 @@ class TextConsultationService:
             self._sessions[consultation_id] = session
             return response.model_copy(deep=True)
 
-    def propose(self, consultation_id: str, request: TextProposalRequest) -> ToolResult:
-        with self._lock:
+    def propose(self, consultation_id: str, request: TextProposalRequest,
+                *, progress: ProgressSink = ignore_progress) -> ToolResult:
+        with self._operation(progress):
             self._expire()
             session = self._session(consultation_id, request.expected_turn)
             if session.proposal is not None:
+                progress("completed", None)
                 return session.proposal.model_copy(deep=True)
             if session.latest is None or not session.latest.can_propose:
                 raise TextError("text_not_proposable", "当前仅咨询或信息不足，不能生成问题提案。", 409)
+            progress("tool_running", "propose_issue_record")
             result = self.proposals.preview(ProposalPreviewRequest(
                 invocation_id="text-" + uuid4().hex, analysis=session.latest.reply.analysis))
             if not result.ok:
                 raise TextError("text_proposal_failed", "提案暂时生成失败，可手动重试。")
             session.proposal, session.updated = result, self.clock()
+            progress("completed", None)
             return result.model_copy(deep=True)
