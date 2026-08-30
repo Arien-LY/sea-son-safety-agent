@@ -25,6 +25,7 @@
 - 历史记录搜索、类别/状态/处置筛选、分页、详情恢复和继续人工整改。
 - Windows 安装、启动和验证脚本。
 - 教程约束、迁移清单、架构决策和阶段任务清单。
+- Phase 6 严格脱敏 Trace、20 案例离线指标计算和可复现成功/失败报告。
 
 ## 环境要求
 
@@ -67,6 +68,17 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-frontend.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 ```
 
+重建 Phase 6 合成协议基线并从显式 Trace 生成报告（均不读取 `.env`、不联网）：
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\build-phase6-protocol-fixtures.py
+.\.venv\Scripts\python.exe .\scripts\evaluate-phase6.py `
+  --run .\tests\fixtures\phase6_protocol_run.v1.json `
+  --output .\phase6-report.json
+```
+
+合成协议报告只验证评估管线；不能作为真实模型准确率、现场专业结论或真实账单证据。
+
 ## 文档入口
 
 - [任务清单](TASKS.md)
@@ -75,6 +87,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - [旧项目复用清单](docs/reuse-inventory.md)
 - [Codex harness 架构决策](docs/decisions/0001-codex-harness.md)
 - [验证记录](docs/verification.md)
+- [Phase 6 评估与 Trace 契约](docs/phase6-evaluation-contract.md)
 - [Phase 4 知识契约](docs/phase4-knowledge-contract.md)
 - [知识目录维护](knowledge/README.md)
 - [Phase 5 图片契约](docs/phase5-image-contract.md)

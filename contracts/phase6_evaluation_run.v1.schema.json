@@ -1,0 +1,344 @@
+{
+  "$defs": {
+    "EvaluationCaseTrace": {
+      "additionalProperties": false,
+      "properties": {
+        "trace_id": {
+          "pattern": "^TRACE-[A-Z0-9-]{8,48}$",
+          "title": "Trace Id",
+          "type": "string"
+        },
+        "case_id": {
+          "pattern": "^(CONS|SAFE|QUAL|MGMT|LOGI)-00[1-4]$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "input_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Input Digest",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "failure"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "duration_ms": {
+          "maximum": 300000,
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/TraceEvent"
+          },
+          "maxItems": 20,
+          "minItems": 2,
+          "title": "Events",
+          "type": "array"
+        },
+        "actual_category": {
+          "anyOf": [
+            {
+              "enum": [
+                "consultation",
+                "safety",
+                "quality",
+                "management",
+                "logistics",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual Category"
+        },
+        "actual_risk": {
+          "anyOf": [
+            {
+              "enum": [
+                "undetermined",
+                "low",
+                "medium",
+                "high",
+                "emergency"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual Risk"
+        },
+        "actual_route": {
+          "anyOf": [
+            {
+              "enum": [
+                "direct_answer",
+                "collect_more_info",
+                "propose_workflow",
+                "human_review"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual Route"
+        },
+        "actual_human_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual Human Review"
+        },
+        "captured_point_keys": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Captured Point Keys",
+          "type": "array"
+        },
+        "tool_behavior": {
+          "enum": [
+            "not_called",
+            "proposal_only",
+            "unexpected_call",
+            "unauthorized_state_change",
+            "not_observed"
+          ],
+          "title": "Tool Behavior",
+          "type": "string"
+        },
+        "false_citation_count": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "False Citation Count",
+          "type": "integer"
+        },
+        "unauthorized_state_change_count": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Unauthorized State Change Count",
+          "type": "integer"
+        },
+        "privacy_leak_count": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Privacy Leak Count",
+          "type": "integer"
+        },
+        "workflow_closed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workflow Closed"
+        },
+        "prompt_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt Tokens"
+        },
+        "completion_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Tokens"
+        },
+        "cost_micro_usd": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Micro Usd"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]{1,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        }
+      },
+      "required": [
+        "trace_id",
+        "case_id",
+        "input_digest",
+        "status",
+        "duration_ms",
+        "events",
+        "tool_behavior"
+      ],
+      "title": "EvaluationCaseTrace",
+      "type": "object"
+    },
+    "TraceEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "sequence": {
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "stage": {
+          "enum": [
+            "input_validated",
+            "model_called",
+            "output_validated",
+            "tool_called",
+            "completed",
+            "failed"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "elapsed_ms": {
+          "maximum": 300000,
+          "minimum": 0,
+          "title": "Elapsed Ms",
+          "type": "integer"
+        },
+        "tool_name": {
+          "anyOf": [
+            {
+              "const": "propose_issue_record",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Name"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]{1,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        }
+      },
+      "required": [
+        "sequence",
+        "stage",
+        "elapsed_ms"
+      ],
+      "title": "TraceEvent",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "phase6-evaluation-run-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^RUN-[A-Z0-9-]{8,48}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "run_kind": {
+      "enum": [
+        "synthetic_protocol",
+        "real_model",
+        "human_adjudicated"
+      ],
+      "title": "Run Kind",
+      "type": "string"
+    },
+    "evaluated_at": {
+      "format": "date-time",
+      "title": "Evaluated At",
+      "type": "string"
+    },
+    "suite_id": {
+      "const": "phase1-fixed-text-v1",
+      "title": "Suite Id",
+      "type": "string"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/EvaluationCaseTrace"
+      },
+      "maxItems": 20,
+      "minItems": 20,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "run_kind",
+    "evaluated_at",
+    "suite_id",
+    "cases"
+  ],
+  "title": "EvaluationRun",
+  "type": "object"
+}

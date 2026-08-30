@@ -1,0 +1,397 @@
+{
+  "$defs": {
+    "CountMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "minimum": 0,
+          "title": "Value",
+          "type": "integer"
+        },
+        "maximum_allowed": {
+          "minimum": 0,
+          "title": "Maximum Allowed",
+          "type": "integer"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "maximum_allowed",
+        "passed"
+      ],
+      "title": "CountMetric",
+      "type": "object"
+    },
+    "EngineeringMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "response_time": {
+          "$ref": "#/$defs/LatencyMetric"
+        },
+        "failure_rate": {
+          "$ref": "#/$defs/RateMetric"
+        },
+        "token_usage": {
+          "$ref": "#/$defs/UsageMetric"
+        },
+        "call_cost": {
+          "$ref": "#/$defs/UsageMetric"
+        },
+        "task_closure_rate": {
+          "$ref": "#/$defs/RateMetric"
+        }
+      },
+      "required": [
+        "response_time",
+        "failure_rate",
+        "token_usage",
+        "call_cost",
+        "task_closure_rate"
+      ],
+      "title": "EngineeringMetrics",
+      "type": "object"
+    },
+    "LatencyMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "not_measured"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "p50_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P50 Ms"
+        },
+        "p95_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P95 Ms"
+        },
+        "max_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Ms"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "LatencyMetric",
+      "type": "object"
+    },
+    "QualityMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "classification_accuracy": {
+          "$ref": "#/$defs/RateMetric"
+        },
+        "field_completeness": {
+          "$ref": "#/$defs/RateMetric"
+        },
+        "high_risk_recall": {
+          "$ref": "#/$defs/RateMetric"
+        },
+        "workflow_route_accuracy": {
+          "$ref": "#/$defs/RateMetric"
+        },
+        "tool_call_accuracy": {
+          "$ref": "#/$defs/RateMetric"
+        }
+      },
+      "required": [
+        "classification_accuracy",
+        "field_completeness",
+        "high_risk_recall",
+        "workflow_route_accuracy",
+        "tool_call_accuracy"
+      ],
+      "title": "QualityMetrics",
+      "type": "object"
+    },
+    "RateMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "not_measured"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "enum": [
+                "minimum",
+                "maximum"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Direction"
+        },
+        "numerator": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Numerator"
+        },
+        "denominator": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Denominator"
+        },
+        "basis_points": {
+          "anyOf": [
+            {
+              "maximum": 10000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Basis Points"
+        },
+        "threshold_basis_points": {
+          "anyOf": [
+            {
+              "maximum": 10000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threshold Basis Points"
+        },
+        "passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Passed"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "RateMetric",
+      "type": "object"
+    },
+    "SafetyMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "false_citations": {
+          "$ref": "#/$defs/CountMetric"
+        },
+        "high_risk_misses": {
+          "$ref": "#/$defs/CountMetric"
+        },
+        "unauthorized_state_changes": {
+          "$ref": "#/$defs/CountMetric"
+        },
+        "privacy_leaks": {
+          "$ref": "#/$defs/CountMetric"
+        }
+      },
+      "required": [
+        "false_citations",
+        "high_risk_misses",
+        "unauthorized_state_changes",
+        "privacy_leaks"
+      ],
+      "title": "SafetyMetrics",
+      "type": "object"
+    },
+    "UsageMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "measured",
+            "not_measured"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "total": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total"
+        },
+        "unit": {
+          "enum": [
+            "tokens",
+            "micro_usd"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "unit"
+      ],
+      "title": "UsageMetric",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "phase6-evaluation-report-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "run_kind": {
+      "enum": [
+        "synthetic_protocol",
+        "real_model",
+        "human_adjudicated"
+      ],
+      "title": "Run Kind",
+      "type": "string"
+    },
+    "evaluated_at": {
+      "format": "date-time",
+      "title": "Evaluated At",
+      "type": "string"
+    },
+    "suite_id": {
+      "const": "phase1-fixed-text-v1",
+      "title": "Suite Id",
+      "type": "string"
+    },
+    "total_cases": {
+      "const": 20,
+      "title": "Total Cases",
+      "type": "integer"
+    },
+    "successful_cases": {
+      "maximum": 20,
+      "minimum": 0,
+      "title": "Successful Cases",
+      "type": "integer"
+    },
+    "failed_cases": {
+      "maximum": 20,
+      "minimum": 0,
+      "title": "Failed Cases",
+      "type": "integer"
+    },
+    "quality": {
+      "$ref": "#/$defs/QualityMetrics"
+    },
+    "safety": {
+      "$ref": "#/$defs/SafetyMetrics"
+    },
+    "engineering": {
+      "$ref": "#/$defs/EngineeringMetrics"
+    },
+    "overall_passed": {
+      "title": "Overall Passed",
+      "type": "boolean"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "run_kind",
+    "evaluated_at",
+    "suite_id",
+    "total_cases",
+    "successful_cases",
+    "failed_cases",
+    "quality",
+    "safety",
+    "engineering",
+    "overall_passed",
+    "limitations"
+  ],
+  "title": "EvaluationReport",
+  "type": "object"
+}

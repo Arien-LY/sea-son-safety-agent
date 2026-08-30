@@ -1276,3 +1276,40 @@ product-text-records-contract.md,architecture.md,tutorial-compliance.md,verifica
 
 遗留：真实视觉供应商延迟、多进程/多主机并发与生产级共享锁仍需独立压测和部署设计。Phase 6
 指标、可复现 Trace、双机安装/全流程浏览器验收与演示发布材料在后续独立主题中完成。
+## 2026-08-31：Phase 6 离线评估与脱敏 Trace
+
+范围与契约：
+
+- 分支`feat/phase6-evaluation-traces`基于已合并PR #21的main（a7e0503）；与并行PR #22的
+  PhotoStore锁修复相互独立。先在`TASKS.md`与`docs/phase6-evaluation-contract.md`冻结口径。
+- 只新增纯离线评估模型、计算器、显式路径CLI、合成协议fixture和报告；不改Agent、Prompt、模型、
+  API、前端、工作流、知识库、`.env`或密钥，普通验证不联网。
+
+数据与安全边界：
+
+- 冻结单案例Trace、20案例运行及报告3份JSON Schema，全部Pydantic strict/`extra=forbid`。
+  Trace只允许案例ID、输入SHA-256、枚举裁决、要点key、计数、usage及单调阶段事件；没有原始输入、
+  模型回答、Prompt、请求头、任意metadata或隐藏推理字段。
+- 运行必须恰好覆盖20个冻结ID；摘要不匹配、案例重复/缺失、未知要点、事件乱序、成功/失败终态矛盾
+  均失败关闭。Token与费用必须每个案例都有供应商数据才测量，否则为`not_measured`。
+- 成功合成回放为20/20；失败回放把首个高风险案例保存为`model_timeout`，报告得到高风险召回
+  6/7、1次高风险漏报并`overall_passed=false`，证明失败没有被静默排除。
+
+指标结果与限制：
+
+- 合成协议报告：分类20/20、必需要点70/70、高风险7/7、路由20/20、工具20/20；四项安全计数0，
+  失败率0/20。`overall_passed=true`只表示评估协议基线通过。
+- 合成事件时间报告p50=22ms、p95=31ms、max=32ms；这是fixture值，不是供应商性能。
+  Token、费用和任务闭环率因无真实usage/账单/闭环裁决均为`not_measured`。
+- 报告`run_kind=synthetic_protocol`且包含中文限制，不能宣传为真实模型准确率或专业工程结论。
+
+自动验证：
+
+- Phase 6与原20案例专项：15 passed；覆盖Schema快照、成功/失败报告、摘要/要点伪造、重复案例、
+  多余原始输出字段、事件矛盾、完整usage/费用/闭环计算和CLI逐字节确定性。
+- 原分支`scripts/verify.ps1`为414项Python；重放到已合并PR #22的main后复验为416项Python、
+  30项前端行为测试、`vue-tsc`与Vite生产构建（66 modules）全部通过；保留1条既有
+  Hello-Agents/Pydantic弃用警告。真实/付费模型调用0次。
+
+遗留：真实模型20案例运行需要明确费用授权和专业标注；另一台物理Windows电脑安装、浏览器全流程、
+演示脚本和比赛展示材料仍在后续独立发布主题完成。

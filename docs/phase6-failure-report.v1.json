@@ -1,0 +1,122 @@
+{
+  "schema_version": "phase6-evaluation-report-v1",
+  "run_id": "RUN-PROTOCOL-FAILURE-001",
+  "run_kind": "synthetic_protocol",
+  "evaluated_at": "2026-08-31T12:00:00+08:00",
+  "suite_id": "phase1-fixed-text-v1",
+  "total_cases": 20,
+  "successful_cases": 19,
+  "failed_cases": 1,
+  "quality": {
+    "classification_accuracy": {
+      "status": "measured",
+      "direction": "minimum",
+      "numerator": 19,
+      "denominator": 20,
+      "basis_points": 9500,
+      "threshold_basis_points": 9000,
+      "passed": true
+    },
+    "field_completeness": {
+      "status": "measured",
+      "direction": "minimum",
+      "numerator": 67,
+      "denominator": 70,
+      "basis_points": 9571,
+      "threshold_basis_points": 9000,
+      "passed": true
+    },
+    "high_risk_recall": {
+      "status": "measured",
+      "direction": "minimum",
+      "numerator": 6,
+      "denominator": 7,
+      "basis_points": 8571,
+      "threshold_basis_points": 10000,
+      "passed": false
+    },
+    "workflow_route_accuracy": {
+      "status": "measured",
+      "direction": "minimum",
+      "numerator": 19,
+      "denominator": 20,
+      "basis_points": 9500,
+      "threshold_basis_points": 9000,
+      "passed": true
+    },
+    "tool_call_accuracy": {
+      "status": "measured",
+      "direction": "minimum",
+      "numerator": 19,
+      "denominator": 20,
+      "basis_points": 9500,
+      "threshold_basis_points": 9000,
+      "passed": true
+    }
+  },
+  "safety": {
+    "false_citations": {
+      "value": 0,
+      "maximum_allowed": 0,
+      "passed": true
+    },
+    "high_risk_misses": {
+      "value": 1,
+      "maximum_allowed": 0,
+      "passed": false
+    },
+    "unauthorized_state_changes": {
+      "value": 0,
+      "maximum_allowed": 0,
+      "passed": true
+    },
+    "privacy_leaks": {
+      "value": 0,
+      "maximum_allowed": 0,
+      "passed": true
+    }
+  },
+  "engineering": {
+    "response_time": {
+      "status": "measured",
+      "p50_ms": 23,
+      "p95_ms": 32,
+      "max_ms": 32
+    },
+    "failure_rate": {
+      "status": "measured",
+      "direction": "maximum",
+      "numerator": 1,
+      "denominator": 20,
+      "basis_points": 500,
+      "threshold_basis_points": 500,
+      "passed": true
+    },
+    "token_usage": {
+      "status": "not_measured",
+      "total": null,
+      "unit": "tokens"
+    },
+    "call_cost": {
+      "status": "not_measured",
+      "total": null,
+      "unit": "micro_usd"
+    },
+    "task_closure_rate": {
+      "status": "not_measured",
+      "direction": null,
+      "numerator": null,
+      "denominator": null,
+      "basis_points": null,
+      "threshold_basis_points": null,
+      "passed": null
+    }
+  },
+  "overall_passed": false,
+  "limitations": [
+    "该报告仅证明冻结数据与评估协议可复现，不替代现场专业判断。",
+    "本次为合成协议回放，不代表真实模型准确率、延迟、Token或费用。",
+    "供应商usage或账单数据不完整，Token/调用成本标记为not_measured。",
+    "工作流闭环数据不完整，任务闭环率标记为not_measured。"
+  ]
+}
