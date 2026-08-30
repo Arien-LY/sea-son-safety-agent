@@ -13,6 +13,10 @@ if ($LASTEXITCODE -ne 0) {
 
 Push-Location (Join-Path $ProjectRoot "frontend")
 try {
+    & npm.cmd test
+    if ($LASTEXITCODE -ne 0) {
+        throw "Frontend behavior tests failed."
+    }
     & npm.cmd run build
     if ($LASTEXITCODE -ne 0) {
         throw "Frontend build failed."

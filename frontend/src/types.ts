@@ -7,6 +7,7 @@ export interface RuntimeInfo {
 
 export interface TextTurnRequest {
   request_id: string;
+  intent: "chat" | "consult";
   input: { message: string; project: string | null; area: string | null; requester_role: string | null };
   consultation_id: string | null;
   expected_turn: number;

@@ -5,9 +5,12 @@ import RecordsView from "./views/RecordsView.vue";
 export default createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", name: "home", component: HomeView },
+    { path: "/", redirect: "/consult" },
+    { path: "/chat", name: "chat", component: HomeView },
+    { path: "/consult", name: "consult", component: HomeView },
+    { path: "/submit", name: "submit", component: HomeView },
     { path: "/records", name: "records", component: RecordsView },
     { path: "/records/:recordId", name: "record-detail", component: HomeView },
-    { path: "/:pathMatch(.*)*", redirect: "/" },
+    { path: "/:pathMatch(.*)*", redirect: "/consult" },
   ],
 });

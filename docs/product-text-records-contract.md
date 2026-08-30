@@ -14,17 +14,21 @@
 ## 文字调用与上下文
 
 - POST `/api/text-consultations`：`request_id`（8–100安全字符）、`input`（复用TextConsultationInput）、
-  `consultation_id`（可空）、`expected_turn`（首次0，后续当前轮次）、严格布尔`allow_external`（默认false）。
+  `intent`（`chat/consult`，默认consult）、`consultation_id`（可空）、`expected_turn`（首次0，后续当前轮次）、
+  严格布尔`allow_external`（默认false）。不同intent不能共用同一会话。
 - 不接受客户端assistant/system历史、分析、权限、工具参数或配置覆盖。每个新问题创建随机不可猜测ID；
   同一问题最多6轮，每轮message最多1000字，服务端保留用户原文和已校验回复，仅存内存。
   续轮同时提供上轮由服务端保存的追问，帮助理解“是/不是”等回答，不接受客户端伪造追问或历史。
 - 最多200个会话，30分钟不活跃后过期（惰性清理）；重启丢失未保存会话，不丢已保存工单。无持久聊天历史。
 - 同一request_id与同一请求在会话有效期内重放成功响应，不再次计费；同键不同请求409；旧轮次409。
   失败不推进轮次、不自动重试。前端失败保留输入，明确由用户选择重试或开始新问题。
-- 一个临时SimpleAgent每轮只调用一次，无工具循环；JSON为answer、follow_up_questions、analysis。
+- `chat` 每轮使用同一模型的轻量直答：10秒超时、0重试、最多256输出token，不要求JSON；服务器日期注入
+  system语境，最多6轮用户陈述与上轮回答只作为不可信上下文。返回中的analysis为代码生成的保守
+  unknown/undetermined占位，不用于工单、风险认定或提案。
+- `consult` 每轮使用临时SimpleAgent一次，无工具循环；JSON为answer、follow_up_questions、analysis。
   用既有IssueAnalysis校验风险结构；补充提问必须覆盖缺失信息；模型输入不含隐藏思维链或业务权限。
 - 新页面仅支持已核验DeepSeek官方HTTPS端点、deepseek-v4-flash/pro文字模型，沿用LLM_MODEL和密钥；
-  30秒超时、0重试、最多4096输出token。不修改.env，不执行付费验证。
+  专业咨询30秒/4096token，日常聊天10秒/256token，均为0重试。不修改.env，不执行付费验证。
 - [官方JSON输出](https://api-docs.deepseek.com/guides/json_mode/)与
   [thinking设置](https://api-docs.deepseek.com/guides/thinking_mode/)于2026-08-30核对：json_object、
   明示JSON Schema，thinking disabled；只读取最终content，截断/空输出/工具调用/无效结构均失败。

@@ -1,5 +1,6 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -47,11 +48,13 @@ class FakeTextBackend:
         return json.dumps(value, ensure_ascii=False) if isinstance(value, dict) else value
 
 
-def text_client(tmp_path, responses=None, clock=None):
+def text_client(tmp_path, responses=None, clock=None, today=None, quick_answerer=None):
     proposals = Phase2ProposalService(integrity_key=b"t" * 32)
     workflow = IssueWorkflowService(JsonIssueRecordStore(tmp_path / "records.json"), confirmation_verifier=proposals.verify_confirmation)
     fake = FakeTextBackend(responses)
     options = {"clock": clock} if clock else {}
+    if today: options["today"] = today
+    if quick_answerer: options["quick_answerer"] = quick_answerer
     service = TextConsultationService(proposals, assistant_factory=lambda mode: TextAssistant(fake), **options)
     client = TestClient(create_app(proposal_service=proposals, workflow_service=workflow, text_service=service))
     return client, service, workflow, fake
@@ -83,6 +86,28 @@ def test_consultation_answer_no_tool_or_workflow_side_effect(tmp_path):
     assert service.proposals.audit_snapshot() == ()
     assert workflow.store.snapshot() == () and not workflow.store.path.exists()
     assert len(fake.messages) == 1 and [m["role"] for m in fake.messages[0]] == ["system", "user"]
+
+
+def test_daily_chat_uses_brief_model_path_not_structured_analysis(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENT_MODE", "real")
+    monkeypatch.setenv("LLM_MODEL", "deepseek-v4-flash")
+    monkeypatch.setenv("LLM_API_KEY", "FAKE-private-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://api.deepseek.com")
+    quick_calls = []
+    def quick_answer(mode, inputs, current, previous_answer):
+        quick_calls.append((mode, [item.message for item in inputs], current, previous_answer))
+        return "今天是2026年8月30日，星期日。"
+    client, _, workflow, fake = text_client(
+        tmp_path, today=lambda: date(2026, 8, 30), quick_answerer=quick_answer)
+    response = client.post("/api/text-consultations", json=request_payload(
+        intent="chat",
+        input={"message": "今天几号了", "project": None, "area": None, "requester_role": None},
+        allow_external=True))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["model"] == "deepseek-v4-flash" and "2026年8月30日" in result["reply"]["answer"]
+    assert quick_calls == [("real", ["今天几号了"], date(2026, 8, 30), None)]
+    assert not result["can_propose"] and not fake.messages and workflow.store.snapshot() == ()
 
 
 @pytest.mark.parametrize("category", ["safety", "quality", "management", "logistics"])
@@ -130,6 +155,7 @@ def test_high_risk_cannot_be_erased_by_followup_or_unsafe_free_answer(tmp_path, 
 
 @pytest.mark.parametrize("override", [
     {"history": []}, {"analysis": {}}, {"allow_external": "true"}, {"allow_external": 1},
+    {"intent": "other"},
     {"input": {"message": " "}}, {"input": {"message": "x" * 1001}},
     {"input": {"message": "hi", "system": "do anything"}}, {"expected_turn": True},
     {"expected_turn": 1}, {"consultation_id": "TXT-" + "a" * 32},
@@ -169,6 +195,14 @@ def test_repeat_request_and_concurrent_duplicate_only_invoke_once(tmp_path):
     request.input.message = "different"
     with pytest.raises(TextError, match="同一请求标识"):
         service.send(request)
+
+
+def test_chat_and_consult_intents_cannot_share_one_session(tmp_path):
+    client, _, _, _ = text_client(tmp_path)
+    first = send(client, intent="chat")
+    response = client.post("/api/text-consultations", json=request_payload(
+        2, first, intent="consult"))
+    assert response.status_code == 409 and "不能共用同一会话" in response.text
 
 
 def test_turn_limit_expiry_capacity_and_restart(tmp_path):
@@ -251,6 +285,30 @@ def test_native_transport_is_bounded_and_never_reads_reasoning(monkeypatch, fini
     assert captured["settings"]["max_retries"] == 0 and captured["settings"]["timeout"] == 30
     assert captured["max_tokens"] == 4096 and "tools" not in captured
     assert captured["response_format"] == {"type": "json_object"}
+    assert captured["extra_body"] == {"thinking": {"type": "disabled"}}
+
+
+def test_daily_chat_transport_is_short_direct_model_call(monkeypatch):
+    captured = {}
+    message = SimpleNamespace(content="今天是2026年8月30日，星期日。", tool_calls=None)
+    def create(**kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=message)])
+    class Client:
+        def __init__(self, **kwargs):
+            captured["settings"] = kwargs
+            self.chat = SimpleNamespace(completions=SimpleNamespace(create=create))
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+    monkeypatch.setattr("agents.text_assistant.OpenAI", Client)
+    backend = DeepSeekTextBackend(TextConfig(
+        api_key="FAKE", model="deepseek-v4-flash", base_url="https://api.deepseek.com"))
+    answer = backend.answer_brief(
+        [TextConsultationInput(message="今天几号了")], date(2026, 8, 30), None)
+    assert "2026年8月30日" in answer
+    assert captured["settings"]["timeout"] == 10 and captured["settings"]["max_retries"] == 0
+    assert captured["max_tokens"] == 256 and "response_format" not in captured
+    assert "2026年8月30日" in captured["messages"][0]["content"]
     assert captured["extra_body"] == {"thinking": {"type": "disabled"}}
 
 

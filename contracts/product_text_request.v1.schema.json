@@ -69,6 +69,15 @@
       "title": "Request Id",
       "type": "string"
     },
+    "intent": {
+      "default": "consult",
+      "enum": [
+        "chat",
+        "consult"
+      ],
+      "title": "Intent",
+      "type": "string"
+    },
     "input": {
       "$ref": "#/$defs/TextConsultationInput"
     },
