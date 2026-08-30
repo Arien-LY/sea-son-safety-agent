@@ -1,11 +1,13 @@
 import { createRouter, createWebHistory } from "vue-router";
 import HomeView from "./views/HomeView.vue";
+import RecordsView from "./views/RecordsView.vue";
 
 export default createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/", name: "home", component: HomeView },
+    { path: "/records", name: "records", component: RecordsView },
+    { path: "/records/:recordId", name: "record-detail", component: HomeView },
     { path: "/:pathMatch(.*)*", redirect: "/" },
   ],
 });
-

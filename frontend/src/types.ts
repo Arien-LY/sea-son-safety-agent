@@ -5,6 +5,40 @@ export interface RuntimeInfo {
   tutorial_baseline: string;
 }
 
+export interface TextTurnRequest {
+  request_id: string;
+  input: { message: string; project: string | null; area: string | null; requester_role: string | null };
+  consultation_id: string | null;
+  expected_turn: number;
+  allow_external: boolean;
+}
+
+export interface TextTurnResponse {
+  consultation_id: string;
+  turn: number;
+  mode: "mock" | "real";
+  model: string;
+  reply: { answer: string; follow_up_questions: string[]; analysis: IssueAnalysis };
+  can_propose: boolean;
+  risk_retained: boolean;
+  remaining_turns: number;
+}
+
+export interface RecordListItem {
+  record_id: string;
+  title: string;
+  project: string | null;
+  area: string | null;
+  category: IssueCategory;
+  risk_level: RiskLevel;
+  status: WorkflowStatus;
+  disposition: RecordDisposition;
+  revision: number;
+  updated_at: string;
+}
+
+export interface RecordPage { total: number; offset: number; limit: number; items: RecordListItem[] }
+
 export interface PhotoMetadata {
   photo_id: string;
   content_digest: string;

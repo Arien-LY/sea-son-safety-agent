@@ -16,6 +16,9 @@ import type {
   PhotoAnalysisRecord,
   LinkedPhoto,
   VisionRuntime,
+  TextTurnRequest,
+  TextTurnResponse,
+  RecordPage,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
@@ -35,6 +38,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getTextRuntime() { return request<VisionRuntime>("/api/text/runtime"); },
+  sendText(input: TextTurnRequest) {
+    return request<TextTurnResponse>("/api/text-consultations", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+    });
+  },
+  proposeText(consultationId: string, turn: number) {
+    return request<ToolResult<IssueProposalPreviewData>>(`/api/text-consultations/${encodeURIComponent(consultationId)}/proposal`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expected_turn: turn, confirmed: true }),
+    });
+  },
+  listRecords(query: URLSearchParams) { return request<RecordPage>(`/api/issue-records?${query}`); },
   getVisionRuntime() { return request<VisionRuntime>("/api/vision/runtime"); },
   uploadPhoto(file: File) {
     return request<PhotoMetadata>("/api/photos", {

@@ -766,3 +766,85 @@ git ls-files .env
   未入索引的图片；上限200张/每张10份分析，无自动保留期、删除界面、备份与灾难恢复。
 - 文字页面仍为结构化演示，不是自然语言真实模型聊天入口；Phase 6 的指标、比赛材料和发布验收未启动。
 - 保留 Phase 0 双机全新克隆未完成、既有Pydantic警告，以及资料专业复核和生产身份安全门禁。
+
+## 2026-08-30：产品补齐——文字入口与历史工单完成
+
+任务和Git边界：
+
+- 用户确认先补齐真实文字入口、受控追问、历史工单列表和详情，再开展Phase 6。
+- 先冻结 `docs/product-text-records-contract.md` 的任务模板、T01–T10/R01–R06验收场景，再实现接口。
+- Phase 5 PR #13已合并，基线 `ffe217b95909e55e71c6489a1e7867ac249087d0`；更新main后创建
+  `product-text-and-records` 独立分支，不直接在main开发、不自动合并PR。
+- 未修改.env、密钥、依赖或既有Phase1/3冻结Schema；.env仍被忽略且未跟踪。
+
+实现与教程符合性：
+
+- 一个临时SimpleAgent每轮一次文字调用，同时给出answer、follow_up_questions及IssueAnalysis；
+  严格JSON校验后才进入内存。DeepSeek官方JSON/thinking协议已核对，30秒超时、零重试、4096输出token。
+- 服务端至多200个会话，每问题最多6轮、30分钟不活跃后惰性过期；只接收用户输入，不接受伪造的
+  assistant/system历史、模型配置、分析或工具参数。上轮已校验追问用于理解后续“是/不是”。
+- 实际模型调用前必须逐次确认外发与费用。幂等成功重放不再次调用；失败不推进轮次、不自动重试。
+- 同一问题已有high/emergency不可被后续低风险输出覆盖；保留避险要求和人工复核，后续自由回答用
+  确定性保守提示替代。普通咨询/unknown不提案，信息不足转补充；不会把unknown等同于low。
+- 提案只取服务端最新分析，复用既有确定性工具边界，不新增第二次模型调用。提案不自动落库，成功后
+  会话冻结，避免更高风险补充与旧提案混用；确认与保存继续复用HMAC和工作流规则。
+- 只读工单列表从单次Store快照检索，稳定排序、组合筛选和分页，不返回完整分析/事件。
+- Vue新增文字首页、历史列表与可刷新详情；旧结构化表单折叠并标注演示。详情保留全部展示字段、分析、
+  时间轨迹、知识、照片及原人工动作；使用已保存的报告人/整改人ID而非固定示例ID。
+- 确认后再改字段会失效旧确认；同一次保存重试沿用幂等键；请求期间锁定操作区和应用内切换，避免交叉结果。
+
+验证：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_product_text.py tests/test_product_records.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+git diff --check
+git check-ignore .env
+git ls-files .env
+```
+
+- 新增专项50 passed；完整349 passed，1条既有Hello-Agents Pydantic弃用警告。
+- TypeScript和Vite生产构建通过，46 modules transformed；git diff --check无空白错误。
+- 覆盖普通咨询、四类问题补充/提案/显式保存、高风险跨轮保留、非法输入、空/非法/超长输出、超时、
+  脱敏错误、并发重复请求、旧轮次、过期/容量/轮次/重启、严格确认、提案失败重试及成功冻结。
+- Fake SDK验证原生json_object、thinking disabled、零重试、token/timeout上限，拒绝截断/工具返回，
+  隐藏思维链属性不可读取。Mock明确未执行文字理解。
+- 列表覆盖空/多页、组合条件、大小写ID搜索、未知/重复/越界查询、坏Store、只读字节不变、重启读取、
+  历史角色继续工作流和revision冲突；新增请求/响应Schema与Pydantic定义精确比对。
+
+隔离浏览器验收（browser技能）：
+
+- 临时端口8016/5176、临时Store、合成资料；runtime设real但文字注入明确标注的Fake后端，真实SDK
+  构造被禁止。未使用真实.env或真实项目数据，文字/图片真实调用均为0，未沿用上轮付费授权。
+- 未勾选逐次外发不能发送；普通咨询没有提案按钮；信息不足追问后给出高风险，再补充“没事了”仍保留
+  high/人工复核与避险提示。未发送补充时禁用旧分析提案按钮。
+- 生成提案后停止补充；确认后再改标题会隐藏保存按钮，重新确认后才可保存；保存跳转
+  `/records/ISS-37056F2B345B`，刷新恢复记录及已关联合成照片。
+- 该高风险记录从draft走完提交、人工派工、整改、待复查和独立专业关闭，revision=6。
+- 22条合成历史记录验证20+2分页；标题与closed组合筛选得1条，刷新保留筛选；无匹配显示空状态。
+- 重启隔离后端后仍能读取22条历史记录，并复测两轮文字补充；未保存会话不承诺跨重启恢复。
+- 模拟超时显示安全错误、保留输入、无自动重试，历史工单仍可导航。
+- 390×844下列表、文字及详情有效内容宽375、scrollWidth375，无横向溢出；桌面页首、导航及卡片检查通过。
+- 浏览器控制台无warning/error；临时视口已恢复、验收页关闭，本次前后端隔离服务均停止。
+
+修改文件分组：
+
+- Agent/API：`agents/text_assistant.py`、`backend/app/text_models.py`、`text_consultations.py`、
+  `product_routes.py`、`main.py`。
+- 前端：`frontend/src/components/TextPanel.vue`、`AppShell.vue`、`ImagePanel.vue`、`views/RecordsView.vue`、
+  `HomeView.vue`、`router.ts`、`api.ts`、`types.ts`。
+- 契约/测试：`contracts/product_text_request.v1.schema.json`、`product_text_response.v1.schema.json`、
+  `tests/test_product_text.py`、`test_product_records.py`。
+- 文档：`docs/product-text-records-contract.md`、`architecture.md`、`tutorial-compliance.md`、本验证记录、
+  `README.md`、`CONTEXT.md`、`TASKS.md`。
+
+遗留限制：
+
+- 本轮没有真实文字接口冒烟，不把Fake响应视为真实模型理解或分类正确率；首次实调、专业现场核验和
+  Phase6指标需独立验收。已有图片真实记录仅为上一轮合成图连通性。
+- 会话内存/单进程锁、一次一条模型请求，无流式回复或高并发调度；30分钟惰性清理不是定时物理清除。
+  浏览器刷新/离开丢失未保存对话；进程重启会清除会话、幂等缓存和未保存提案凭据，不影响正式Store。
+- “同一问题高风险保留”不等于识别所有危险；新会话不会自动关联旧咨询或原工单，模型自由建议仍需核验。
+- 操作角色仍为演示身份，无生产鉴权、项目隔离、速率限制、数据库事务或备份；列表暴露本机Store摘要，
+  不能直接公网部署。搜索词会进入URL及访问日志，请勿填写敏感个人信息。
+- 继承Phase3本地Store和Phase5图片隐私/保留期限制；双机新克隆、专业资料复核、比赛材料及Phase6仍待完成。

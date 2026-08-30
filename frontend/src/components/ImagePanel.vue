@@ -3,8 +3,8 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { api } from "../api";
 import type { IssueProposalPreviewData, IssueRecord, LinkedPhoto, PhotoAnalysisRecord, PhotoMetadata, VisionRuntime } from "../types";
 
-const props = defineProps<{ record: IssueRecord | null }>();
-const emit = defineEmits<{ proposal: [data: IssueProposalPreviewData] }>();
+const props = defineProps<{ record: IssueRecord | null; evidenceOnly?: boolean }>();
+const emit = defineEmits<{ proposal: [data: IssueProposalPreviewData]; busy: [value: boolean] }>();
 const runtime = ref<VisionRuntime | null>(null);
 const selected = ref<File | null>(null);
 const uploadAuthorized = ref(false);
@@ -33,6 +33,7 @@ onMounted(async () => {
 });
 
 watch(context, () => { externalConsent.value = false; });
+watch(busy, value => emit("busy", value), { flush: "sync" });
 watch(stage, () => { error.value = ""; notice.value = ""; });
 watch(() => props.record, async (record) => {
   const id = record?.record_id;
@@ -43,7 +44,7 @@ watch(() => props.record, async (record) => {
     const result = await api.getRecordPhotos(id);
     if (props.record?.record_id === id) links.value = result;
   } catch { error.value = "图片关联列表无法加载，不影响文字记录。"; }
-}, { deep: true });
+}, { deep: true, immediate: true });
 
 function selectFile(event: Event) {
   const files = (event.target as HTMLInputElement).files;
@@ -135,12 +136,15 @@ const limitationLabels: Record<string, string> = { low_resolution: "分辨率较
       <img :src="api.photoContentUrl(photo.photo_id)" alt="服务器清除元数据后的图片预览" />
       <p>{{ photo.photo_id }} · {{ photo.width }}×{{ photo.height }} · 元数据已清除</p>
     </div>
+    <p v-if="evidenceOnly" class="section-note">详情页用于关联本工单的照片证据；分析新的图片问题请前往“咨询与上报”。</p>
+    <template v-if="!evidenceOnly">
     <label>图片补充描述<textarea v-model.trim="context" maxlength="1000" rows="3" :disabled="busy"></textarea></label>
     <label v-if="runtime?.mode === 'real'" class="consent"><input v-model="externalConsent" type="checkbox" :disabled="busy" />本次允许将脱敏图片和补充描述发送至DeepSeek，理解会产生模型费用</label>
     <button class="primary-button" :disabled="!canAnalyze" @click="analyze">{{ busy ? "处理中…" : runtime?.mode === "real" ? "确认本次费用并分析图片" : "运行Mock图片链路（不识别内容）" }}</button>
+    </template>
     <p v-if="error" role="alert" class="error-message">{{ error }}</p>
     <p v-if="notice" role="status" class="info-callout">{{ notice }}</p>
-    <div v-if="analysis" class="visual-results" aria-live="polite">
+    <div v-if="analysis && !evidenceOnly" class="visual-results" aria-live="polite">
       <h3>初步视觉结果 · 必须人工复核</h3>
       <p>本次模式：{{ analysis.mode }}；未观察到不等于不存在。</p>
       <ul><li v-for="item in analysis.result.observations" :key="item.observation_id"><strong>{{ observationLabels[item.status] }}</strong>：{{ item.description }}</li></ul>

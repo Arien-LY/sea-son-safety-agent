@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "TextConsultationInput": {
+      "additionalProperties": false,
+      "description": "一条纯文字咨询消息及用户自报的可选上下文。",
+      "properties": {
+        "message": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "project": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project"
+        },
+        "area": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area"
+        },
+        "requester_role": {
+          "anyOf": [
+            {
+              "maxLength": 50,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requester Role"
+        }
+      },
+      "required": [
+        "message"
+      ],
+      "title": "TextConsultationInput",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "maxLength": 100,
+      "minLength": 8,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "input": {
+      "$ref": "#/$defs/TextConsultationInput"
+    },
+    "consultation_id": {
+      "anyOf": [
+        {
+          "pattern": "^TXT-[a-f0-9]{32}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Consultation Id"
+    },
+    "expected_turn": {
+      "default": 0,
+      "maximum": 6,
+      "minimum": 0,
+      "title": "Expected Turn",
+      "type": "integer"
+    },
+    "allow_external": {
+      "default": false,
+      "title": "Allow External",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "request_id",
+    "input"
+  ],
+  "title": "TextRequest",
+  "type": "object"
+}
