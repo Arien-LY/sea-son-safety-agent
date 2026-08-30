@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 import { api } from "../api";
+import KnowledgePanel from "../components/KnowledgePanel.vue";
 import type {
   ActorRole,
   ConfirmedIssueProposal,
@@ -33,7 +34,7 @@ const actionNote = ref("");
 const selectedRole = ref<ResponsibleRole>("safety_officer");
 
 const analysisForm = reactive({
-  category: "safety" as Extract<IssueCategory, "safety" | "logistics">,
+  category: "safety" as Extract<IssueCategory, "safety" | "quality" | "management" | "logistics">,
   issueType: "临边防护",
   summary: "作业层临边缺少防护栏杆，需要现场人员核实并跟进。",
   riskLevel: "medium" as RiskLevel,
@@ -223,7 +224,7 @@ function displayValue(value: string | null): string {
       <p class="eyebrow">施工现场问题闭环</p>
       <h1>由人确认提案，由代码推进整改</h1>
       <p class="lead">
-        Phase 3 将已确认提案保存为本地正式记录；责任建议不等于归责，状态只能按权限矩阵推进。
+        Phase 4 增加只读知识依据；建议、来源和人工结论分开展示，既有整改状态仍由确定性代码推进。
       </p>
     </div>
     <div class="runtime-card">
@@ -249,7 +250,7 @@ function displayValue(value: string | null): string {
       <span class="safe-chip">无真实模型 · 无自动归责</span>
     </div>
     <p class="section-note">
-      使用结构化本地验收输入验证安全与后勤共用生命周期；这里不是自然语言模型入口。
+      使用结构化本地验收输入验证四类问题共用生命周期与知识检索；这里不是自然语言模型入口。
     </p>
 
     <div class="form-grid">
@@ -257,6 +258,8 @@ function displayValue(value: string | null): string {
         问题类别
         <select v-model="analysisForm.category">
           <option value="safety">安全问题</option>
+          <option value="quality">质量问题</option>
+          <option value="management">管理问题</option>
           <option value="logistics">后勤问题</option>
         </select>
       </label>
@@ -457,8 +460,10 @@ function displayValue(value: string | null): string {
     </div>
   </section>
 
+  <KnowledgePanel :analysis="record?.analysis || buildAnalysis()" :record="record" />
+
   <section class="boundary">
     <h2>当前能力边界</h2>
-    <p>记录保存在本地 JSON Store，不含登录鉴权、外部派单、通知、图片、RAG 或真实模型调用；演示角色标识不代表生产身份。</p>
+    <p>记录保存在本地 JSON Store，知识使用小规模本地关键词检索，不含向量库、登录鉴权、外部派单、通知、图片或真实模型调用；演示角色标识不代表生产身份。</p>
   </section>
 </template>

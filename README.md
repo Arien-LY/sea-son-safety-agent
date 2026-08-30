@@ -5,8 +5,8 @@
 受控工作流。
 
 当前仓库是从 `sea-son-agent` 的 `main` 选择性迁移得到的干净起点，不包含旧 MiC 数据、
-旧演示任务和复杂后台 Agent job。当前只交付可安装、可启动、可测试的工程骨架，尚未宣称
-实现问题识别、图片分析或整改闭环。
+旧演示任务和复杂后台 Agent job。当前已完成 Phase 1–4 的离线分析契约、受控提案、
+本地整改工作流和只读知识检索；页面为结构化验收演示，不是已接入真实模型的完整产品。
 
 ## 当前能力
 
@@ -15,6 +15,8 @@
 - Hello-Agents V1.0.3 教程兼容依赖基线（框架包固定为 `hello-agents==0.2.9`）。
 - Pydantic 安全质量问题结构化契约。
 - 受控工具统一返回协议。
+- 六状态本地整改工作流、人工派工与复查事件。
+- 2 份公开法规、8 条可追溯释义；模型建议、检索依据和人工结论分开展示。
 - Windows 安装、启动和验证脚本。
 - 教程约束、迁移清单、架构决策和阶段任务清单。
 
@@ -67,6 +69,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - [旧项目复用清单](docs/reuse-inventory.md)
 - [Codex harness 架构决策](docs/decisions/0001-codex-harness.md)
 - [验证记录](docs/verification.md)
+- [Phase 4 知识契约](docs/phase4-knowledge-contract.md)
+- [知识目录维护](knowledge/README.md)
+
+## 只读知识演示
+
+页面输入结构化分析后，在“建议、依据与人工结论”区输入关键词，人工确认适用地区后检索。
+首批只有中国内地建设工程资料；可用“临边”“消防通道”“隐蔽工程”“生活区”等关键词。
+未知/境外地区或无匹配材料时明确显示无依据，不作合规或责任认定。普通咨询由 Python 分析边界
+测试验证，页面尚无自然语言模型入口。
+
+关闭知识库：在启动后端的 PowerShell 中先执行 `$env:KNOWLEDGE_ENABLED = 'false'`，再运行
+`scripts/start-backend.ps1`；恢复时设为 `'true'` 并重启。此开关不改变已有分析或整改记录。
+不保证启动脚本自动加载 `.env`；以进程环境变量为准。
 
 ## 能力边界
 

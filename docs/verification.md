@@ -581,3 +581,81 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - 专业人员仍需复核责任角色名称、状态语义、高风险关闭/取消规则和安全/后勤验收措辞。
 - Phase 0 的双机全新克隆验证仍未完成；本机 163 条测试不能替代队友电脑验收。
 - 保留既有 `hello-agents==0.2.9` 的 Pydantic 弃用警告；本任务未升级依赖。
+
+## 2026-08-30：Phase 4 知识检索与依据引用完成
+
+范围与教程依据：
+
+- 先冻结 `docs/phase4-knowledge-contract.md`、8 条资料及15个固定检索案例，再实现检索与接口。
+- Hello-Agents V1.0.3 第8章：本地小规模检索；第9章：有限候选上下文且不提升为系统指令；
+  第7章：原生工具 Schema、严格参数和统一返回；Extra09：有限容量脱敏审计。
+- 两份政府官网公开行政法规短释义：安全条例第27/28/29/31/32条，质量条例第29/30/32条。
+  官方来源 URL、版本、更新时间、适用范围、条号和入库核对信息均保留；不含内部项目资料。
+- 不新增向量库、嵌入服务、第二个模型调用、图片、多智能体、外部派单或业务状态权限变化。
+
+Git 启动审计：
+
+- PR #11 已 squash merge 合入 main，基线为 `5cd9d7c`；从更新后的 main 创建
+  `phase4-readonly-knowledge`，没有叠加未合入的 Phase 3 分支。
+- 目标 `Arien-LY/sea-son-safety-agent` 经 GitHub CLI 只读核对仍为私人仓库。
+- 当前仓库已有提交，最初 unborn main 的启动限制不再适用；没有直接在 main 开发。
+
+验证命令与结果：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_phase4_knowledge.py tests/test_phase4_api.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+git diff --check
+```
+
+- Phase 4 专项：66 tests passed。
+- 完整 Python：229 tests passed，1 条既有 Hello-Agents Pydantic 弃用警告。
+- TypeScript 与 Vite 生产构建通过：35 modules transformed。
+- 15 个冻结案例全部达到预期精确 ID 集合；所有返回引用逐字段与目录核对，SHA-256 独立重算一致。
+- `git diff --check` 无空白错误；Windows Git 的 LF/CRLF 提示不影响测试。
+- 验证没有初始化真实服务商客户端、读取 API Key 或调用真实/付费模型；无新增依赖。
+
+确定性门禁：
+
+- 严格拒绝多余参数、日期/开关覆盖、字符串布尔/整数、伪造来源、引用或人工结论。
+- 未知/境外地区不引用；按服务器日期剔除撤回、尚未到核对日期和已到复核截止日的资料。
+- `2026-11-29` 可命中、`2026-11-30` 停止本批引用；截止日不是法律失效日。
+- 来源缺失、重复 ID、未授权、非法域名、版本晚于核对、无效日期、坏 JSON、超大文件均安全降级。
+- 关键词命中数排序，稳定 ID 决定同分顺序，最多3条；重复调用确定性一致，每次重新读取目录。
+- 关闭知识库先于文件读取；缺失/损坏/关闭/无命中时保留同一次 Fake 分析的风险、立即行动和人工标记。
+- 普通咨询可以按关键词跨领域检索，但不会改成工作流类别或改变原 direct_answer 路由。
+- 不给模型自由编写证据字段；用户恶意查询和原分析建议里的任意条号不能创建引用或人工结论。
+- 检索前后目录和已持久化记录逐字节相同；人工结论仅取关闭事件，附记录 ID、revision、操作者、角色和时间。
+- 工具审计不含原始查询、个人文本或隐藏思维链；仅参数键、摘要、结果数量/错误码和时间。
+
+本地浏览器验收（browser 技能）：
+
+- 未确认地区检索显示无依据；选择内地后得到安全条例第28条释义、官方原文链接、范围和版本日期。
+- 改为境外地区立即清空旧引用，再检索仍无依据；记录状态变化同样清空旧回答，避免错用旧结论。
+- 高风险安全演示记录走完六步工作流；待复查时无人工结论，关闭后显示专业复查事件，revision=6。
+- 关闭 `KNOWLEDGE_ENABLED` 并重启后端后，页面无引用且显示 knowledge_disabled，保留高风险避险提示
+  和已经存在的人工复查结论。
+- 桌面和390×844移动视口检查通过；修正移动端标题与标签挤占问题，引用长元数据换行，无横向溢出。
+- 控制台无 warning/error；测试只访问本地服务，未从页面打开外部来源。
+- 临时视口已恢复，临时浏览器页关闭，本次前后端服务已停止；合成工作流数据在系统临时目录，不在仓库。
+
+修改文件分组：
+
+- 数据/契约：`knowledge/catalog.v1.json`、`knowledge/README.md`、`contracts/phase4_*.schema.json`。
+- Agent：`agents/knowledge.py`、`agents/knowledge_answer.py`、`agents/tools/search_knowledge.py`。
+- 后端：`backend/app/knowledge.py`、`backend/app/main.py`。
+- 前端：`frontend/src/components/KnowledgePanel.vue`、`AppShell.vue`、`views/HomeView.vue`、`api.ts`、`types.ts`。
+- 测试：`tests/test_phase4_knowledge.py`、`tests/test_phase4_api.py`、`tests/fixtures/phase4_knowledge_cases.v1.json`。
+- 文档/配置：`.env.example`、`README.md`、`CONTEXT.md`、`TASKS.md`、`docs/phase4-knowledge-contract.md`、
+  `docs/architecture.md`、`docs/tutorial-compliance.md`、本验证记录。
+
+遗留风险和人工评审重点：
+
+- 8 条释义只覆盖极小范围，词法命中不理解否定、同义或完整法律适用；固定案例全通过不是开放域召回率。
+- 2026-08-30入库核对不等于专业法律复核或“截至今日完整现行法规”的保证；请专业人员确认摘编和项目适用，
+  复核截止前经评审更新版本/日期。境外项目目前没有可引用材料。
+- SHA-256 仅证明本次目录内容一致，不提供官方数字签名；资料维护依赖 Git 人工评审。
+- 程序保证引用字段不接受模型伪造，原模型建议仍是未经事实核验的自由文本，不能当规范原文或法律意见。
+  页面使用结构化演示输入，没有完整自然语言模型入口；真实模型准确率、工具选择和成本均未验收。
+- 审计缓冲区在内存中，检索快照不写业务记录；不是生产级持久化证据链。
+- 保留 Phase 3 的无真实身份认证、单机/单进程 Store 限制，以及 Phase 0 双机验证和专业人工验收门禁。

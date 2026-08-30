@@ -1,0 +1,479 @@
+{
+  "$defs": {
+    "HumanConclusion": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "default": "not_reviewed",
+          "enum": [
+            "not_reviewed",
+            "reviewed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "record_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record Id"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "actor_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actor Id"
+        },
+        "actor_role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actor Role"
+        },
+        "occurred_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurred At"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "title": "HumanConclusion",
+      "type": "object"
+    },
+    "IssueAnalysis": {
+      "additionalProperties": false,
+      "description": "模型分析结果；不能直接创建或修改业务记录。",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/IssueCategory"
+        },
+        "issue_type": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Issue Type",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "observed_facts": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Observed Facts",
+          "type": "array"
+        },
+        "uncertainties": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Uncertainties",
+          "type": "array"
+        },
+        "missing_fields": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "risk_level": {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        "immediate_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Immediate Actions",
+          "type": "array"
+        },
+        "suggested_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Suggested Actions",
+          "type": "array"
+        },
+        "recommended_route": {
+          "$ref": "#/$defs/RecommendedRoute"
+        },
+        "requires_human_review": {
+          "title": "Requires Human Review",
+          "type": "boolean"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "category",
+        "issue_type",
+        "summary",
+        "observed_facts",
+        "uncertainties",
+        "missing_fields",
+        "risk_level",
+        "immediate_actions",
+        "suggested_actions",
+        "recommended_route",
+        "requires_human_review",
+        "confidence"
+      ],
+      "title": "IssueAnalysis",
+      "type": "object"
+    },
+    "IssueCategory": {
+      "enum": [
+        "safety",
+        "quality",
+        "management",
+        "logistics",
+        "consultation",
+        "unknown"
+      ],
+      "title": "IssueCategory",
+      "type": "string"
+    },
+    "KnowledgeCitation": {
+      "additionalProperties": false,
+      "properties": {
+        "entry": {
+          "$ref": "#/$defs/KnowledgeEntry"
+        },
+        "source": {
+          "$ref": "#/$defs/KnowledgeSource"
+        },
+        "content_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Content Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entry",
+        "source",
+        "content_digest"
+      ],
+      "title": "KnowledgeCitation",
+      "type": "object"
+    },
+    "KnowledgeEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "entry_id": {
+          "pattern": "^KB-[A-Z]{3}-[0-9]{3}$",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "source_id": {
+          "pattern": "^SRC-[A-Z0-9-]{1,60}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "locator": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Locator",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "content_kind": {
+          "const": "paraphrase",
+          "title": "Content Kind",
+          "type": "string"
+        },
+        "categories": {
+          "items": {
+            "$ref": "#/$defs/IssueCategory"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Categories",
+          "type": "array"
+        },
+        "scope": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Scope",
+          "type": "string"
+        },
+        "jurisdiction": {
+          "const": "cn_mainland",
+          "title": "Jurisdiction",
+          "type": "string"
+        },
+        "keywords": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Keywords",
+          "type": "array"
+        },
+        "reviewed_on": {
+          "format": "date",
+          "title": "Reviewed On",
+          "type": "string"
+        },
+        "review_due_on": {
+          "format": "date",
+          "title": "Review Due On",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "withdrawn"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entry_id",
+        "source_id",
+        "locator",
+        "title",
+        "text",
+        "content_kind",
+        "categories",
+        "scope",
+        "jurisdiction",
+        "keywords",
+        "reviewed_on",
+        "review_due_on",
+        "status"
+      ],
+      "title": "KnowledgeEntry",
+      "type": "object"
+    },
+    "KnowledgeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "pattern": "^SRC-[A-Z0-9-]{1,60}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "publisher": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Publisher",
+          "type": "string"
+        },
+        "url": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "updated_on": {
+          "format": "date",
+          "title": "Updated On",
+          "type": "string"
+        },
+        "authorization": {
+          "const": "public_legal_text",
+          "title": "Authorization",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "title",
+        "publisher",
+        "url",
+        "version",
+        "updated_on",
+        "authorization"
+      ],
+      "title": "KnowledgeSource",
+      "type": "object"
+    },
+    "RecommendedRoute": {
+      "enum": [
+        "direct_answer",
+        "collect_more_info",
+        "propose_workflow",
+        "human_review"
+      ],
+      "title": "RecommendedRoute",
+      "type": "string"
+    },
+    "RiskLevel": {
+      "enum": [
+        "undetermined",
+        "low",
+        "medium",
+        "high",
+        "emergency"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "phase4-knowledge-answer-v1",
+      "default": "phase4-knowledge-answer-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "analysis": {
+      "$ref": "#/$defs/IssueAnalysis"
+    },
+    "model_suggestions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Model Suggestions",
+      "type": "array"
+    },
+    "suggestion_notice": {
+      "default": "以下是未核验建议，不是规范原文、检索依据或人工结论。",
+      "title": "Suggestion Notice",
+      "type": "string"
+    },
+    "retrieved_evidence": {
+      "items": {
+        "$ref": "#/$defs/KnowledgeCitation"
+      },
+      "maxItems": 3,
+      "title": "Retrieved Evidence",
+      "type": "array"
+    },
+    "evidence_notice": {
+      "title": "Evidence Notice",
+      "type": "string"
+    },
+    "human_conclusion": {
+      "$ref": "#/$defs/HumanConclusion"
+    },
+    "knowledge_status": {
+      "enum": [
+        "matched",
+        "no_results",
+        "unavailable"
+      ],
+      "title": "Knowledge Status",
+      "type": "string"
+    },
+    "knowledge_error_code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Knowledge Error Code"
+    }
+  },
+  "required": [
+    "analysis",
+    "model_suggestions",
+    "retrieved_evidence",
+    "evidence_notice",
+    "knowledge_status"
+  ],
+  "title": "KnowledgeAnswer",
+  "type": "object"
+}

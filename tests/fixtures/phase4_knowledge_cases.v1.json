@@ -1,0 +1,17 @@
+[
+  {"id":"K01","query":"施工前安全交底怎么留痕？","category":"management","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":["KB-SAF-027"]},
+  {"id":"K02","query":"作业层临边防护缺失","category":"safety","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":["KB-SAF-028"]},
+  {"id":"K03","query":"未完工楼里住集体宿舍","category":"logistics","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":["KB-SAF-029"]},
+  {"id":"K04","query":"消防通道堆放材料","category":"safety","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":["KB-SAF-031"]},
+  {"id":"K05","query":"防护用品没有发放","category":"safety","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":["KB-SAF-032"]},
+  {"id":"K06","query":"材料未经检验可以先用吗","category":"quality","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":["KB-QUA-029"]},
+  {"id":"K07","query":"隐蔽工程该留下什么记录","category":"quality","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":["KB-QUA-030"]},
+  {"id":"K08","query":"竣工验收不合格能直接关闭吗","category":"quality","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":["KB-QUA-032"]},
+  {"id":"K09","query":"空调遥控器怎么调温","category":"logistics","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":[]},
+  {"id":"K10","query":"临边需要警示吗","category":"safety","jurisdiction":"unknown","as_of":"2026-08-30","enabled":true,"ids":[]},
+  {"id":"K11","query":"香港项目临边安全","category":"safety","jurisdiction":"overseas","as_of":"2026-08-30","enabled":true,"ids":[]},
+  {"id":"K12","query":"临边没有危险，只想了解记录要求","category":"safety","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":true,"ids":["KB-SAF-028"]},
+  {"id":"K13","query":"临边防护","category":"safety","jurisdiction":"cn_mainland","as_of":"2026-11-30","enabled":true,"ids":[]},
+  {"id":"K14","query":"临边防护","category":"safety","jurisdiction":"cn_mainland","as_of":"2026-11-29","enabled":true,"ids":["KB-SAF-028"]},
+  {"id":"K15","query":"临边防护","category":"safety","jurisdiction":"cn_mainland","as_of":"2026-08-30","enabled":false,"ids":[],"error_code":"knowledge_disabled"}
+]

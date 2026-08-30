@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "IssueCategory": {
+      "enum": [
+        "safety",
+        "quality",
+        "management",
+        "logistics",
+        "consultation",
+        "unknown"
+      ],
+      "title": "IssueCategory",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "query": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Query",
+      "type": "string"
+    },
+    "category": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IssueCategory"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "jurisdiction": {
+      "default": "unknown",
+      "enum": [
+        "unknown",
+        "cn_mainland",
+        "overseas"
+      ],
+      "title": "Jurisdiction",
+      "type": "string"
+    },
+    "limit": {
+      "default": 3,
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "query"
+  ],
+  "title": "SearchKnowledgeRequest",
+  "type": "object"
+}

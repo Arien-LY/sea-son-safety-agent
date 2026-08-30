@@ -1,0 +1,89 @@
+{
+  "schema_version": "phase4-knowledge-v1",
+  "sources": [
+    {
+      "source_id": "SRC-SAFETY-393",
+      "title": "建设工程安全生产管理条例",
+      "publisher": "国家能源局华北监管局（国务院令第393号公开文本）",
+      "url": "https://hbj.nea.gov.cn/xxgk/fdzdgknr/hbjgfl/flwj/202311/t20231105_196004.html",
+      "version": "国务院令第393号，2003-11-24公布，2004-02-01施行",
+      "updated_on": "2003-11-24",
+      "authorization": "public_legal_text"
+    },
+    {
+      "source_id": "SRC-QUALITY-2019",
+      "title": "建设工程质量管理条例",
+      "publisher": "国家市场监督管理总局（国务院行政法规公开文本）",
+      "url": "https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2023/art_e42ecef60e9146af83cf9846821fac6c.html",
+      "version": "2000年公布，2017年第一次修订，2019-04-23第二次修订",
+      "updated_on": "2019-04-23",
+      "authorization": "public_legal_text"
+    }
+  ],
+  "entries": [
+    {
+      "entry_id": "KB-SAF-027", "source_id": "SRC-SAFETY-393", "locator": "第二十七条",
+      "title": "施工前安全技术交底", "text": "施工前应向班组和作业人员说明安全技术要求，并由双方签字确认。",
+      "content_kind": "paraphrase", "categories": ["management", "safety"],
+      "scope": "中国内地建设工程施工前的安全技术交底；具体要求须核对原文和项目制度。",
+      "jurisdiction": "cn_mainland", "keywords": ["安全交底", "技术交底", "交底签字"],
+      "reviewed_on": "2026-08-30", "review_due_on": "2026-11-30", "status": "active"
+    },
+    {
+      "entry_id": "KB-SAF-028", "source_id": "SRC-SAFETY-393", "locator": "第二十八条",
+      "title": "危险部位警示与现场防护", "text": "临边等危险部位应设醒目的安全警示，施工安全措施应结合阶段、环境和季节调整；本条不提供栏杆尺寸。",
+      "content_kind": "paraphrase", "categories": ["safety"],
+      "scope": "中国内地建设工程施工现场危险部位；不能仅凭文字认定现场违法。",
+      "jurisdiction": "cn_mainland", "keywords": ["临边", "警示标志", "洞口", "基坑边"],
+      "reviewed_on": "2026-08-30", "review_due_on": "2026-11-30", "status": "active"
+    },
+    {
+      "entry_id": "KB-SAF-029", "source_id": "SRC-SAFETY-393", "locator": "第二十九条",
+      "title": "生活区设置与卫生", "text": "办公生活区须与作业区分开并满足安全要求，饮食饮水休息场所须符合卫生要求，不得在未竣工建筑内设集体宿舍。",
+      "content_kind": "paraphrase", "categories": ["logistics", "safety"],
+      "scope": "中国内地建设工程施工现场的办公生活区，不涵盖所有社会住宅维修。",
+      "jurisdiction": "cn_mainland", "keywords": ["集体宿舍", "生活区", "饮水卫生", "宿舍卫生"],
+      "reviewed_on": "2026-08-30", "review_due_on": "2026-11-30", "status": "active"
+    },
+    {
+      "entry_id": "KB-SAF-031", "source_id": "SRC-SAFETY-393", "locator": "第三十一条",
+      "title": "施工现场消防管理", "text": "现场应落实消防责任和用火用电等制度，设置消防通道、消防水源及相应设施器材，并在入口作明显标识。",
+      "content_kind": "paraphrase", "categories": ["safety", "management"],
+      "scope": "中国内地建设工程施工现场消防管理，不提供具体通道宽度或处罚结论。",
+      "jurisdiction": "cn_mainland", "keywords": ["消防通道", "消防水源", "消防器材", "动火管理"],
+      "reviewed_on": "2026-08-30", "review_due_on": "2026-11-30", "status": "active"
+    },
+    {
+      "entry_id": "KB-SAF-032", "source_id": "SRC-SAFETY-393", "locator": "第三十二条",
+      "title": "作业人员防护与紧急避险", "text": "应提供防护用品并书面告知危险；作业人员可拒绝违章指挥，遇直接危及人身安全的紧急情况可停止作业或撤离。",
+      "content_kind": "paraphrase", "categories": ["safety"],
+      "scope": "中国内地建设工程施工作业人员安全防护；检索不得延迟紧急避险与人工联络。",
+      "jurisdiction": "cn_mainland", "keywords": ["防护用品", "违章指挥", "紧急撤离"],
+      "reviewed_on": "2026-08-30", "review_due_on": "2026-11-30", "status": "active"
+    },
+    {
+      "entry_id": "KB-QUA-029", "source_id": "SRC-QUALITY-2019", "locator": "第二十九条",
+      "title": "材料设备进场检验", "text": "材料、构配件、设备和商品混凝土须按要求检验并记录签字，未经检验或检验不合格不得使用。",
+      "content_kind": "paraphrase", "categories": ["quality", "management"],
+      "scope": "中国内地建设工程施工单位材料设备检验，不代替具体设计和检测标准。",
+      "jurisdiction": "cn_mainland", "keywords": ["进场检验", "材料检验", "未经检验", "混凝土检验"],
+      "reviewed_on": "2026-08-30", "review_due_on": "2026-11-30", "status": "active"
+    },
+    {
+      "entry_id": "KB-QUA-030", "source_id": "SRC-QUALITY-2019", "locator": "第三十条",
+      "title": "隐蔽工程检查与记录", "text": "施工单位应健全质量检验及工序管理，检查记录隐蔽工程质量，并在隐蔽前通知相关单位。",
+      "content_kind": "paraphrase", "categories": ["quality", "management"],
+      "scope": "中国内地建设工程隐蔽工序的检查通知，不等同于自动验收通过。",
+      "jurisdiction": "cn_mainland", "keywords": ["隐蔽工程", "隐蔽验收", "隐蔽前"],
+      "reviewed_on": "2026-08-30", "review_due_on": "2026-11-30", "status": "active"
+    },
+    {
+      "entry_id": "KB-QUA-032", "source_id": "SRC-QUALITY-2019", "locator": "第三十二条",
+      "title": "施工质量问题返修", "text": "施工中出现质量问题或者竣工验收不合格的工程，应由施工单位负责返修；具体事实与责任仍需专业核实。",
+      "content_kind": "paraphrase", "categories": ["quality"],
+      "scope": "中国内地建设工程施工或竣工验收阶段，不适用于一切保修和赔偿争议。",
+      "jurisdiction": "cn_mainland", "keywords": ["质量返修", "竣工验收不合格", "施工质量问题"],
+      "reviewed_on": "2026-08-30", "review_due_on": "2026-11-30", "status": "active"
+    }
+  ]
+}

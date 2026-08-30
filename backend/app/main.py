@@ -11,6 +11,11 @@ from pydantic import ValidationError
 
 from agents.runtime import runtime_info
 from agents.tools import ProposeIssueRecordTool, ToolResult
+from agents.knowledge_answer import (
+    KnowledgeAnswer, KnowledgeAnswerBuilder, KnowledgeAnswerRequest, RecordKnowledgeRequest,
+)
+from agents.tools.search_knowledge import SearchKnowledgeTool
+from backend.app.knowledge import answer_for_record
 from backend.app.proposals import (
     ConfirmedIssueProposal,
     Phase2ProposalService,
@@ -37,6 +42,7 @@ def create_app(
     *,
     proposal_service: Phase2ProposalService | None = None,
     workflow_service: IssueWorkflowService | None = None,
+    knowledge_tool: SearchKnowledgeTool | None = None,
 ) -> FastAPI:
     proposal_boundary = proposal_service or Phase2ProposalService()
     workflow_boundary = workflow_service or IssueWorkflowService(
@@ -45,6 +51,10 @@ def create_app(
         ),
         confirmation_verifier=proposal_boundary.verify_confirmation,
     )
+    knowledge_boundary = knowledge_tool or SearchKnowledgeTool(
+        enabled=os.getenv("KNOWLEDGE_ENABLED", "true").strip().casefold() == "true",
+    )
+    knowledge_builder = KnowledgeAnswerBuilder(knowledge_boundary)
     app = FastAPI(
         title="海之子 · 安全质量 Agent API",
         version="0.1.0",
@@ -83,6 +93,36 @@ def create_app(
                 error_code="invalid_arguments",
             )
         return proposal_boundary.preview(request)
+
+    @app.post("/api/knowledge/search", response_model=ToolResult)
+    def search_knowledge(payload: dict[str, Any]) -> ToolResult:
+        return knowledge_boundary.run(payload)
+
+    @app.post("/api/knowledge/answer", response_model=KnowledgeAnswer)
+    def knowledge_answer(payload: dict[str, Any]) -> KnowledgeAnswer:
+        try:
+            request = KnowledgeAnswerRequest.model_validate_json(
+                json.dumps(payload, ensure_ascii=False), strict=True,
+            )
+        except (TypeError, ValueError) as exc:
+            raise _workflow_http_error(400, "invalid_arguments", "知识回答请求无效。", exc)
+        return knowledge_builder.build(request)
+
+    @app.post("/api/issue-records/{record_id}/knowledge", response_model=KnowledgeAnswer)
+    def record_knowledge(record_id: str, payload: dict[str, Any]) -> KnowledgeAnswer:
+        try:
+            request = RecordKnowledgeRequest.model_validate_json(
+                json.dumps(payload, ensure_ascii=False), strict=True,
+            )
+        except (TypeError, ValueError) as exc:
+            raise _workflow_http_error(400, "invalid_arguments", "记录依据请求无效。", exc)
+        try:
+            return answer_for_record(record_id, request, workflow=workflow_boundary,
+                                     builder=knowledge_builder)
+        except RecordNotFoundError as exc:
+            raise _workflow_http_error(404, "record_not_found", "问题记录不存在。", exc)
+        except StoreError as exc:
+            raise _workflow_http_error(500, "store_error", "问题记录暂时无法读取。", exc)
 
     @app.post(
         "/api/issue-proposals/confirm",
