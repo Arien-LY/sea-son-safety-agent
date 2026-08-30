@@ -1247,3 +1247,32 @@ product-text-records-contract.md,architecture.md,tutorial-compliance.md,verifica
 `frontend/src/components/TextPanel.vue`、`frontend/tests/{markdown,text-panel}.test.cjs`、
 `tests/test_frontend_workbench.py`、`scripts/run-workbench-browser-fixture.py`、`docs/chat-visual-contract.md`、
 `THIRD_PARTY_NOTICES.md`、`TASKS.md`、`README.md`、`docs/verification.md`。
+
+## 2026-08-31：PhotoStore 视觉调用锁范围修复
+
+范围与失败基线：
+
+- 分支 `fix/photo-store-lock-scope` 基于已合并 PR #21 的 `main`（a7e0503）。契约先冻结于
+  `TASKS.md`；不改视觉 Prompt/Schema、供应商配置、授权、人工候选确认、工作流或前端。
+- 旧实现从 `PhotoStore.mutate` 回调内执行视觉 Fake；阻塞 Fake 未释放时，同库 `read` 在
+  0.5 秒确定性门限内超时。该单测修复前失败，证明模型等待持有了全库锁。
+
+实现与边界：
+
+- PhotoStore 为每个已存在图片提供共享逐图分析锁；模型调用只持有该图片锁，不持有全库索引锁。
+- 分析前在逐图锁内重新读取图片并检查每图 10 次上限；模型成功后只在原子写入阶段短暂持有全库锁，
+  写入回调再次防御性检查上限。模型失败仍不保存分析。
+- 逐图锁以存储根目录共享，因此同进程内多个 `PhotoStore` 实例也不能并发分析同一图片；本地容量
+  最多 200 张，锁表同样有界。该机制不宣称提供跨进程分布式锁。
+
+验证：
+
+- 修复前：`test_slow_vision_call_does_not_block_photo_reads` 为 1 failed，读取抛出
+  `concurrent.futures.TimeoutError`。
+- Phase 5 专项：`pytest tests/test_phase5_images.py tests/test_phase5_api.py -q` 为 68 passed。
+- 完整 `scripts/verify.ps1`：409 项 Python、30 项 Node 前端行为测试、`vue-tsc` 和 Vite 生产构建
+  （66 modules）全部通过；保留 1 条既有 Hello-Agents/Pydantic 弃用警告。
+- `git diff --check` 通过；所有模型响应均来自 Fake/Mock，真实或付费模型调用 0 次。
+
+遗留：真实视觉供应商延迟、多进程/多主机并发与生产级共享锁仍需独立压测和部署设计。Phase 6
+指标、可复现 Trace、双机安装/全流程浏览器验收与演示发布材料在后续独立主题中完成。

@@ -62,21 +62,30 @@ class PhotoService:
         mode = "real" if os.getenv("AGENT_MODE", "mock").strip().casefold() == "real" else "mock"
         if mode == "real" and not request.allow_external:
             raise PhotoError("external_consent_required", "真实模式须确认将脱敏图片与补充文字发送至DeepSeek并承担费用。", 403)
-        def analyze_and_store(document: PhotoDocument) -> PhotoAnalysisRecord:
-            photo, jpeg = self.store.read(photo_id)
+        def store_analysis(document: PhotoDocument) -> PhotoAnalysisRecord:
             if sum(item.photo_id == photo_id for item in document.analyses.values()) >= 10:
                 raise PhotoError("analysis_capacity_limit", "此图片已达到本地演示分析次数上限。", 409)
-            analyzer = self.analyzer_factory(mode)
-            result = analyzer.analyze(jpeg, request.context, low_resolution=min(photo.width, photo.height) < 384)
-            record = PhotoAnalysisRecord(
-                analysis_id="VIS-" + uuid4().hex[:24].upper(), photo_id=photo_id, mode=mode,
-                model="deepseek-v4-flash-vision-exp" if mode == "real" else "mock-no-image-recognition",
-                result=result, created_at=datetime.now(UTC),
-            )
             document.analyses[record.analysis_id] = record
             return record
         try:
-            record = self.store.mutate(analyze_and_store)
+            # Reject unknown/corrupt photos before allocating a per-photo guard.
+            self.store.read(photo_id)
+            with self.store.analysis_guard(photo_id):
+                # Re-read after acquiring the guard so metadata and bytes form one current snapshot.
+                document = self.store.snapshot()
+                if sum(item.photo_id == photo_id for item in document.analyses.values()) >= 10:
+                    raise PhotoError("analysis_capacity_limit", "此图片已达到本地演示分析次数上限。", 409)
+                photo, jpeg = self.store.read(photo_id)
+                analyzer = self.analyzer_factory(mode)
+                result = analyzer.analyze(
+                    jpeg, request.context, low_resolution=min(photo.width, photo.height) < 384,
+                )
+                record = PhotoAnalysisRecord(
+                    analysis_id="VIS-" + uuid4().hex[:24].upper(), photo_id=photo_id, mode=mode,
+                    model="deepseek-v4-flash-vision-exp" if mode == "real" else "mock-no-image-recognition",
+                    result=result, created_at=datetime.now(UTC),
+                )
+                record = self.store.mutate(store_analysis)
         except (PhotoError, VisionError) as exc:
             self._audit(photo_id, False, exc.code)
             raise

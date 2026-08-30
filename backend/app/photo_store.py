@@ -8,7 +8,8 @@ import json
 import os
 import tempfile
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock, RLock
@@ -20,6 +21,7 @@ from backend.app.photo_models import PhotoDocument, PhotoMetadata
 
 MAX_PHOTO_BYTES = 5 * 1024 * 1024
 _LOCKS: dict[str, RLock] = {}
+_ANALYSIS_LOCKS: dict[str, dict[str, RLock]] = {}
 _GUARD = Lock()
 
 
@@ -67,7 +69,9 @@ class PhotoStore:
         self.index_path = self.root / "index.json"
         self._replace = replace
         with _GUARD:
-            self._lock = _LOCKS.setdefault(str(self.root).casefold(), RLock())
+            root_key = str(self.root).casefold()
+            self._lock = _LOCKS.setdefault(root_key, RLock())
+            self._analysis_locks = _ANALYSIS_LOCKS.setdefault(root_key, {})
 
     def _path(self, photo_id: str) -> Path:
         # Validate before joining any user-supplied identifier to a filesystem path.
@@ -120,6 +124,15 @@ class PhotoStore:
             result = action(document)
             self._write(document)
             return result
+
+    @contextmanager
+    def analysis_guard(self, photo_id: str) -> Iterator[None]:
+        """Serialize analyses for one existing photo without locking the whole store."""
+        self._path(photo_id)
+        with _GUARD:
+            lock = self._analysis_locks.setdefault(photo_id, RLock())
+        with lock:
+            yield
 
     def snapshot(self) -> PhotoDocument:
         with self._lock:
