@@ -10,6 +10,8 @@ import type {
   ToolResult,
   WorkflowActor,
   WorkflowTransitionInput,
+  KnowledgeAnswer,
+  KnowledgeJurisdiction,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
@@ -29,6 +31,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getKnowledgeAnswer(query: string, jurisdiction: KnowledgeJurisdiction, analysis: IssueAnalysis, recordId?: string) {
+    return request<KnowledgeAnswer>(
+      recordId ? `/api/issue-records/${encodeURIComponent(recordId)}/knowledge` : "/api/knowledge/answer",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(recordId ? { query, jurisdiction } : { query, jurisdiction, analysis }),
+      },
+    );
+  },
   getRuntime() {
     return request<RuntimeInfo>("/api/runtime");
   },

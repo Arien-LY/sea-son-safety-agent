@@ -5,6 +5,49 @@ export interface RuntimeInfo {
   tutorial_baseline: string;
 }
 
+export type KnowledgeJurisdiction = "unknown" | "cn_mainland" | "overseas";
+
+export interface KnowledgeCitation {
+  entry: {
+    entry_id: string;
+    locator: string;
+    title: string;
+    text: string;
+    content_kind: "paraphrase";
+    scope: string;
+    reviewed_on: string;
+    review_due_on: string;
+  };
+  source: {
+    source_id: string;
+    title: string;
+    publisher: string;
+    url: string;
+    version: string;
+    updated_on: string;
+  };
+  content_digest: string;
+}
+
+export interface KnowledgeAnswer {
+  analysis: IssueAnalysis;
+  model_suggestions: string[];
+  suggestion_notice: string;
+  retrieved_evidence: KnowledgeCitation[];
+  evidence_notice: string;
+  human_conclusion: {
+    status: "not_reviewed" | "reviewed";
+    record_id: string | null;
+    revision: number | null;
+    actor_id: string | null;
+    actor_role: string | null;
+    occurred_at: string | null;
+    note: string | null;
+  };
+  knowledge_status: "matched" | "no_results" | "unavailable";
+  knowledge_error_code: string | null;
+}
+
 export type IssueCategory =
   | "safety"
   | "quality"

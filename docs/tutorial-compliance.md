@@ -29,6 +29,13 @@
 - 每个阶段在 `TASKS.md` 具有固定输入、输出、验收和禁止范围。
 - 新增 RAG、图片或多智能体前必须有前一阶段的验证记录。
 
+## Phase 4 落地
+
+Phase 4 落地：第 8 章采用小规模本地候选检索，不把向量数据库作为前置条件；第 9 章用最大3条
+短释义和严格出处边界控制上下文，资料不进入系统指令、不额外触发模型循环。第 7 章继续提供原生
+Function Calling Schema 和统一 ToolResult；Extra09 复用有容量上限的脱敏工具审计。
+实现与验收见 `docs/phase4-knowledge-contract.md`，未进行真实模型工具选择或开放域检索效果评估。
+
 ## 教程源码
 
 - 上游仓库：https://github.com/datawhalechina/hello-agents

@@ -1,0 +1,206 @@
+{
+  "$defs": {
+    "IssueCategory": {
+      "enum": [
+        "safety",
+        "quality",
+        "management",
+        "logistics",
+        "consultation",
+        "unknown"
+      ],
+      "title": "IssueCategory",
+      "type": "string"
+    },
+    "KnowledgeEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "entry_id": {
+          "pattern": "^KB-[A-Z]{3}-[0-9]{3}$",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "source_id": {
+          "pattern": "^SRC-[A-Z0-9-]{1,60}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "locator": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Locator",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "content_kind": {
+          "const": "paraphrase",
+          "title": "Content Kind",
+          "type": "string"
+        },
+        "categories": {
+          "items": {
+            "$ref": "#/$defs/IssueCategory"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Categories",
+          "type": "array"
+        },
+        "scope": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Scope",
+          "type": "string"
+        },
+        "jurisdiction": {
+          "const": "cn_mainland",
+          "title": "Jurisdiction",
+          "type": "string"
+        },
+        "keywords": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Keywords",
+          "type": "array"
+        },
+        "reviewed_on": {
+          "format": "date",
+          "title": "Reviewed On",
+          "type": "string"
+        },
+        "review_due_on": {
+          "format": "date",
+          "title": "Review Due On",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "withdrawn"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entry_id",
+        "source_id",
+        "locator",
+        "title",
+        "text",
+        "content_kind",
+        "categories",
+        "scope",
+        "jurisdiction",
+        "keywords",
+        "reviewed_on",
+        "review_due_on",
+        "status"
+      ],
+      "title": "KnowledgeEntry",
+      "type": "object"
+    },
+    "KnowledgeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "pattern": "^SRC-[A-Z0-9-]{1,60}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "publisher": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Publisher",
+          "type": "string"
+        },
+        "url": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "updated_on": {
+          "format": "date",
+          "title": "Updated On",
+          "type": "string"
+        },
+        "authorization": {
+          "const": "public_legal_text",
+          "title": "Authorization",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "title",
+        "publisher",
+        "url",
+        "version",
+        "updated_on",
+        "authorization"
+      ],
+      "title": "KnowledgeSource",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "phase4-knowledge-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/KnowledgeSource"
+      },
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    },
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/KnowledgeEntry"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Entries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "sources",
+    "entries"
+  ],
+  "title": "KnowledgeCatalog",
+  "type": "object"
+}
