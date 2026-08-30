@@ -80,12 +80,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - [图片人工复核表](docs/phase5-human-review.md)
 - [文字入口与历史工单契约](docs/product-text-records-contract.md)
 - [会话工作台体验契约](docs/conversation-workbench-contract.md)
+- [聊天提示词位置与修改方法](docs/chat-prompt-guide.md)
 
 ## 文字咨询与历史工单
 
 启动前后端后，左侧“新建聊天”用于一般问答且不提供工单动作；“新建咨询”接收自然语言，
 先提取信息、追问和判断风险；“提交工单”用于信息已较完整的结构化受控路径。
-real模式右下角持续显示目标模型；每次点击发送箭头即确认将当前消息、标签及本会话历次用户补充
+real模式右下角持续显示目标模型；每次点击发送箭头即确认将当前消息、标签及本会话历次用户补充和已生成回答
 发给DeepSeek并承担费用，不形成后续消息的持续授权，也不再显示额外确认弹窗。
 文字沿用 `LLM_MODEL=deepseek-v4-flash`（也支持已核验的v4-pro）及现有密钥/官方HTTPS端点；
 普通聊天10秒超时/最多256输出token，专业咨询30秒超时/最多4096输出token；均零自动重试、每轮一次请求。

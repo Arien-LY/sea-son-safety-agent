@@ -1026,3 +1026,90 @@ Chrome DevTools MCP隔离浏览器：
 frontend/src/{api.ts,types.ts,styles.css,components/TextPanel.vue}；
 frontend/tests/{api.test.cjs,text-panel.test.cjs}；tests/{test_chat_progress.py,test_frontend_workbench.py}；
 scripts/run-workbench-browser-fixture.py；docs/{chat-progress-contract.md,architecture.md,verification.md}；TASKS.md。
+
+## 2026-08-30：极简消息与普通聊天提示词修订
+
+范围与基线：`style/minimal-chat`基于9d87720 / `fix/chat-progress`，PR #16仍未合并；
+本主题冻结在会话工作台契约M01–M06，不重写Agent、不改专业咨询JSON或工单权限。
+
+提示词诊断与限制：
+
+- 用户截图提供了重复“中文日常问答助手”和自称“DeepSeek最新版”的实际样本。
+- 排查顺序为system角色称呼、上轮回答延续、前端固定拼接；代码排除前端拼接。
+  Fake SDK捕获实际answer_brief请求，确认旧system确有该称呼且未提供模型标识，last_answer亦带入旧回答。
+- 按diagnose建立请求边界回归；修前两个模型参数案例及两个布局契约检查失败（4 failed / 48 passed），
+  修后52 passed。该反馈环验证请求构造和布局约束，不声称复现真实模型生成的概率或建立完整因果实验。
+- 新CHAT_SYSTEM_PROMPT禁止主动自我介绍/规则复述，不沿用历史中的型号猜测；日期和模型标识由服务端追加，
+  用户陈述与上轮回答仍只放在user资料。没有以删词、关键词应答或前端替换的方式篡改模型输出。
+- 保留无工具、10秒超时、256输出token、零重试与原安全边界；没有读取/修改.env、模型配置或任何密钥。
+
+界面与Chrome DevTools验收：
+
+- 取消消息头像、助手标题、轮数和会话网格背景；用户气泡靠右、助手正文靠左；保留无视觉噪声的可访问消息分组。
+- “用时N秒”是默认折叠的原生details入口，展开后显示实际服务端步骤、工具和Mock说明。
+  等待仍显示实际经过时间与服务端阶段；仅真正调用业务工具时单独显示工具名，没有伪造思考过程。
+- 使用独立临时Store、8018 Fake服务和5178前端；用户原5173/8000服务未停止，未在real页面发送消息。
+- 桌面CSS视口2048×962：延迟Fake发送后输入立即为空、pending气泡立即靠右，头像数量0；
+  4秒后显示用时4秒，展开可见queued/preparing/model_running/validating/completed对应文案。
+  连续两轮用户消息全部靠右、助手左对齐，所有历史步骤默认折叠，无横向溢出。
+- 390×844设备模拟：较长中文消息换行且靠右，clientWidth/scrollWidth均390；时间折叠项可点击展开。
+  4秒为人为Fake延迟，不能代表真实供应商速度；移动消息/输入框截图已人工检查。
+- 专业咨询Fake错误恢复原输入，发送按钮重新可用；合成高风险回复仍显示必须人工复核和立即避险。
+  人工点击提案后出现propose_issue_record已完成/尚未保存提示及确认界面，没有创建正式工单。
+- 验收页控制台无error/warn；文字和提案流HTTP200，错误场景仍通过流内error事件明确失败。
+
+验证结果：`scripts/verify.ps1`通过，370项Python、21项前端行为测试、vue-tsc/Vite构建（45 modules）；
+1条既有Hello-Agents/Pydantic弃用警告；git diff --check通过。真实文字/图片模型调用均0次。
+
+修改文件：agents/text_assistant.py；frontend/src/{components/TextPanel.vue,styles.css}；
+tests/{test_product_text.py,test_frontend_workbench.py}；docs/{conversation-workbench-contract.md,
+chat-prompt-guide.md,verification.md}；TASKS.md；README.md。
+
+遗留风险：真实模型可能仍重复或幻觉；型号标识是程序配置而非供应商内部运行版本证明。生产鉴权、
+现场效果与此前三项独立P2不在本修订范围。提示词编辑后的新会话比较、重载丢失未保存上下文、
+Mock不执行真实提示词等注意事项已写入编辑指南。PR依赖#16，未自动合并。
+
+收尾：本轮创建的隔离浏览器页已关闭，8018/5178验收服务已停止；原用户页面和服务保持不变。
+
+## 2026-08-30：普通聊天重复回答的逐轮上下文修复
+
+基线dc6216c，独立分支`fix/chat-turn-history`，依赖仍开放的PR #17。
+实现前冻结`docs/chat-turn-history-contract.md`（H01–H06）。本轮不改前端视觉、公共Schema或工单流程。
+
+依据与复现：
+
+- 复用紧邻诊断轮的Chrome DevTools只读证据：用户三轮“你是谁→今天几号了→围栏断裂”，对应三次POST；
+  第三轮原始result.answer已经包含身份和日期，DOM与接口一致，排除重复发送与前端拼接。
+- 离线捕获answer_brief确认：只有system/user两条消息，user内有全部user_statements和last_answer。
+  上轮只约束语气的修订未改该结构，不能消除旧问题被当成本轮输入的诱因。
+- diagnose回归走HTTP（JSON和NDJSON）→真实服务与适配器→Fake SDK，逐轮捕获消息，而非只检查提示词字串。
+  测试开发时曾误将错误码视为顶层字段；按既有detail.error_code协议修正测试后，修前稳定14 failed /
+  5 passed；第三轮得到2条消息而非6条，非法历史也未在外发前拒绝。未将测试自身错误算作产品故障。
+
+实现：
+
+- chat改为system、逐轮user/assistant、最后一条当前user；每个user是独立TextConsultationInput的JSON，
+  保留背景标签。历史assistant只含成功回复answer，不含analysis或隐藏推理，仍不成为系统指令。
+- 从既有session.responses按turn读取答案，与inputs配对；不新增历史存储。失败不提交历史，幂等重放
+  直接返回原响应；最大6轮/12条消息。历史数量不符、空/非字符串/超长答案在构造SDK客户端前拒绝。
+- system明确只回答最新user，相关指代/明确回顾仍可使用历史；不通过删词或强制固定答案掩盖模型行为。
+- consult的累计事实/上轮追问、高风险保留和人工确认不变；chat仍无工具/无提案权限，10秒/256token/零重试。
+- 更新提示词指南、产品契约、教程映射、架构和README，说明历史答案也会作为上下文发送。
+
+验证：
+
+- 新增19项：三轮JSON/NDJSON角色与当前问题、代词追问及伪role标签、失败重试/旧新幂等重放、会话隔离、
+  6轮上限、伪造客户端历史拒绝、9类非法历史，以及空/超长/截断/工具/超时结果处理。
+- `pytest tests/test_chat_turn_history.py tests/test_product_text.py tests/test_chat_progress.py -q`：65 passed。
+- `scripts/verify.ps1`：389 passed，1条既有Hello-Agents/Pydantic弃用警告；21项前端行为测试和
+  vue-tsc/Vite生产构建（45 modules）通过；git diff --check通过。
+- Fake答案只验证透传和历史配对，不将预设“无重复”文本当作真实模型质量证据。本轮未新发浏览器模型请求，
+  未读取/修改.env或密钥；真实文字/图片模型调用均0次，也未启动额外后台服务。
+
+遗留与人工验证：需在后端重载后清空旧问题，主动重新发送固定三轮检查真实重复行为；不承诺所有生成
+完全无重复。历史最多增加4条更早答案，相比旧结构可能增加输入成本/耗时（未实测），仍有6轮与每条
+1000字上限。重载丢失未保存会话的既有规则不变；生产身份、现场评估及此前三项P2仍为独立待办。
+
+修改文件：agents/text_assistant.py；backend/app/text_consultations.py；
+tests/{test_chat_turn_history.py,test_product_text.py}；docs/{chat-turn-history-contract.md,chat-prompt-guide.md,
+product-text-records-contract.md,architecture.md,tutorial-compliance.md,verification.md}；TASKS.md；README.md。

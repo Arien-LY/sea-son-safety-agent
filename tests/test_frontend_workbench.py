@@ -91,3 +91,24 @@ def test_frozen_contract_names_required_browser_scenarios() -> None:
     for scenario in ("W01", "W02", "W03", "W04", "W05", "W06", "W07", "W08", "W09", "W10"):
         assert scenario in contract
     assert "真实文字与图片模型调用为 0" in contract
+
+
+def test_minimal_message_template_has_no_avatars_and_keeps_pending_role() -> None:
+    panel = source("frontend/src/components/TextPanel.vue")
+    assert "message-avatar" not in panel and "message-meta" not in panel
+    assert panel.count('class="message-row user-row" aria-label="你的消息"') == 2
+    assert 'class="message-row assistant-row" aria-label="助手回复"' in panel
+    assert '<summary>用时 {{ turn.seconds }} 秒</summary>' in panel
+    assert 'class="execution-history" open' not in panel
+    assert "第 {{ turn.result.turn }} 轮" not in panel
+    assert "Mock 验证，未调用真实模型" in panel
+    assert "step.tool" in panel and "activeStepLabel" in panel
+
+
+def test_minimal_message_styles_align_user_right_without_avatar_gutter() -> None:
+    styles = source("frontend/src/styles.css")
+    assert ".user-row { justify-content: flex-end; }" in styles
+    assert ".assistant-message { width: 100%; }" in styles
+    assert ".conversation > li" in styles
+    assert ".message-avatar" not in styles and ".message-meta" not in styles
+    assert ".workspace:has(.conversation-workspace) { background: #fff; }" in styles
