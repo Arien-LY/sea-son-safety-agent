@@ -848,3 +848,62 @@ git ls-files .env
 - 操作角色仍为演示身份，无生产鉴权、项目隔离、速率限制、数据库事务或备份；列表暴露本机Store摘要，
   不能直接公网部署。搜索词会进入URL及访问日志，请勿填写敏感个人信息。
 - 继承Phase3本地Store和Phase5图片隐私/保留期限制；双机新克隆、专业资料复核、比赛材料及Phase6仍待完成。
+
+## 2026-08-30：会话工作台前端体验重构
+
+范围与冻结契约：
+
+- 先新增 `docs/conversation-workbench-contract.md`，冻结信息架构、普通聊天/专业咨询/直接提交三种模式、
+  状态迁移、工单出现条件及 W01–W10 桌面和移动验收场景，再修改 Vue。
+- 左侧提供新建聊天、新建咨询、提交工单、最近正式工单和全部历史；主体改为消息流、空白引导、
+  composer、图片/背景入口和明确发送状态。视觉采用独立中性工作台设计，不复制或冒充 Codex 品牌资产。
+- 普通聊天前端永不调用提案接口；专业咨询只在服务端 `can_propose=true` 后显示生成提案；直接提交
+  仍依次经过提案预览、字段核对、人工确认、HMAC 完整性和显式保存草稿。
+- 没有修改 Phase 1/2/3/5 冻结 Schema、后端状态机、模型权限或高风险独立专业复查规则；没有新增
+  Agent、RAG、多智能体、生产身份、数据库或依赖升级。
+
+Git 与实现：
+
+- PR #14 已合并到 `main`；本任务先 fast-forward 本地 `main` 到合并基线 `78fda2a`，再创建
+  `feat/conversation-workbench`，没有继续修改 `product-text-and-records` 分支。
+- 新增 `/chat`、`/consult`、`/submit` 路由，根路径转到专业咨询；详情与列表路由保持兼容。
+- `AppShell` 增加响应式侧栏和最近工单快照；`TextPanel` 增加模式策略、消息流、键盘发送、加载/错误、
+  图片与背景入口；`HomeView` 把工单链表达为三步受控流程；`RecordsView` 补齐加载、错误、空结果与移动布局。
+- 新增 `scripts/run-workbench-browser-fixture.py`，只构造确定性 Fake 文字响应和临时 Store，
+  不创建真实模型客户端；新增 `tests/test_frontend_workbench.py` 固定路由、侧栏、普通聊天无提案和确认链。
+
+验证命令与结果：
+
+```powershell
+npm run build
+.\.venv\Scripts\python.exe -m pytest tests\test_frontend_workbench.py tests\test_product_text.py tests\test_product_records.py -q
+powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
+git diff --check
+```
+
+- 工作台＋文字/历史专项：55 passed；完整 Python：354 passed，保留 1 条既有 Hello-Agents Pydantic 弃用警告。
+- TypeScript 和 Vite 生产构建通过：45 modules transformed；`git diff --check` 通过。
+- 全部自动验证使用本地 Fake/Mock；未读取真实 `.env`、未创建服务商客户端，文字/图片真实模型调用均为 0。
+
+隔离浏览器验收：
+
+- 本地端口 8000/5177、系统临时目录 Store 与明确 Fake 文字后端；没有使用真实项目或个人资料。
+- 桌面空白页显示三种入口、最近工单、消息引导、图片/背景工具和 composer；普通聊天完成一轮回答，
+  页面中生成提案按钮数量为 0。
+- 专业咨询首轮返回信息不足和追问，生成提案按钮数量为 0；补充“三层配电箱冒火花且有人在附近”后，
+  高风险、立即避险和人工复核可见，服务端允许后才出现生成待确认提案。
+- 提案补齐项目/区域并确认后，再改标题使旧确认与保存按钮立即失效；重新确认后只保存 1 条正式草稿，
+  自动进入详情，revision=1。侧栏同步显示该记录。
+- 直接提交可生成待确认提案；未确认时最近正式工单仍为 1 条且没有保存按钮，证明未自动落库。
+- 历史列表显示共 1 条记录，进入详情并刷新后标题、ID 和 revision=1 均恢复。
+- “模拟加载”期间显示发送状态；“模拟错误”显示稳定 Fake 错误、未自动重试，输入值“模拟错误”保留。
+- 图片入口可展开上传面板；未选择文件和勾选授权时上传按钮禁用，没有发送或上传任何图片。
+- 390×844 下 `clientWidth=375`、`scrollWidth=375`，无横向溢出；移动顶栏和抽屉正常，最近工单可见。
+- 浏览器控制台 warning/error 为 0；临时视口已恢复、验收页关闭，前后端临时服务已停止。
+
+已知限制：
+
+- 本轮是前端体验与信息架构重构，不增加流式响应、持久聊天、多会话账户隔离或生产权限。
+- Fake 浏览器结果只证明交互、协议与安全边界，不证明真实模型理解、分类准确率或高风险召回率。
+- 侧栏最近项只读取前 6 条正式工单；未保存会话按既有契约在刷新、过期或进程重启后丢失。
+- 系统临时验收 Store 未写入仓库；生产数据库、备份、外部工单同步和 Windows 双机全新克隆仍待 Phase 6。

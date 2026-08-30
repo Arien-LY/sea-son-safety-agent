@@ -136,7 +136,7 @@ const limitationLabels: Record<string, string> = { low_resolution: "分辨率较
       <img :src="api.photoContentUrl(photo.photo_id)" alt="服务器清除元数据后的图片预览" />
       <p>{{ photo.photo_id }} · {{ photo.width }}×{{ photo.height }} · 元数据已清除</p>
     </div>
-    <p v-if="evidenceOnly" class="section-note">详情页用于关联本工单的照片证据；分析新的图片问题请前往“咨询与上报”。</p>
+    <p v-if="evidenceOnly" class="section-note">详情页用于关联本工单的照片证据；分析新的图片问题请前往“新建咨询”。</p>
     <template v-if="!evidenceOnly">
     <label>图片补充描述<textarea v-model.trim="context" maxlength="1000" rows="3" :disabled="busy"></textarea></label>
     <label v-if="runtime?.mode === 'real'" class="consent"><input v-model="externalConsent" type="checkbox" :disabled="busy" />本次允许将脱敏图片和补充描述发送至DeepSeek，理解会产生模型费用</label>

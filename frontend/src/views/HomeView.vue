@@ -26,6 +26,14 @@ const runtime = ref<RuntimeInfo | null>(null);
 const route = useRoute();
 const router = useRouter();
 const isDetail = computed(() => route.name === "record-detail");
+const workspaceMode = computed<"chat" | "consult" | "submit">(() => {
+  if (route.name === "chat") return "chat";
+  if (route.name === "submit") return "submit";
+  return "consult";
+});
+const isConversation = computed(() => !isDetail.value && workspaceMode.value !== "submit");
+const isSubmit = computed(() => !isDetail.value && workspaceMode.value === "submit");
+const showImages = ref(false);
 const loadingRecord = ref(false);
 const recordError = ref("");
 const textAnalysis = ref<IssueAnalysis | null>(null);
@@ -111,6 +119,7 @@ async function loadRecord() {
 }
 watch(() => route.fullPath, () => {
   proposal.value = null; confirmed.value = null; editedFields.value = null; textAnalysis.value = null;
+  showImages.value = false;
   void loadRecord();
 }, { immediate: true });
 watch(editedFields, () => { confirmed.value = null; saveKey = ""; }, { deep: true });
@@ -274,47 +283,33 @@ function displayValue(value: string | null): string {
 </script>
 
 <template>
-  <section class="hero proposal-hero">
+  <section v-if="isDetail || isSubmit" class="workspace-header">
     <div>
-      <p class="eyebrow">施工现场问题闭环</p>
-      <h1>{{ isDetail ? '工单详情与整改' : '先说问题，再确认行动' }}</h1>
-      <p class="lead">
-        {{ isDetail ? '从本地记录恢复完整状态，继续人工整改与复查；页面刷新不会删除已保存工单。' : '用文字咨询或单张照片描述现场，查看建议与追问；只有你确认后，才保存正式问题记录。' }}
-      </p>
+      <p class="workspace-kicker">{{ isDetail ? "历史工单" : "结构化提交" }}</p>
+      <h1>{{ isDetail ? "工单详情与整改" : "提交工单" }}</h1>
+      <p>{{ isDetail ? "从唯一状态源恢复记录，继续人工整改与复查。" : "适合信息已经较完整的情况；仍需生成提案、核对并确认后保存。" }}</p>
     </div>
-    <div class="runtime-card">
-      <span class="status-dot" :class="{ online: runtime }"></span>
-      <div v-if="runtime">
-        <strong>底座已连接</strong>
-        <p>{{ runtime.tutorial_baseline }} · {{ runtime.framework }} {{ runtime.framework_version }}</p>
-        <small>运行模式：{{ runtime.agent_mode }}</small>
-      </div>
-      <div v-else>
-        <strong>{{ runtimeError || "正在检查后端" }}</strong>
-        <p>启动 FastAPI 后可进行工作流验收。</p>
-      </div>
-    </div>
+    <div class="connection-pill" :class="{ online: runtime }"><span></span>{{ runtime ? `服务已连接 · ${runtime.agent_mode}` : runtimeError || "正在检查服务" }}</div>
   </section>
 
   <fieldset class="workspace-fields" :disabled="working || loadingRecord" aria-label="咨询和工单操作区">
-  <div v-if="isDetail" class="button-row"><RouterLink to="/records" class="secondary-button">返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新工单详情</button></div>
-  <p v-if="loadingRecord" role="status">正在恢复工单详情…</p>
+  <div v-if="isDetail" class="record-toolbar"><RouterLink to="/records" class="secondary-button">← 返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新详情</button></div>
+  <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在恢复工单详情</strong><small>从本地唯一状态源读取记录与轨迹…</small></p></div>
   <p v-if="recordError" class="error-message" role="alert">{{ recordError }}</p>
   <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
-  <TextPanel v-if="!isDetail" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @busy="textBusy = $event" />
+  <TextPanel v-if="isConversation" :mode="workspaceMode === 'chat' ? 'chat' : 'consult'" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @busy="textBusy = $event" @attachment="showImages = true" />
 
-  <details v-if="!isDetail" class="proposal-workbench">
-    <summary>结构化流程演示（不调用模型）</summary>
+  <section v-if="isSubmit" class="proposal-workbench direct-submit">
   <section aria-labelledby="proposal-workbench-title">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">确定性验收入口</p>
-        <h2 id="proposal-workbench-title">已校验问题分析</h2>
+        <p class="eyebrow">第 1 步 · 描述待提交问题</p>
+        <h2 id="proposal-workbench-title">结构化问题信息</h2>
       </div>
-      <span class="safe-chip">无真实模型 · 无自动归责</span>
+      <span class="safe-chip">不调用模型</span>
     </div>
     <p class="section-note">
-      使用结构化本地验收输入验证四类问题共用生命周期与知识检索；这里不是自然语言模型入口。
+      这里只创建待确认提案，不会直接落库、派工或归责。风险与人工复核字段提交后不可由页面降低。
     </p>
 
     <div class="form-grid">
@@ -346,17 +341,17 @@ function displayValue(value: string | null): string {
       </label>
     </div>
     <button class="primary-button" :disabled="previewing" @click="createPreview">
-      {{ previewing ? "正在生成…" : "生成建议创建记录" }}
+      {{ previewing ? "正在生成待确认提案…" : "继续：生成待确认提案" }}
     </button>
     <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
   </section>
-  </details>
+  </section>
 
   <section v-if="!isDetail && proposal && editedFields" class="proposal-card" aria-labelledby="suggestion-title">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">等待用户确认</p>
-        <h2 id="suggestion-title">建议创建记录</h2>
+        <p class="eyebrow">第 2 步 · 等待人工确认</p>
+        <h2 id="suggestion-title">核对工单提案</h2>
       </div>
       <span class="warning-chip">尚未保存</span>
     </div>
@@ -408,15 +403,15 @@ function displayValue(value: string | null): string {
     </div>
 
     <button class="primary-button confirm-button" :disabled="confirming" @click="confirmProposal">
-      {{ confirming ? "正在确认…" : "确认提案" }}
+      {{ confirming ? "正在确认…" : "确认以上提案" }}
     </button>
   </section>
 
   <section v-if="!isDetail && confirmed && !record" class="confirmation-card" aria-live="polite">
-    <strong>提案已由用户确认</strong>
-    <p>完整性凭据已生成，但尚未保存正式记录。</p>
+    <strong>第 3 步 · 提案已确认</strong>
+    <p>HMAC 完整性凭据已生成，但尚未保存正式记录。请显式保存完成建单。</p>
     <button class="primary-button" :disabled="saving" @click="saveDraft">
-      {{ saving ? "正在保存…" : "保存为正式草稿" }}
+      {{ saving ? "正在保存，请勿重复点击…" : "保存为正式草稿" }}
     </button>
   </section>
 
@@ -541,18 +536,27 @@ function displayValue(value: string | null): string {
     </div>
   </section>
 
-  <ImagePanel :record="record" :evidence-only="isDetail" @proposal="usePhotoProposal" @busy="imageBusy = $event" />
-  <KnowledgePanel v-if="activeAnalysis" :analysis="activeAnalysis" :record="record" />
+  <section v-if="isConversation && showImages" class="attachment-surface">
+    <div class="attachment-head"><div><p class="eyebrow">图片附件</p><h2>添加单张现场图片</h2></div><button type="button" class="secondary-button" @click="showImages = false">收起</button></div>
+    <ImagePanel :record="record" @proposal="usePhotoProposal" @busy="imageBusy = $event" />
+  </section>
+  <ImagePanel v-if="isDetail" :record="record" evidence-only @proposal="usePhotoProposal" @busy="imageBusy = $event" />
+  <KnowledgePanel v-if="activeAnalysis && (isDetail || isSubmit || workspaceMode === 'consult')" :analysis="activeAnalysis" :record="record" />
   </fieldset>
 
-  <section class="boundary">
-    <h2>当前能力边界</h2>
-    <p>文字与图片均可逐次确认后调用已配置真实模型，结果仍需现场专业复核。数据保存在本地，无生产登录鉴权、外部派单或自动关闭；不得直接暴露公网。未保存咨询不长期留存。</p>
+  <section v-if="isDetail || isSubmit" class="boundary">
+    <h2>受控边界</h2>
+    <p>模型不能改变业务状态。保存、派工、整改与关闭均由人工动作和服务端规则执行；高风险必须独立专业复查。</p>
   </section>
 </template>
 
 <style scoped>
 .workspace-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.record-toolbar { display: flex; gap: 10px; margin-bottom: 18px; }
+.attachment-surface { margin-top: 24px; }
+.attachment-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.attachment-head h2 { margin: 4px 0 0; }
+.direct-submit { margin-top: 18px; }
 .record-description { white-space: pre-wrap; line-height: 1.7; }
 .analysis-detail { padding: 16px; background: #f5f8fc; border-radius: 12px; overflow-wrap: anywhere; }
 summary { cursor: pointer; font-weight: 700; }
