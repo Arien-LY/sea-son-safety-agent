@@ -91,7 +91,7 @@ async function propose() {
 
     <div class="message-stage">
       <section v-if="!turns.length" class="empty-conversation" aria-live="polite">
-        <div class="assistant-orb">安</div>
+        <div class="assistant-orb" aria-hidden="true"></div>
         <h2>{{ prompt }}</h2>
         <p>{{ mode === "chat" ? "回答仅供参考；涉及现场风险时仍需专业人员核验。" : "请尽量说明位置、当前状态、影响范围，以及是否有人正处于危险中。" }}</p>
         <div class="starter-grid">
@@ -119,7 +119,7 @@ async function propose() {
           </div>
         </li>
       </ol>
-      <div v-if="busy" class="typing-row" role="status"><span></span><span></span><span></span><em>正在分析并组织回复</em></div>
+      <div v-if="busy" class="typing-row" role="status"><span></span><span></span><span></span><em>正在分析，最多约 35 秒</em></div>
     </div>
 
     <div class="composer-dock">
@@ -135,6 +135,9 @@ async function propose() {
           <div class="composer-tools">
             <button type="button" class="tool-button" :disabled="busy" title="添加图片" @click="emit('attachment')">＋ <span>图片</span></button>
             <button type="button" class="tool-button" :class="{ active: contextOpen }" :disabled="busy" @click="contextOpen = !contextOpen">⌁ <span>背景</span></button>
+            <label v-if="runtime?.mode === 'real'" class="compact-consent" title="仅授权本次发送到 DeepSeek；可能产生模型费用">
+              <input v-model="consent" type="checkbox" /><span>允许本次外发</span>
+            </label>
           </div>
           <div class="send-controls"><span>{{ form.message.length }}/1000</span><button type="button" class="send-button" :disabled="!canSend" :aria-label="latest ? '发送补充' : '发送消息'" @click="send">↑</button></div>
         </div>
@@ -144,7 +147,6 @@ async function propose() {
         <label>区域标签（可选）<input v-model="form.area" maxlength="200" /></label>
         <label>自报角色（非权限）<input v-model="form.requester_role" maxlength="50" /></label>
       </div>
-      <label v-if="runtime?.mode === 'real'" class="text-consent"><input v-model="consent" type="checkbox" />本次允许将问题、背景标签及同一会话的用户补充发送至 DeepSeek，并理解可能产生费用</label>
       <div class="composer-foot"><span>Enter 发送 · Shift+Enter 换行</span><button type="button" :disabled="busy" @click="reset">清空并开始新问题</button></div>
       <p v-if="dirty && canCreateProposal" class="section-note">还有未发送的补充，请先发送，避免使用旧分析生成提案。</p>
       <p v-if="proposed" class="success-callout">待确认提案已生成。会话已冻结，尚未创建正式工单。</p>

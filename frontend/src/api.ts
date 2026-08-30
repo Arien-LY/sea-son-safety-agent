@@ -23,18 +23,29 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, init);
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as {
-      detail?: string | { error_code?: string; message?: string };
-    } | null;
-    const detail = payload?.detail;
-    const message = typeof detail === "string" ? detail : detail?.message;
-    const code = typeof detail === "object" ? detail?.error_code : undefined;
-    throw new Error(message ? `${message}${code ? `（${code}）` : ""}` : `请求失败：${response.status}`);
+async function request<T>(path: string, init?: RequestInit, timeoutMs?: number): Promise<T> {
+  const controller = timeoutMs ? new AbortController() : null;
+  const timeout = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const response = await fetch(`${API_BASE}${path}`, { ...init, signal: controller?.signal ?? init?.signal });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as {
+        detail?: string | { error_code?: string; message?: string };
+      } | null;
+      const detail = payload?.detail;
+      const message = typeof detail === "string" ? detail : detail?.message;
+      const code = typeof detail === "object" ? detail?.error_code : undefined;
+      throw new Error(message ? `${message}${code ? `（${code}）` : ""}` : `请求失败：${response.status}`);
+    }
+    return response.json() as Promise<T>;
+  } catch (cause) {
+    if (cause instanceof DOMException && cause.name === "AbortError") {
+      throw new Error("分析等待超过 35 秒，已停止等待；可以直接重试，不会自动重复提交。");
+    }
+    throw cause;
+  } finally {
+    if (timeout !== null) window.clearTimeout(timeout);
   }
-  return response.json() as Promise<T>;
 }
 
 export const api = {
@@ -42,7 +53,7 @@ export const api = {
   sendText(input: TextTurnRequest) {
     return request<TextTurnResponse>("/api/text-consultations", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
-    });
+    }, 35_000);
   },
   proposeText(consultationId: string, turn: number) {
     return request<ToolResult<IssueProposalPreviewData>>(`/api/text-consultations/${encodeURIComponent(consultationId)}/proposal`, {

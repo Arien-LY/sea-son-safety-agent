@@ -38,6 +38,15 @@ def test_plain_chat_cannot_enter_the_proposal_api_path() -> None:
     assert "一般问答，不会在此模式生成或提交工单" in panel
 
 
+def test_text_composer_uses_compact_consent_and_bounded_wait() -> None:
+    panel = source("frontend/src/components/TextPanel.vue")
+    api = source("frontend/src/api.ts")
+    assert "允许本次外发" in panel
+    assert "本次允许将问题、背景标签及同一会话" not in panel
+    assert "最多约 35 秒" in panel
+    assert "35_000" in api and "AbortController" in api
+
+
 def test_direct_submission_keeps_preview_confirm_and_save_steps() -> None:
     home = source("frontend/src/views/HomeView.vue")
     assert "生成待确认提案" in home
