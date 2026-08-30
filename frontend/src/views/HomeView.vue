@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { api } from "../api";
 import KnowledgePanel from "../components/KnowledgePanel.vue";
 import ImagePanel from "../components/ImagePanel.vue";
+import TextPanel from "../components/TextPanel.vue";
 import type {
   ActorRole,
   ConfirmedIssueProposal,
@@ -21,12 +23,24 @@ import type {
 } from "../types";
 
 const runtime = ref<RuntimeInfo | null>(null);
+const route = useRoute();
+const router = useRouter();
+const isDetail = computed(() => route.name === "record-detail");
+const loadingRecord = ref(false);
+const recordError = ref("");
+const textAnalysis = ref<IssueAnalysis | null>(null);
+const activeAnalysis = computed(() => record.value?.analysis || proposal.value?.analysis || textAnalysis.value);
+let loadGeneration = 0;
+let saveKey = "";
 const runtimeError = ref("");
 const actionError = ref("");
 const previewing = ref(false);
 const confirming = ref(false);
 const saving = ref(false);
 const advancing = ref(false);
+const textBusy = ref(false);
+const imageBusy = ref(false);
+const working = computed(() => previewing.value || confirming.value || saving.value || advancing.value || textBusy.value || imageBusy.value);
 const proposal = ref<IssueRecordProposal | null>(null);
 const proposalToken = ref("");
 const editedFields = ref<IssueRecordReviewFields | null>(null);
@@ -79,6 +93,32 @@ const highRiskRecord = computed(() =>
   record.value ? ["high", "emergency"].includes(record.value.analysis.risk_level) : false,
 );
 
+onBeforeRouteLeave(() => !working.value);
+onBeforeRouteUpdate(() => !working.value);
+
+async function loadRecord() {
+  const current = ++loadGeneration;
+  record.value = null; recordError.value = ""; actionError.value = ""; actionNote.value = "";
+  if (!isDetail.value) { loadingRecord.value = false; return; }
+  const id = String(route.params.recordId);
+  if (!/^ISS-[A-F0-9]{12}$/.test(id)) { recordError.value = "工单编号格式无效。"; loadingRecord.value = false; return; }
+  loadingRecord.value = true;
+  try {
+    const result = await api.getIssueRecord(id);
+    if (current === loadGeneration) { record.value = result; selectedRole.value = result.suggested_responsible_role; }
+  } catch (cause) { if (current === loadGeneration) recordError.value = String(cause); }
+  finally { if (current === loadGeneration) loadingRecord.value = false; }
+}
+watch(() => route.fullPath, () => {
+  proposal.value = null; confirmed.value = null; editedFields.value = null; textAnalysis.value = null;
+  void loadRecord();
+}, { immediate: true });
+watch(editedFields, () => { confirmed.value = null; saveKey = ""; }, { deep: true });
+
+function useTextAnalysis(analysis: IssueAnalysis | null) {
+  textAnalysis.value = analysis; proposal.value = null; confirmed.value = null; editedFields.value = null;
+}
+
 onMounted(async () => {
   try {
     runtime.value = await api.getRuntime();
@@ -116,6 +156,7 @@ function usePhotoProposal(data: IssueProposalPreviewData) {
   confirmed.value = null;
   record.value = null;
   actionError.value = "";
+  saveKey = "";
 }
 
 async function createPreview() {
@@ -148,6 +189,7 @@ async function confirmProposal() {
       proposalToken.value,
       editedFields.value,
     );
+    saveKey = uniqueId("create");
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : "无法确认提案";
   } finally {
@@ -162,11 +204,13 @@ async function saveDraft() {
   try {
     const result = await api.createIssueRecord(
       confirmed.value,
-      uniqueId("create"),
+      saveKey || (saveKey = uniqueId("create")),
       { actor_id: "reporter-demo", role: "reporter" },
     );
     record.value = result.record;
     selectedRole.value = result.record.suggested_responsible_role;
+    saving.value = false;
+    await router.push({ name: "record-detail", params: { recordId: result.record.record_id } });
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : "无法保存草稿";
   } finally {
@@ -213,7 +257,7 @@ function cancelRecord() {
     return advance("cancel", "professional-reviewer-demo", "professional_reviewer", { note: true });
   }
   if (record.value.status === "draft") {
-    return advance("cancel", "reporter-demo", "reporter", { note: true });
+    return advance("cancel", record.value.reporter_id, "reporter", { note: true });
   }
   return advance("cancel", "coordinator-demo", "coordinator", { note: true });
 }
@@ -233,9 +277,9 @@ function displayValue(value: string | null): string {
   <section class="hero proposal-hero">
     <div>
       <p class="eyebrow">施工现场问题闭环</p>
-      <h1>由人确认提案，由代码推进整改</h1>
+      <h1>{{ isDetail ? '工单详情与整改' : '先说问题，再确认行动' }}</h1>
       <p class="lead">
-        Phase 5 支持单张图片补充证据；观察、人工采纳、记录确认和整改照片分步处理，图片不作最终认定。
+        {{ isDetail ? '从本地记录恢复完整状态，继续人工整改与复查；页面刷新不会删除已保存工单。' : '用文字咨询或单张照片描述现场，查看建议与追问；只有你确认后，才保存正式问题记录。' }}
       </p>
     </div>
     <div class="runtime-card">
@@ -252,7 +296,16 @@ function displayValue(value: string | null): string {
     </div>
   </section>
 
-  <section class="proposal-workbench" aria-labelledby="proposal-workbench-title">
+  <fieldset class="workspace-fields" :disabled="working || loadingRecord" aria-label="咨询和工单操作区">
+  <div v-if="isDetail" class="button-row"><RouterLink to="/records" class="secondary-button">返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新工单详情</button></div>
+  <p v-if="loadingRecord" role="status">正在恢复工单详情…</p>
+  <p v-if="recordError" class="error-message" role="alert">{{ recordError }}</p>
+  <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
+  <TextPanel v-if="!isDetail" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @busy="textBusy = $event" />
+
+  <details v-if="!isDetail" class="proposal-workbench">
+    <summary>结构化流程演示（不调用模型）</summary>
+  <section aria-labelledby="proposal-workbench-title">
     <div class="section-heading">
       <div>
         <p class="eyebrow">确定性验收入口</p>
@@ -297,8 +350,9 @@ function displayValue(value: string | null): string {
     </button>
     <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
   </section>
+  </details>
 
-  <section v-if="proposal && editedFields" class="proposal-card" aria-labelledby="suggestion-title">
+  <section v-if="!isDetail && proposal && editedFields" class="proposal-card" aria-labelledby="suggestion-title">
     <div class="section-heading">
       <div>
         <p class="eyebrow">等待用户确认</p>
@@ -358,7 +412,7 @@ function displayValue(value: string | null): string {
     </button>
   </section>
 
-  <section v-if="confirmed && !record" class="confirmation-card" aria-live="polite">
+  <section v-if="!isDetail && confirmed && !record" class="confirmation-card" aria-live="polite">
     <strong>提案已由用户确认</strong>
     <p>完整性凭据已生成，但尚未保存正式记录。</p>
     <button class="primary-button" :disabled="saving" @click="saveDraft">
@@ -376,6 +430,22 @@ function displayValue(value: string | null): string {
         {{ record.disposition === "active" ? statusLabels[record.status] : "已取消" }}
       </span>
     </div>
+
+    <h3>{{ record.review_fields.record_title }}</h3>
+    <p class="section-note">项目：{{ record.review_fields.project || '待补充' }} · 区域：{{ record.review_fields.area || '待补充' }}</p>
+    <p class="record-description">{{ record.review_fields.record_description }}</p>
+    <p v-if="record.review_fields.reporter_note">补充说明：{{ record.review_fields.reporter_note }}</p>
+    <p class="section-note">报告人：{{ record.reporter_id }} · 更新：{{ new Date(record.updated_at).toLocaleString() }}</p>
+    <details class="analysis-detail"><summary>查看完整问题分析</summary>
+      <p>类别：{{ record.analysis.category }} · 路由：{{ record.analysis.recommended_route }} · 置信度：{{ record.analysis.confidence }}（不代表风险程度）</p>
+      <p>{{ record.analysis.summary }}</p>
+      <p>已述事实：{{ record.analysis.observed_facts.join('；') || '无' }}</p>
+      <p>不确定性：{{ record.analysis.uncertainties.join('；') || '仍需现场复核' }}</p>
+      <p>缺失字段：{{ record.analysis.missing_fields.join('；') || '无额外追问' }}</p>
+      <p v-for="action in record.analysis.suggested_actions" :key="action">建议：{{ action }}</p>
+    </details>
+    <p v-for="action in record.analysis.immediate_actions" :key="action" class="error-message">{{ action }}</p>
+    <p class="locked-note">当前操作者仍为演示角色，不代表真实身份或执业资质。高风险必须独立专业复查。</p>
 
     <div class="record-summary-grid">
       <div><span>责任角色建议</span><strong>{{ roleLabels[record.suggested_responsible_role] }}</strong></div>
@@ -405,13 +475,13 @@ function displayValue(value: string | null): string {
           v-if="record.status === 'draft' && !record.information_request"
           class="primary-button"
           :disabled="advancing"
-          @click="advance('submit', 'reporter-demo', 'reporter')"
+          @click="advance('submit', record.reporter_id, 'reporter')"
         >提交记录</button>
         <button
           v-if="record.status === 'draft' && record.information_request"
           class="primary-button"
           :disabled="advancing"
-          @click="advance('supplement_information', 'reporter-demo', 'reporter', { note: true })"
+          @click="advance('supplement_information', record.reporter_id, 'reporter', { note: true })"
         >补充并重新提交</button>
         <button
           v-if="record.status === 'submitted'"
@@ -429,13 +499,13 @@ function displayValue(value: string | null): string {
           v-if="record.status === 'assigned'"
           class="primary-button"
           :disabled="advancing"
-          @click="advance('start_rectification', 'rectifier-demo', 'rectifier')"
+          @click="advance('start_rectification', record.assigned_to!, 'rectifier')"
         >开始整改</button>
         <button
           v-if="record.status === 'rectifying'"
           class="primary-button"
           :disabled="advancing"
-          @click="advance('submit_rectification', 'rectifier-demo', 'rectifier', { note: true })"
+          @click="advance('submit_rectification', record.assigned_to!, 'rectifier', { note: true })"
         >提交整改说明</button>
         <button
           v-if="record.status === 'pending_review'"
@@ -465,17 +535,27 @@ function displayValue(value: string | null): string {
         <li v-for="event in record.events" :key="event.sequence">
           <strong>#{{ event.sequence }} · {{ event.action }}</strong>
           <span>{{ event.from_status || "无" }} → {{ event.to_status }}</span>
-          <small>{{ event.note || event.summary }} · {{ event.actor_id }} / {{ event.actor_role }}</small>
+          <small>{{ event.note || event.summary }} · {{ event.actor_id }} / {{ event.actor_role }} · {{ new Date(event.occurred_at).toLocaleString() }}</small>
         </li>
       </ol>
     </div>
   </section>
 
-  <ImagePanel :record="record" @proposal="usePhotoProposal" />
-  <KnowledgePanel :analysis="record?.analysis || proposal?.analysis || buildAnalysis()" :record="record" />
+  <ImagePanel :record="record" :evidence-only="isDetail" @proposal="usePhotoProposal" @busy="imageBusy = $event" />
+  <KnowledgePanel v-if="activeAnalysis" :analysis="activeAnalysis" :record="record" />
+  </fieldset>
 
   <section class="boundary">
     <h2>当前能力边界</h2>
-    <p>图片可在独立real模式下调用已配置视觉模型；上方文字表单仍为结构化验收输入。数据保存在本地，无生产登录鉴权、外部派单或自动关闭；不得直接暴露公网。</p>
+    <p>文字与图片均可逐次确认后调用已配置真实模型，结果仍需现场专业复核。数据保存在本地，无生产登录鉴权、外部派单或自动关闭；不得直接暴露公网。未保存咨询不长期留存。</p>
   </section>
 </template>
+
+<style scoped>
+.workspace-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.record-description { white-space: pre-wrap; line-height: 1.7; }
+.analysis-detail { padding: 16px; background: #f5f8fc; border-radius: 12px; overflow-wrap: anywhere; }
+summary { cursor: pointer; font-weight: 700; }
+.workflow-card { overflow-wrap: anywhere; }
+@media (max-width: 600px) { .section-heading { flex-wrap: wrap; } }
+</style>
