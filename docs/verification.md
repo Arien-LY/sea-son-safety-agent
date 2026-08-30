@@ -1026,3 +1026,47 @@ Chrome DevTools MCP隔离浏览器：
 frontend/src/{api.ts,types.ts,styles.css,components/TextPanel.vue}；
 frontend/tests/{api.test.cjs,text-panel.test.cjs}；tests/{test_chat_progress.py,test_frontend_workbench.py}；
 scripts/run-workbench-browser-fixture.py；docs/{chat-progress-contract.md,architecture.md,verification.md}；TASKS.md。
+
+## 2026-08-30：极简消息与普通聊天提示词修订
+
+范围与基线：`style/minimal-chat`基于9d87720 / `fix/chat-progress`，PR #16仍未合并；
+本主题冻结在会话工作台契约M01–M06，不重写Agent、不改专业咨询JSON或工单权限。
+
+提示词诊断与限制：
+
+- 用户截图提供了重复“中文日常问答助手”和自称“DeepSeek最新版”的实际样本。
+- 排查顺序为system角色称呼、上轮回答延续、前端固定拼接；代码排除前端拼接。
+  Fake SDK捕获实际answer_brief请求，确认旧system确有该称呼且未提供模型标识，last_answer亦带入旧回答。
+- 按diagnose建立请求边界回归；修前两个模型参数案例及两个布局契约检查失败（4 failed / 48 passed），
+  修后52 passed。该反馈环验证请求构造和布局约束，不声称复现真实模型生成的概率或建立完整因果实验。
+- 新CHAT_SYSTEM_PROMPT禁止主动自我介绍/规则复述，不沿用历史中的型号猜测；日期和模型标识由服务端追加，
+  用户陈述与上轮回答仍只放在user资料。没有以删词、关键词应答或前端替换的方式篡改模型输出。
+- 保留无工具、10秒超时、256输出token、零重试与原安全边界；没有读取/修改.env、模型配置或任何密钥。
+
+界面与Chrome DevTools验收：
+
+- 取消消息头像、助手标题、轮数和会话网格背景；用户气泡靠右、助手正文靠左；保留无视觉噪声的可访问消息分组。
+- “用时N秒”是默认折叠的原生details入口，展开后显示实际服务端步骤、工具和Mock说明。
+  等待仍显示实际经过时间与服务端阶段；仅真正调用业务工具时单独显示工具名，没有伪造思考过程。
+- 使用独立临时Store、8018 Fake服务和5178前端；用户原5173/8000服务未停止，未在real页面发送消息。
+- 桌面CSS视口2048×962：延迟Fake发送后输入立即为空、pending气泡立即靠右，头像数量0；
+  4秒后显示用时4秒，展开可见queued/preparing/model_running/validating/completed对应文案。
+  连续两轮用户消息全部靠右、助手左对齐，所有历史步骤默认折叠，无横向溢出。
+- 390×844设备模拟：较长中文消息换行且靠右，clientWidth/scrollWidth均390；时间折叠项可点击展开。
+  4秒为人为Fake延迟，不能代表真实供应商速度；移动消息/输入框截图已人工检查。
+- 专业咨询Fake错误恢复原输入，发送按钮重新可用；合成高风险回复仍显示必须人工复核和立即避险。
+  人工点击提案后出现propose_issue_record已完成/尚未保存提示及确认界面，没有创建正式工单。
+- 验收页控制台无error/warn；文字和提案流HTTP200，错误场景仍通过流内error事件明确失败。
+
+验证结果：`scripts/verify.ps1`通过，370项Python、21项前端行为测试、vue-tsc/Vite构建（45 modules）；
+1条既有Hello-Agents/Pydantic弃用警告；git diff --check通过。真实文字/图片模型调用均0次。
+
+修改文件：agents/text_assistant.py；frontend/src/{components/TextPanel.vue,styles.css}；
+tests/{test_product_text.py,test_frontend_workbench.py}；docs/{conversation-workbench-contract.md,
+chat-prompt-guide.md,verification.md}；TASKS.md；README.md。
+
+遗留风险：真实模型可能仍重复或幻觉；型号标识是程序配置而非供应商内部运行版本证明。生产鉴权、
+现场效果与此前三项独立P2不在本修订范围。提示词编辑后的新会话比较、重载丢失未保存上下文、
+Mock不执行真实提示词等注意事项已写入编辑指南。PR依赖#16，未自动合并。
+
+收尾：本轮创建的隔离浏览器页已关闭，8018/5178验收服务已停止；原用户页面和服务保持不变。

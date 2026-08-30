@@ -80,6 +80,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 - [图片人工复核表](docs/phase5-human-review.md)
 - [文字入口与历史工单契约](docs/product-text-records-contract.md)
 - [会话工作台体验契约](docs/conversation-workbench-contract.md)
+- [聊天提示词位置与修改方法](docs/chat-prompt-guide.md)
 
 ## 文字咨询与历史工单
 

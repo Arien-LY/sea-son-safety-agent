@@ -187,12 +187,17 @@ async function propose() {
 
       <ol v-else class="conversation" aria-label="当前会话消息" aria-live="polite">
         <li v-for="turn in turns" :key="turn.result.turn">
-          <div class="message-row user-row"><div class="message-avatar user-avatar">你</div><div class="message-body user-message"><p>{{ turn.message }}</p></div></div>
-          <div class="message-row assistant-row">
-            <div class="message-avatar assistant-avatar">安</div>
+          <div class="message-row user-row" aria-label="你的消息" role="group"><div class="message-body user-message"><p>{{ turn.message }}</p></div></div>
+          <div class="message-row assistant-row" aria-label="助手回复" role="group">
             <div class="message-body assistant-message">
-              <div class="message-meta"><strong>{{ turn.result.mode === "mock" ? "Mock 助手" : mode === "chat" ? "海之子助手" : "安全质量助手" }}</strong><span>第 {{ turn.result.turn }} 轮 · 用时 {{ turn.seconds }} 秒</span></div>
-              <details v-if="turn.steps.length" class="execution-history"><summary>执行步骤 · 未调用业务工具</summary><ol><li v-for="step in turn.steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}</li></ol></details>
+              <details class="execution-history">
+                <summary>用时 {{ turn.seconds }} 秒</summary>
+                <div class="execution-detail">
+                  <p v-if="turn.result.mode === 'mock'">Mock 验证，未调用真实模型。</p>
+                  <p v-if="!turn.steps.some(step => step.tool)">未调用业务工具。</p>
+                  <ol v-if="turn.steps.length"><li v-for="step in turn.steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ` · ${step.tool}` : '' }}</li></ol>
+                </div>
+              </details>
               <p class="preserve-lines">{{ turn.result.reply.answer }}</p>
               <div v-if="mode === 'consult' || turn.result.reply.analysis.risk_level === 'high' || turn.result.reply.analysis.risk_level === 'emergency'" class="analysis-summary">
                 <span>类别 {{ turn.result.reply.analysis.category }}</span><span>风险 {{ turn.result.reply.analysis.risk_level }}</span><span>{{ turn.result.reply.analysis.requires_human_review ? "必须人工复核" : "需结合现场判断" }}</span>
@@ -204,13 +209,13 @@ async function propose() {
           </div>
         </li>
         <li v-if="pendingMessage" class="pending-turn">
-          <div class="message-row user-row"><div class="message-avatar user-avatar">你</div><div class="message-body user-message"><p>{{ pendingMessage }}</p></div></div>
+          <div class="message-row user-row" aria-label="你的消息" role="group"><div class="message-body user-message"><p>{{ pendingMessage }}</p></div></div>
         </li>
       </ol>
       <div v-if="busy" class="execution-status" role="status" aria-live="polite">
         <div class="execution-current"><span class="execution-spinner" aria-hidden="true"></span><strong>{{ activeStepLabel }}</strong><span class="elapsed-time" aria-live="off">已等待 {{ elapsedSeconds }} 秒</span></div>
-        <p>{{ currentStep?.tool ? `正在调用工具：${currentStep.tool}` : '当前未调用业务工具' }} · 最多约 35 秒</p>
-        <details v-if="steps.length"><summary>查看已执行步骤</summary><ol><li v-for="step in steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ` · ${step.tool}` : '' }}</li></ol></details>
+        <p v-if="currentStep?.tool">正在调用工具：{{ currentStep.tool }}</p>
+        <details><summary>查看执行步骤</summary><p>最多约 35 秒 · {{ currentStep?.tool ? '业务工具执行中' : '当前未调用业务工具' }}</p><ol v-if="steps.length"><li v-for="step in steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ` · ${step.tool}` : '' }}</li></ol></details>
       </div>
       <p v-else-if="proposed" class="execution-finished">提案工具 propose_issue_record 已完成 · 用时 {{ elapsedSeconds }} 秒 · 尚未保存工单</p>
     </div>
