@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { api } from "../api";
+import { renderAssistantMarkdown } from "../markdown";
 import type { IssueAnalysis, IssueProposalPreviewData, TextTurnRequest, TextTurnResponse, VisionRuntime, TextProgress } from "../types";
 
 const props = defineProps<{ mode: "chat" | "consult" }>();
@@ -173,12 +174,14 @@ async function propose() {
 <template>
   <section class="conversation-workspace" :aria-labelledby="mode === 'chat' ? 'chat-title' : 'consult-title'">
     <header class="conversation-header">
-      <div>
-        <p class="workspace-kicker">{{ mode === "chat" ? "普通聊天" : "专业咨询" }}</p>
-        <h1 :id="mode === 'chat' ? 'chat-title' : 'consult-title'">{{ mode === "chat" ? "新建聊天" : "新建咨询" }}</h1>
-        <p>{{ mode === "chat" ? "用于一般问答，不会在此模式生成或提交工单。" : "先理解事实与风险；满足受控条件后，才会出现工单步骤。" }}</p>
+      <div class="conversation-header-inner">
+        <div>
+          <p class="workspace-kicker">{{ mode === "chat" ? "普通聊天" : "专业咨询" }}</p>
+          <h1 :id="mode === 'chat' ? 'chat-title' : 'consult-title'">{{ mode === "chat" ? "新建聊天" : "新建咨询" }}</h1>
+          <p>{{ mode === "chat" ? "用于一般问答，不会在此模式生成或提交工单。" : "先理解事实与风险；满足受控条件后，才会出现工单步骤。" }}</p>
+        </div>
+        <div class="connection-pill" :class="{ online: runtime?.configured }" title="仅检查本地配置，不代表模型已成功回复"><span></span>{{ runtime?.configured ? runtime.mode === 'mock' ? "Mock 已配置" : "模型已配置" : error ? "服务未连接" : "连接检查中" }}</div>
       </div>
-      <div class="connection-pill" :class="{ online: runtime?.configured }" title="仅检查本地配置，不代表模型已成功回复"><span></span>{{ runtime?.configured ? runtime.mode === 'mock' ? "Mock 已配置" : "模型已配置" : error ? "服务未连接" : "连接检查中" }}</div>
     </header>
 
     <div ref="messageStage" class="message-stage">
@@ -203,6 +206,7 @@ async function propose() {
           <div class="message-row user-row" aria-label="你的消息" role="group"><div class="message-body user-message"><p>{{ turn.message }}</p></div></div>
           <div class="message-row assistant-row" aria-label="助手回复" role="group">
             <div class="message-body assistant-message">
+              <div class="markdown-body" v-html="renderAssistantMarkdown(turn.result.reply.answer)"></div>
               <details class="execution-history">
                 <summary>用时 {{ turn.seconds }} 秒</summary>
                 <div class="execution-detail">
@@ -211,7 +215,6 @@ async function propose() {
                   <ol v-if="turn.steps.length"><li v-for="step in turn.steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ` · ${step.tool}` : '' }}</li></ol>
                 </div>
               </details>
-              <p class="preserve-lines">{{ turn.result.reply.answer }}</p>
               <div v-if="mode === 'consult' || turn.result.reply.analysis.risk_level === 'high' || turn.result.reply.analysis.risk_level === 'emergency'" class="analysis-summary">
                 <span>类别 {{ turn.result.reply.analysis.category }}</span><span>风险 {{ turn.result.reply.analysis.risk_level }}</span><span>{{ turn.result.reply.analysis.requires_human_review ? "必须人工复核" : "需结合现场判断" }}</span>
               </div>
