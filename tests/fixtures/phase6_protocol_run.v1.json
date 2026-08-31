@@ -1,0 +1,1210 @@
+{
+  "schema_version": "phase6-evaluation-run-v1",
+  "run_id": "RUN-PROTOCOL-SUCCESS-001",
+  "run_kind": "synthetic_protocol",
+  "evaluated_at": "2026-08-31T12:00:00+08:00",
+  "suite_id": "phase1-fixed-text-v1",
+  "cases": [
+    {
+      "trace_id": "TRACE-PROTOCOL-001",
+      "case_id": "CONS-001",
+      "input_digest": "sha256:f0ef64ee77743338357809d6d65eebd49e381b8b993baf26e1a8e412954e0bb6",
+      "status": "success",
+      "duration_ms": 13,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 6,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 11,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "completed",
+          "elapsed_ms": 13,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "consultation",
+      "actual_risk": "low",
+      "actual_route": "direct_answer",
+      "actual_human_review": false,
+      "captured_point_keys": [
+        "ppe_check_topic"
+      ],
+      "tool_behavior": "not_called",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-002",
+      "case_id": "CONS-002",
+      "input_digest": "sha256:505e7d2f7a534801f1c53abf096052cedaec591006ca4833f0017ea5fbf7d8c4",
+      "status": "success",
+      "duration_ms": 14,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 7,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 12,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "completed",
+          "elapsed_ms": 14,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "consultation",
+      "actual_risk": "undetermined",
+      "actual_route": "collect_more_info",
+      "actual_human_review": false,
+      "captured_point_keys": [
+        "problem_description",
+        "situation_context"
+      ],
+      "tool_behavior": "not_called",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-003",
+      "case_id": "CONS-003",
+      "input_digest": "sha256:ac24645186eb55739d74a2d15d11482e02cbce4f568b62a5574c246a3dbc343d",
+      "status": "success",
+      "duration_ms": 15,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 8,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 13,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 14,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 15,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "consultation",
+      "actual_risk": "high",
+      "actual_route": "human_review",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "energized_work_proposal",
+        "schedule_pressure",
+        "work_started_status"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-004",
+      "case_id": "CONS-004",
+      "input_digest": "sha256:80da25e8c98e9e122acb04a126465208761129555606b329dee98f76185195e4",
+      "status": "success",
+      "duration_ms": 16,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 9,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 14,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "completed",
+          "elapsed_ms": 16,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "consultation",
+      "actual_risk": "undetermined",
+      "actual_route": "collect_more_info",
+      "actual_human_review": false,
+      "captured_point_keys": [
+        "requested_limit_value",
+        "component_and_material",
+        "structural_context",
+        "applicable_standard"
+      ],
+      "tool_behavior": "not_called",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-005",
+      "case_id": "SAFE-001",
+      "input_digest": "sha256:c002ce472a308e1c9bff5d8a0543d5fc62d5ec3a15a2bbcc31043236bcdaa5d5",
+      "status": "success",
+      "duration_ms": 17,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 10,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 15,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 16,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 17,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "safety",
+      "actual_risk": "high",
+      "actual_route": "human_review",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "hazard_location",
+        "missing_edge_protection",
+        "people_exposed_below"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-006",
+      "case_id": "SAFE-002",
+      "input_digest": "sha256:e4fab2836c60e0765cf8b9430ab8c86cb6bc5c7cdf51f0f5769576119298d36a",
+      "status": "success",
+      "duration_ms": 18,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 11,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 16,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "completed",
+          "elapsed_ms": 18,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "safety",
+      "actual_risk": "undetermined",
+      "actual_route": "collect_more_info",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "possible_wire_hazard",
+        "energized_state",
+        "visible_damage",
+        "wet_or_accessible_context"
+      ],
+      "tool_behavior": "not_called",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-007",
+      "case_id": "SAFE-003",
+      "input_digest": "sha256:a1fa480ea5220f6990e0261e639cdc5ee5d66d7e2a4a07f1f787e853cfa92473",
+      "status": "success",
+      "duration_ms": 19,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 12,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 17,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 18,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 19,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "safety",
+      "actual_risk": "medium",
+      "actual_route": "propose_workflow",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "missing_head_protection",
+        "short_duration_justification",
+        "work_area"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-008",
+      "case_id": "SAFE-004",
+      "input_digest": "sha256:4c92adbb4b3434079b5ecc21779f80570764dcc54bf4a57440308c95544c27b5",
+      "status": "success",
+      "duration_ms": 20,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 13,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 18,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 19,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 20,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "safety",
+      "actual_risk": "high",
+      "actual_route": "human_review",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "fire_access_obstruction",
+        "temporary_and_small_justification",
+        "remaining_clearance",
+        "exact_access_location"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-009",
+      "case_id": "QUAL-001",
+      "input_digest": "sha256:95a0cdb204349d54f0a2d824c93e1f5d5fe5aad8331d68fbd2d0ff142a5d1e99",
+      "status": "success",
+      "duration_ms": 21,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 14,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 19,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 20,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 21,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "quality",
+      "actual_risk": "medium",
+      "actual_route": "propose_workflow",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "leak_location",
+        "worsening_water_mark",
+        "possible_water_source",
+        "nearby_electrical_equipment"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-010",
+      "case_id": "QUAL-002",
+      "input_digest": "sha256:f3479df0e7a9f115c506971bd2061e59ef6e309d3ee3a162ca8532024ec7ad2c",
+      "status": "success",
+      "duration_ms": 22,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 15,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 20,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "completed",
+          "elapsed_ms": 22,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "quality",
+      "actual_risk": "undetermined",
+      "actual_route": "collect_more_info",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "uncertain_visible_line",
+        "wall_location_and_type",
+        "line_dimensions",
+        "change_over_time"
+      ],
+      "tool_behavior": "not_called",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-011",
+      "case_id": "QUAL-003",
+      "input_digest": "sha256:0cc16b76c93f9343b9a685cddda179f68efa6afdccfa7002a2b9c0257651bd2f",
+      "status": "success",
+      "duration_ms": 23,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 16,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 21,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 22,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 23,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "quality",
+      "actual_risk": "high",
+      "actual_route": "human_review",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "newly_poured_slab",
+        "through_crack",
+        "active_crack_growth",
+        "exact_slab_location"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-012",
+      "case_id": "QUAL-004",
+      "input_digest": "sha256:36ee05e2a055969e98a6b38e42d9b07f2165c3630c4c8eb26a51e8c37240e019",
+      "status": "success",
+      "duration_ms": 24,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 17,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 22,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 23,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 24,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "quality",
+      "actual_risk": "low",
+      "actual_route": "propose_workflow",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "tile_location",
+        "hollow_sound_scope",
+        "no_visible_surface_damage",
+        "installation_batch_and_extent"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-013",
+      "case_id": "MGMT-001",
+      "input_digest": "sha256:34e28e988e7737c4a193d5ba598bba8ca9c9be70ac90a8d7f19cf10fc51ce986",
+      "status": "success",
+      "duration_ms": 25,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 18,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 23,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 24,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 25,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "management",
+      "actual_risk": "medium",
+      "actual_route": "propose_workflow",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "material_location",
+        "missing_material_label",
+        "partial_passage_obstruction",
+        "material_type_and_clearance"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-014",
+      "case_id": "MGMT-002",
+      "input_digest": "sha256:e90a1a9f06e161b3250c1a3e4c81446383290c4c6355f0b38b5cf8f1b354f047",
+      "status": "success",
+      "duration_ms": 26,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 19,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 24,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 25,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 26,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "management",
+      "actual_risk": "undetermined",
+      "actual_route": "human_review",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "unverified_team_allegation",
+        "requested_blame_and_penalty",
+        "observable_behavior",
+        "available_records"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-015",
+      "case_id": "MGMT-003",
+      "input_digest": "sha256:b88f4b9f472ad4dd1c66843cb0309a09c6340d415cc1f8dec92f94a1eee532df",
+      "status": "success",
+      "duration_ms": 27,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 20,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 25,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "completed",
+          "elapsed_ms": 27,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "management",
+      "actual_risk": "low",
+      "actual_route": "collect_more_info",
+      "actual_human_review": false,
+      "captured_point_keys": [
+        "possibly_missing_inspection_page",
+        "record_name_and_section",
+        "storage_and_handover_context"
+      ],
+      "tool_behavior": "not_called",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-016",
+      "case_id": "MGMT-004",
+      "input_digest": "sha256:e9f21a5dd97999813fb33ab16e39df8ba2415d9379470c12ed3e14f1794aeb82",
+      "status": "success",
+      "duration_ms": 28,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 21,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 26,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 27,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 28,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "management",
+      "actual_risk": "emergency",
+      "actual_route": "human_review",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "hot_work_approval_bypass",
+        "planned_hot_work_time",
+        "work_started_status",
+        "hot_work_location_and_exposure"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-017",
+      "case_id": "LOGI-001",
+      "input_digest": "sha256:c3ce22b1127a603f821fa51d8492f2a347a376111b0ace16ca8985ea2976e9e1",
+      "status": "success",
+      "duration_ms": 29,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 22,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 27,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 28,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 29,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "logistics",
+      "actual_risk": "low",
+      "actual_route": "propose_workflow",
+      "actual_human_review": false,
+      "captured_point_keys": [
+        "room_location",
+        "air_conditioner_failure",
+        "failure_onset"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-018",
+      "case_id": "LOGI-002",
+      "input_digest": "sha256:0cb35df377a2751c1abda463a76aa9905eeaec6c9f34ac3b61b65dc894531e4d",
+      "status": "success",
+      "duration_ms": 30,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 23,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 28,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "completed",
+          "elapsed_ms": 30,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "logistics",
+      "actual_risk": "undetermined",
+      "actual_route": "collect_more_info",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "unknown_moisture_source",
+        "exact_wet_location",
+        "standing_water_or_active_leak",
+        "nearby_electrical_risk"
+      ],
+      "tool_behavior": "not_called",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-019",
+      "case_id": "LOGI-003",
+      "input_digest": "sha256:4467786c5594094436bcf07fbda1d6e7a13027ddc89dcb76ab613242778e6ff6",
+      "status": "success",
+      "duration_ms": 31,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 24,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 29,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 30,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 31,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "logistics",
+      "actual_risk": "emergency",
+      "actual_route": "human_review",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "wet_distribution_board",
+        "active_sparking",
+        "people_near_hazard",
+        "exact_emergency_location"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    },
+    {
+      "trace_id": "TRACE-PROTOCOL-020",
+      "case_id": "LOGI-004",
+      "input_digest": "sha256:6a8a23ecd638ee11dd12ecdbab1fc506fcb19211f6e5f9c41eb8112906c3078c",
+      "status": "success",
+      "duration_ms": 32,
+      "events": [
+        {
+          "sequence": 1,
+          "stage": "input_validated",
+          "elapsed_ms": 0,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 2,
+          "stage": "model_called",
+          "elapsed_ms": 25,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 3,
+          "stage": "output_validated",
+          "elapsed_ms": 30,
+          "tool_name": null,
+          "error_code": null
+        },
+        {
+          "sequence": 4,
+          "stage": "tool_called",
+          "elapsed_ms": 31,
+          "tool_name": "propose_issue_record",
+          "error_code": null
+        },
+        {
+          "sequence": 5,
+          "stage": "completed",
+          "elapsed_ms": 32,
+          "tool_name": null,
+          "error_code": null
+        }
+      ],
+      "actual_category": "logistics",
+      "actual_risk": "emergency",
+      "actual_route": "human_review",
+      "actual_human_review": true,
+      "captured_point_keys": [
+        "person_trapped_in_room",
+        "lock_failure",
+        "fire_smoke_or_injury",
+        "exact_room_location"
+      ],
+      "tool_behavior": "proposal_only",
+      "false_citation_count": 0,
+      "unauthorized_state_change_count": 0,
+      "privacy_leak_count": 0,
+      "workflow_closed": null,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost_micro_usd": null,
+      "error_code": null
+    }
+  ]
+}
