@@ -1328,6 +1328,9 @@ product-text-records-contract.md,architecture.md,tutorial-compliance.md,verifica
 - Windows 11专业版10.0.26200、Python3.12.10、Node24.13.0、Git2.53.0上从本地显式分支全新克隆
   e452fc7；全新安装成功，414项Python、30项前端行为测试和生产构建通过；密钥/运行数据均未复制，
   临时克隆成功清理。这证明当前一台开发机，不等于第二位队员电脑。
+- 发布包提交50eb259随后再次从同一显式分支全新克隆，精确commit为
+  50eb25900b75bf14abfeaaa238d9b8f7722d347a；417项Python、30项前端行为测试及构建通过，
+  `env_copied=false`、`runtime_data_copied=false`，临时克隆由脚本安全清理。
 - 发布材料专项3 passed；原工作区`scripts/verify.ps1`为417项Python、30项前端行为测试、
   `vue-tsc`与Vite生产构建（66 modules）通过，保留1条既有Pydantic弃用警告。付费模型调用0次。
 

@@ -23,10 +23,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-clean-clone.ps1 `
 | Windows / Python / Node / Git | 通过 | Windows 11专业版 10.0.26200；Python 3.12.10；Node 24.13.0；Git 2.53.0 |
 | 全新克隆未包含密钥与运行数据 | 通过 | `env_copied=false`、`runtime_data_copied=false` |
 | `setup.ps1` | 通过 | 全新`.venv`及`npm ci`成功 |
-| `verify.ps1` | 通过 | 414 Python、30前端行为测试、生产构建通过；1条既有Pydantic警告 |
+| `verify.ps1` | 通过 | 417 Python、30前端行为测试、生产构建通过；1条既有Pydantic警告 |
 | 桌面浏览器完整流程 | 阻塞/未通过 | Chrome DevTools MCP新建页面与列出页面均持续无响应；未用其它结果冒充 |
 | 390×844移动布局 | 阻塞/未通过 | 同上；既有阶段浏览器证据不替代本轮全流程 |
-| 执行人 / 日期 / commit | 自动证据完成、队员待签字 | 2026-08-31；e452fc7ddec03b898ba9b0be65d308b4f7573b2a |
+| 执行人 / 日期 / commit | 自动证据完成、队员待签字 | 2026-08-31；50eb25900b75bf14abfeaaa238d9b8f7722d347a |
 
 ## 电脑 B：另一位队员的物理电脑
 
