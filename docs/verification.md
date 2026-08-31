@@ -23,7 +23,23 @@
   离线Fixture硬禁止真实OpenAI客户端构造，没有把Fake结果冒称真实模型效果。
 
 限制：真实模型调用0次；仍是单次结构化生成，不支持损坏/截断JSON的正文抢救。
-旧版本软件不会自动更新，需要退出旧启动器并从新目录运行新版。构建与发布结果待后补。
+旧版本软件不会自动更新，需要退出旧启动器并从新目录运行新版。
+
+发布结果：
+
+- 干净源提交`912d6b5088cb57a1466eac0a71b6ead4f1d234f0`构建，dirty_build=false；28个源文件变更，
+  包括前一轮尚未发布的逐轮历史、快速/深度与真流式修复。完整改动清单见该提交。
+- 包：`release-output/v0.1.0-beta.3-912d6b5-cf8faae4/SeaSon-v0.1.0-beta.3-windows-x64.zip`，
+  45,431,681字节；SHA256 `ca7c79463fff89ff99f2c7cfa0cd3afec858bc485d9c75b3173faa2cf6913e3b`。
+- 独立解压验证4135文件散列、原生启动器、合成DPAPI往返、同源SPA、Mock流、安全/后勤闭环及重启持久化。
+  验收目录：`C:/Users/Administrator/AppData/Local/Temp/sea-son-package-wz50sy86`。
+  另用包内Python执行离线适配器/服务测试：分析无效保留正文、禁止提案、幂等不重复调用通过。
+- ZIP根目录只有海之子.exe、使用说明.txt、_internal；内部licenses含100个声明/许可文件。
+- 已推送fix/unified-chat-regression；在私有仓库创建草稿、上传ZIP及SHA256SUMS，
+  下载到独立临时目录复算一致后发布
+  [v0.1.0-beta.3](https://github.com/Arien-LY/sea-son-safety-agent/releases/tag/v0.1.0-beta.3)。
+  GitHub资产digest一致；标签及targetCommitish都指向912d6b5，isDraft=false、isPrerelease=true。
+- 旧beta.1资产未修改，未合并main或任何PR；此段后补文档不更改已发布源码标签。
 
 ## 2026-08-31：统一聊天上下文、思考选择与真流式修复
 
