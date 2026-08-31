@@ -1313,3 +1313,36 @@ product-text-records-contract.md,architecture.md,tutorial-compliance.md,verifica
 
 遗留：真实模型20案例运行需要明确费用授权和专业标注；另一台物理Windows电脑安装、浏览器全流程、
 演示脚本和比赛展示材料仍在后续独立发布主题完成。
+
+## 2026-08-31：Phase 6 发布验收包
+
+范围：分支`docs/phase6-release-kit`叠加评估PR #23，后续PR以main为目标并明确依赖；只新增发布文档、
+全新克隆验证脚本和文档静态检查，不改Agent、Prompt、模型、API、前端、Schema、工作流、依赖或`.env`。
+
+已完成：
+
+- 新增约8分钟演示脚本、比赛8页展示提纲、集中已知限制/上线门禁、双机及浏览器发布验收表；README
+  提供统一入口。宣传数字明确限定为`synthetic_protocol`，列出禁止使用的真实准确率/自动归责/生产上线表述。
+- `verify-clean-clone.ps1`只接受显式仓库和分支，在系统临时目录创建带GUID的有界路径；克隆后拒绝
+  `.env`、`uploads/`或`data/*.json`，执行setup+verify，成功时仅清理再次验证过的临时目标，失败保留现场。
+- Windows 11专业版10.0.26200、Python3.12.10、Node24.13.0、Git2.53.0上从本地显式分支全新克隆
+  e452fc7；全新安装成功，414项Python、30项前端行为测试和生产构建通过；密钥/运行数据均未复制，
+  临时克隆成功清理。这证明当前一台开发机，不等于第二位队员电脑。
+- 发布包提交50eb259随后再次从同一显式分支全新克隆，精确commit为
+  50eb25900b75bf14abfeaaa238d9b8f7722d347a；417项Python、30项前端行为测试及构建通过，
+  `env_copied=false`、`runtime_data_copied=false`，临时克隆由脚本安全清理。
+- 发布材料专项3 passed；发布分支重放到已合并PR #22且包含评估PR #23后，组合工作区
+  `scripts/verify.ps1`为419项Python、30项前端行为测试、`vue-tsc`与Vite生产构建（66 modules）
+  通过，保留1条既有Pydantic弃用警告。该419项结果不是全新克隆；精确全新克隆证据仍为上方
+  50eb259的417项。付费模型调用0次。
+
+浏览器阻塞证据：
+
+- Chrome正在运行，原生消息主机配置正常，但选中Profile 4没有ChatGPT/Codex浏览器扩展。
+- 用户随后明确允许Chrome DevTools MCP；隔离Fake后端/前端在8018/5178正常启动，但DevTools MCP的
+  “新建页面”和“列出页面”最小调用均持续无响应并被终止。未使用别的结果冒充本轮Chrome全流程通过。
+- 隔离服务已停止；两个为空的验收临时目录因当前命令策略拒绝删除而保留在系统Temp，不含模型、用户或
+  业务数据。该清理限制不影响仓库，但应由环境维护时移除。
+
+仍未完成：另一位队员在另一台物理Windows电脑执行并签字；当前机Chrome桌面/390×844全流程；
+真实模型与现场专业验收。`TASKS.md`的双机/浏览器总项保持未勾选。
