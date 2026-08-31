@@ -1331,8 +1331,10 @@ product-text-records-contract.md,architecture.md,tutorial-compliance.md,verifica
 - 发布包提交50eb259随后再次从同一显式分支全新克隆，精确commit为
   50eb25900b75bf14abfeaaa238d9b8f7722d347a；417项Python、30项前端行为测试及构建通过，
   `env_copied=false`、`runtime_data_copied=false`，临时克隆由脚本安全清理。
-- 发布材料专项3 passed；原工作区`scripts/verify.ps1`为417项Python、30项前端行为测试、
-  `vue-tsc`与Vite生产构建（66 modules）通过，保留1条既有Pydantic弃用警告。付费模型调用0次。
+- 发布材料专项3 passed；发布分支重放到已合并PR #22且包含评估PR #23后，组合工作区
+  `scripts/verify.ps1`为419项Python、30项前端行为测试、`vue-tsc`与Vite生产构建（66 modules）
+  通过，保留1条既有Pydantic弃用警告。该419项结果不是全新克隆；精确全新克隆证据仍为上方
+  50eb259的417项。付费模型调用0次。
 
 浏览器阻塞证据：
 
