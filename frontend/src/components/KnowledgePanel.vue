@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { api } from "../api";
+import { riskNames } from "../customerLabels";
 import type { IssueAnalysis, IssueRecord, KnowledgeAnswer, KnowledgeJurisdiction } from "../types";
 
 const props = defineProps<{ analysis: IssueAnalysis; record: IssueRecord | null }>();
@@ -40,7 +41,7 @@ async function search() {
 <template>
   <section class="knowledge-panel" aria-labelledby="knowledge-title">
     <div class="section-heading">
-      <div><p class="eyebrow">Phase 4 · 只读知识</p><h2 id="knowledge-title">建议、依据与人工结论</h2></div>
+      <div><p class="eyebrow">参考资料</p><h2 id="knowledge-title">建议、依据与人工结论</h2></div>
       <span class="safe-chip">8 条释义摘编 · 检索不额外调用模型</span>
     </div>
     <p class="section-note">
@@ -65,14 +66,14 @@ async function search() {
       <section aria-labelledby="model-advice-title">
         <h3 id="model-advice-title">模型建议（未经人工事实核验）</h3>
         <p class="section-note">{{ answer.suggestion_notice }}</p>
-        <p>风险：{{ answer.analysis.risk_level }} · 人工复核：{{ answer.analysis.requires_human_review ? "必须" : "按现场情况" }}</p>
+        <p>风险：{{ riskNames[answer.analysis.risk_level] }} · 人工复核：{{ answer.analysis.requires_human_review ? "必须" : "按现场情况" }}</p>
         <p v-for="action in answer.analysis.immediate_actions" :key="action" class="error-message">{{ action }}</p>
         <ul><li v-for="suggestion in answer.model_suggestions" :key="suggestion">{{ suggestion }}</li></ul>
       </section>
       <section aria-labelledby="evidence-title">
         <h3 id="evidence-title">检索依据</h3>
         <p>{{ answer.evidence_notice }}</p>
-        <p v-if="answer.knowledge_error_code" class="info-callout">知识状态：{{ answer.knowledge_error_code }}；核心咨询与人工处理保留。</p>
+        <p v-if="answer.knowledge_error_code" class="info-callout">参考资料暂不可用；仍可继续咨询与人工处理。</p>
         <article v-for="citation in answer.retrieved_evidence" :key="citation.entry.entry_id" class="citation-card">
           <h4>{{ citation.entry.title }} · {{ citation.entry.locator }}</h4>
           <p>{{ citation.entry.text }}</p>
@@ -80,15 +81,14 @@ async function search() {
           <p>{{ citation.source.publisher }} · {{ citation.source.version }}</p>
           <p>适用范围：{{ citation.entry.scope }}</p>
           <p>版本更新：{{ citation.source.updated_on }} · 入库核对：{{ citation.entry.reviewed_on }} · 下次复核：{{ citation.entry.review_due_on }}（非法律失效日）</p>
-          <details><summary>追溯 ID 与内容摘要</summary><small>{{ citation.entry.entry_id }} / {{ citation.source.source_id }}<br />{{ citation.content_digest }}</small></details>
         </article>
       </section>
       <section aria-labelledby="human-conclusion-title">
         <h3 id="human-conclusion-title">人工结论</h3>
         <template v-if="answer.human_conclusion.status === 'reviewed'">
           <p>{{ answer.human_conclusion.note }}</p>
-          <small>{{ answer.human_conclusion.record_id }} · revision {{ answer.human_conclusion.revision }} · {{ answer.human_conclusion.actor_id }} / {{ answer.human_conclusion.actor_role }} · {{ answer.human_conclusion.occurred_at }}</small>
-          <p class="section-note">来自工作流关闭事件；演示角色尚无生产身份认证。</p>
+          <small>{{ answer.human_conclusion.record_id }} · {{ answer.human_conclusion.occurred_at }}</small>
+          <p class="section-note">来自工单复查记录；本机版尚未核验操作人员身份和资质。</p>
         </template>
         <p v-else>尚无人工复查结论；模型建议和检索命中不能替代专业人员确认。</p>
       </section>

@@ -1,5 +1,15 @@
 # 海之子 · 安全质量 Agent
 
+## 下载比赛试用版
+
+Windows 10/11 64位用户可从 [GitHub Releases](https://github.com/Arien-LY/sea-son-safety-agent/releases)
+下载 `SeaSon-v0.1.0-beta.1-windows-x64.zip`，完整解压后双击“海之子.exe”。
+自带运行环境，不需要安装 Python、Node.js 或 Git。客户界面不显示教程、开发阶段和内部技术字段。
+在启动窗口的“模型设置”中填写自己的模型密钥即可启用AI；默认不调用模型。
+这是比赛试用包，不是生产上线版；详细操作见包内“使用说明.txt”。私有仓库下载需相应访问权限。
+
+开发维护者的打包契约和验证入口见 [Windows 发布说明](docs/windows-release-contract.md)。
+
 面向施工现场安全、质量、管理和后勤问题的轻量 Agent。用户可以描述问题或咨询处理方法；
 也可以上传单张现场照片。Agent 先正常回答，只有问题需要留痕、整改或复查时才建议进入
 受控工作流。

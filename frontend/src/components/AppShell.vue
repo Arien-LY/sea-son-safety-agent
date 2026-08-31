@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { api } from "../api";
+import { statusNames } from "../customerLabels";
 import type { RecordListItem } from "../types";
 
 const route = useRoute();
@@ -77,24 +78,24 @@ onMounted(() => { restoreUser(); void loadRecent(); });
       </div>
       <nav class="action-nav" aria-label="新建与提交">
         <RouterLink to="/chat" class="nav-action"><span class="nav-icon">＋</span><span><strong>新建聊天</strong><small>问答、咨询与AI工单判断</small></span></RouterLink>
-        <RouterLink to="/submit" class="nav-action submit-action"><span class="nav-icon">↗</span><span><strong>提交工单</strong><small>结构化受控提交</small></span></RouterLink>
+        <RouterLink to="/submit" class="nav-action submit-action"><span class="nav-icon">↗</span><span><strong>提交工单</strong><small>填写并确认问题信息</small></span></RouterLink>
       </nav>
       <section class="sidebar-history" aria-labelledby="recent-title">
         <div class="sidebar-section-title"><span id="recent-title">最近工单</span><button type="button" :disabled="historyBusy" aria-label="刷新最近工单" @click="loadRecent">↻</button></div>
         <p v-if="historyBusy && !recent.length" class="sidebar-muted">正在同步…</p>
         <p v-else-if="!recent.length" class="sidebar-muted">暂无已保存工单</p>
-        <RouterLink v-for="item in recent" :key="item.record_id" :to="`/records/${item.record_id}`" class="history-link"><span>{{ item.title }}</span><small>{{ item.record_id }} · {{ item.status }}</small></RouterLink>
+        <RouterLink v-for="item in recent" :key="item.record_id" :to="`/records/${item.record_id}`" class="history-link"><span>{{ item.title }}</span><small>{{ item.record_id }} · {{ statusNames[item.status] }}</small></RouterLink>
         <RouterLink to="/records" class="all-history">查看全部历史 <span>→</span></RouterLink>
       </section>
       <div class="sidebar-account">
         <button v-if="!currentUser" type="button" class="login-entry" @click="loginOpen = true">
-          <span class="user-avatar-shell">用</span><span><strong>登录</strong><small>使用本地演示身份</small></span><b>→</b>
+          <span class="user-avatar-shell">用</span><span><strong>设置称呼</strong><small>仅本机使用</small></span><b>→</b>
         </button>
         <div v-else class="signed-in-account">
           <button type="button" class="login-entry" :aria-expanded="userMenuOpen" @click="userMenuOpen = !userMenuOpen">
-            <span class="user-avatar-shell signed-in">{{ userInitial }}</span><span><strong>{{ currentUser.name }}</strong><small>本地演示身份</small></span><b>⌄</b>
+            <span class="user-avatar-shell signed-in">{{ userInitial }}</span><span><strong>{{ currentUser.name }}</strong><small>本机使用者</small></span><b>⌄</b>
           </button>
-          <div v-if="userMenuOpen" class="account-menu"><p>仅保存在本机浏览器，不代表生产账号或工单权限。</p><button type="button" @click="logout">退出登录</button></div>
+          <div v-if="userMenuOpen" class="account-menu"><p>称呼仅保存在此浏览器，不用于身份认证或审批授权。</p><button type="button" @click="logout">清除称呼</button></div>
         </div>
       </div>
     </aside>
@@ -104,10 +105,10 @@ onMounted(() => { restoreUser(); void loadRecent(); });
       <form class="login-dialog" role="dialog" aria-modal="true" aria-labelledby="login-title" @submit.prevent="login">
         <span class="dialog-mark" aria-hidden="true">用</span>
         <p class="workspace-kicker">本地工作台</p>
-        <h2 id="login-title">登录演示身份</h2>
-        <p>该身份仅用于显示头像与称呼，不代表真实账号、项目权限或审批资质。</p>
+        <h2 id="login-title">设置你的称呼</h2>
+        <p>称呼仅用于页面展示，不代表真实账号、项目权限或审批资质。</p>
         <label>显示名称<input v-model="loginName" maxlength="30" autocomplete="name" autofocus placeholder="请输入姓名或昵称" /></label>
-        <div class="dialog-actions"><button type="button" class="secondary-button" @click="loginOpen = false">取消</button><button type="submit" class="primary-button" :disabled="!loginName.trim()">登录</button></div>
+        <div class="dialog-actions"><button type="button" class="secondary-button" @click="loginOpen = false">取消</button><button type="submit" class="primary-button" :disabled="!loginName.trim()">保存称呼</button></div>
       </form>
     </div>
   </div>

@@ -72,7 +72,7 @@ def test_chat_cancel_is_outside_the_busy_business_fieldset() -> None:
 
 def test_sidebar_has_local_demo_login_and_avatar_state() -> None:
     shell = source("frontend/src/components/AppShell.vue")
-    assert "登录演示身份" in shell
+    assert "设置你的称呼" in shell
     assert "user-avatar-shell signed-in" in shell
     assert "sea-son-demo-user" in shell
     assert "不代表真实账号、项目权限或审批资质" in shell
@@ -90,7 +90,7 @@ def test_direct_submission_keeps_preview_confirm_and_save_steps() -> None:
     home = source("frontend/src/views/HomeView.vue")
     assert "生成待确认提案" in home
     assert "confirmIssueProposal" in home
-    assert "HMAC 完整性凭据已生成" in home
+    assert "信息已确认，尚未保存" in home
     assert "createIssueRecord" in home
     assert "保存为正式草稿" in home
 
@@ -110,9 +110,9 @@ def test_minimal_message_template_has_no_avatars_and_keeps_pending_role() -> Non
     assert '<summary>用时 {{ turn.seconds }} 秒</summary>' in panel
     assert 'class="execution-history" open' not in panel
     assert "第 {{ turn.result.turn }} 轮" not in panel
-    assert "Mock 验证，未调用真实模型" in panel
+    assert "AI 服务未启用，本次未进行智能分析" in panel
     assert "step.tool" in panel and "activeStepLabel" in panel
-    assert 'class="markdown-body" v-html="renderAssistantMarkdown(turn.result.reply.answer)"' in panel
+    assert 'class="markdown-body" v-html="renderAssistantMarkdown(turn.result.mode' in panel
     assert "streaming-answer" in panel
     assert "preserve-lines" not in panel
 

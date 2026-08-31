@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { api } from "../api";
+import { riskNames } from "../customerLabels";
 import type { IssueProposalPreviewData, IssueRecord, LinkedPhoto, PhotoAnalysisRecord, PhotoMetadata, VisionRuntime } from "../types";
 
 const props = defineProps<{ record: IssueRecord | null; evidenceOnly?: boolean }>();
@@ -114,7 +115,7 @@ async function link() {
     await api.linkPhoto(record, photo.value.photo_id, stage.value);
     const result = await api.getRecordPhotos(record.record_id);
     if (props.record?.record_id === record.record_id) links.value = result;
-    notice.value = "照片已关联；问题状态、风险和revision均未改变。";
+    notice.value = "照片已关联；工单状态和风险未改变。";
   } catch (cause) { error.value = String(cause); }
   finally { busy.value = false; }
 }
@@ -125,34 +126,34 @@ const limitationLabels: Record<string, string> = { low_resolution: "分辨率较
 
 <template>
   <section class="image-panel" aria-labelledby="image-title">
-    <div class="section-heading"><div><p class="eyebrow">Phase 5 · 单张图片证据</p><h2 id="image-title">先观察，再由人确认</h2></div>
+    <div class="section-heading"><div><p class="eyebrow">图片证据</p><h2 id="image-title">先观察，再由人确认</h2></div>
       <span class="warning-chip">图片不是最终认定</span></div>
-    <p v-if="runtime">图片模式：{{ runtime.mode }} · {{ runtime.model }} · {{ runtime.configured ? "已配置" : "配置未就绪" }}</p>
-    <p class="section-note">仅一张JPEG/PNG，最大5MiB、每边4096像素。EXIF清除不会遮挡人脸、工牌或项目铭牌，请先自行打码。图片失败时可继续上方文字流程。</p>
+    <p v-if="runtime">{{ runtime.mode === 'real' && runtime.configured ? '图片分析已配置' : '图片 AI 未启用' }}</p>
+    <p class="section-note">支持单张JPEG/PNG，最大5MB、每边4096像素。请先遮挡人脸、工牌或项目铭牌，清除图片附加信息不会代替打码。图片失败时可继续文字上报。</p>
     <label>选择单张图片<input type="file" accept="image/jpeg,image/png" :disabled="busy" @change="selectFile" /></label>
     <label class="consent"><input v-model="uploadAuthorized" type="checkbox" :disabled="busy" />我确认图片已打码且有权上传到本地项目</label>
     <button class="secondary-button" :disabled="!selected || !uploadAuthorized || busy" @click="upload">上传并清除元数据</button>
     <div v-if="photo" class="photo-preview">
       <img :src="api.photoContentUrl(photo.photo_id)" alt="服务器清除元数据后的图片预览" />
-      <p>{{ photo.photo_id }} · {{ photo.width }}×{{ photo.height }} · 元数据已清除</p>
+      <p>{{ photo.width }}×{{ photo.height }} · 图片附加信息已清除</p>
     </div>
-    <p v-if="evidenceOnly" class="section-note">详情页用于关联本工单的照片证据；分析新的图片问题请前往“新建咨询”。</p>
+    <p v-if="evidenceOnly" class="section-note">详情页用于关联本工单的照片证据；分析新的图片问题请前往“新建聊天”。</p>
     <template v-if="!evidenceOnly">
     <label>图片补充描述<textarea v-model.trim="context" maxlength="1000" rows="3" :disabled="busy"></textarea></label>
     <label v-if="runtime?.mode === 'real'" class="consent"><input v-model="externalConsent" type="checkbox" :disabled="busy" />本次允许将脱敏图片和补充描述发送至DeepSeek，理解会产生模型费用</label>
-    <button class="primary-button" :disabled="!canAnalyze" @click="analyze">{{ busy ? "处理中…" : runtime?.mode === "real" ? "确认本次费用并分析图片" : "运行Mock图片链路（不识别内容）" }}</button>
+    <button class="primary-button" :disabled="!canAnalyze" @click="analyze">{{ busy ? "处理中…" : runtime?.mode === "real" ? "确认本次费用并分析图片" : "查看使用提示（未启用图片 AI）" }}</button>
     </template>
     <p v-if="error" role="alert" class="error-message">{{ error }}</p>
     <p v-if="notice" role="status" class="info-callout">{{ notice }}</p>
     <div v-if="analysis && !evidenceOnly" class="visual-results" aria-live="polite">
       <h3>初步视觉结果 · 必须人工复核</h3>
-      <p>本次模式：{{ analysis.mode }}；未观察到不等于不存在。</p>
-      <ul><li v-for="item in analysis.result.observations" :key="item.observation_id"><strong>{{ observationLabels[item.status] }}</strong>：{{ item.description }}</li></ul>
+      <p>{{ analysis.mode === 'mock' ? '本次未进行智能图片分析。' : '未观察到不等于不存在。' }}</p>
+      <ul v-if="analysis.mode === 'real'"><li v-for="item in analysis.result.observations" :key="item.observation_id"><strong>{{ observationLabels[item.status] }}</strong>：{{ item.description }}</li></ul>
       <p v-if="analysis.result.limitations.length">图像限制：{{ analysis.result.limitations.map(value => limitationLabels[value]).join('、') }}</p>
       <ul><li v-for="question in analysis.result.follow_up_questions" :key="question">需补充：{{ question }}</li></ul>
       <p v-if="!analysis.result.candidates.length">没有可采纳的施工问题候选；这不代表现场安全或质量合格。</p>
       <article v-for="candidate in analysis.result.candidates" :key="candidate.candidate_id" class="candidate-card">
-        <h4>{{ candidate.candidate_id }} · {{ candidate.analysis.issue_type }} · {{ candidate.analysis.risk_level }}</h4>
+        <h4>{{ candidate.analysis.issue_type }} · 风险{{ riskNames[candidate.analysis.risk_level] }}</h4>
         <p v-for="action in candidate.analysis.immediate_actions" :key="action" class="error-message">{{ action }}</p>
         <p>不确定性：{{ candidate.analysis.uncertainties.join('；') }}</p>
         <p>必须补充：{{ candidate.analysis.missing_fields.join('；') }}</p>
@@ -165,14 +166,13 @@ const limitationLabels: Record<string, string> = { low_resolution: "分辨率较
     </div>
     <div v-if="record" class="photo-links">
       <h3>关联到 {{ record.record_id }} 的照片证据</h3>
-      <p class="section-note">前照片由原报告人在整改开始前关联；后照片由已指派整改人在整改中/待复查阶段关联。演示角色无生产身份认证。</p>
+      <p class="section-note">前照片在整改开始前关联；后照片在整改中或待复查时关联。本机版尚未核验操作人员身份。</p>
       <label>照片阶段<select v-model="stage"><option value="before">整改前</option><option value="after">整改后（不表示复查通过）</option></select></label>
       <button class="secondary-button" :disabled="!canLink" @click="link">人工确认关联当前照片</button>
       <p v-if="!canLink" class="section-note">请先上传图片，并确认当前记录阶段允许关联此类照片；关闭或取消后不能追加。</p>
       <div class="linked-grid"><article v-for="item in links" :key="item.photo.photo_id">
         <img :src="api.photoContentUrl(item.photo.photo_id)" :alt="item.link.stage === 'before' ? '整改前照片' : '整改后照片'" />
-        <p>{{ item.link.stage === "before" ? "整改前" : "整改后" }} · 关联时revision {{ item.link.record_revision }}</p>
-        <small>{{ item.photo.photo_id }}</small>
+        <p>{{ item.link.stage === "before" ? "整改前" : "整改后" }}</p>
       </article></div>
     </div>
   </section>

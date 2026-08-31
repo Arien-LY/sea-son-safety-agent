@@ -42,8 +42,7 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs?: number,
       } | null;
       const detail = payload?.detail;
       const message = typeof detail === "string" ? detail : detail?.message;
-      const code = typeof detail === "object" ? detail?.error_code : undefined;
-      throw new Error(message ? `${message}${code ? `（${code}）` : ""}` : `请求失败：${response.status}`);
+      throw new Error(message || "操作暂未成功，请稍后重试。");
     }
     return read ? await read(response) : await response.json() as T;
   } catch (cause) {
@@ -104,7 +103,7 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
           result = event.data as T; receivedResult = true;
         } else if (event.type === "error" && typeof event.message === "string"
           && event.message.length <= 500 && /^[a-z_]{1,64}$/.test(event.error_code)) {
-          throw new Error(`${event.message}（${event.error_code}）`);
+          throw new Error(event.message);
         } else throw invalid();
       }
       if (done) {

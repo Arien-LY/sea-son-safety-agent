@@ -89,7 +89,7 @@ test('safe error event reaches the UI and a proposal also has a bounded stream',
     assert.equal(url, '/api/text-consultations/TXT-test/proposal/stream');
     return eventResponse([{ type: 'error', error_code: 'text_busy', message: '服务繁忙' }]);
   });
-  await assert.rejects(harness.api.proposeText('TXT-test', 1, () => {}), /服务繁忙（text_busy）/);
+  await assert.rejects(harness.api.proposeText('TXT-test', 1, () => {}), error => error.message === '服务繁忙');
   assert.equal(harness.cleared(), true);
 });
 

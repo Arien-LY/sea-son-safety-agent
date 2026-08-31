@@ -1,5 +1,37 @@
 # 验证记录
 
+## 2026-08-31：Windows 比赛客户包
+
+范围：基于已合并PR #25的main 4ae12d1创建`release/windows-portable-beta`；冻结
+`docs/windows-release-contract.md` P01–P10。用户确认仅比赛上传，不建设生产身份或隐私平台。
+
+实现：
+
+- C#原生启动窗口与模型设置；内置官方CPython3.12.10 x64和41个锁定运行依赖；Vue生产页面由
+  同一个FastAPI进程托管，不需要客户安装Python/Node/Git或使用终端。客户模式关闭API开发文档及教程元数据。
+- 设置窗口密码遮挡、Windows当前用户DPAPI加密，密钥只进入本机子进程环境，不写URL/命令行/日志；
+  不读取/复制仓库.env。软件升级与LocalAppData/SeaSon工单数据分离。
+- 客户界面去掉Phase编号、HMAC、revision、内部工具函数名和英文状态；称呼不冒充真实登录。
+  风险、人工确认、未启用AI提示与身份未核验限制仍保留。运行时包仅根目录EXE、使用说明、许可和内部资源。
+- 内部许可保留hello-agents CC-BY-NC-SA-4.0、CPython及全部前端运行依赖许可；缺失于npm包的
+  @vue/devtools-api6.6.4许可从vuejs/devtools-v6对应标签补全，来源随文件记录。不会宣称已获商业许可。
+
+验证：
+
+- `scripts/verify.ps1`：447项Python、35项前端行为测试、vue-tsc与Vite构建（67 modules）通过；
+  保留1条既有Pydantic警告。新增pytest.ini将收集范围明确为tests，避免把release-output里的第三方测试收集进来。
+- 演练包重新解压至独立Temp路径，4129文件散列核验通过；PATH不含Python/Node/Git仍成功运行。
+  原生启动器与合成密钥DPAPI往返通过；同源页面、未启用AI的NDJSON流、安全/后勤两类工单均从草稿到
+  revision6关闭，并重启包内服务验证持久恢复。所有模型调用0次。
+- 使用Browser技能验收真实解压包（非开发服务器）：首页、你好即时入消息区、AI未启用提示、后勤申请、
+  确认保存、中文详情和最近工单通过。1280宽与390×844实测scrollWidth=clientWidth；截图检查完成。
+  页面无Phase/HMAC/revision/Mock/内部工具名，控制台error/warn为0。本轮为应用内浏览器，不冒称Chrome。
+- 打包演练先后发现构建配置缺Node类型、上游npm缺许可文件、嵌套许可目录被误判以及Windows短路径比较问题，
+  均已修复后重跑；未把这些失败记录当成功证据。最终正式产物还会在干净提交后重建并验证。
+
+遗留：真实模型/现场效果和第二台物理电脑未验收；未签名Windows程序可能触发系统信誉提示；
+官方CPython3.12.10二进制及既有依赖后续安全更新需独立维护。本包只用于比赛非商业试用，不改变仓库私有性。
+
 ## 2026-08-28：Phase 0 本机基线
 
 环境：
