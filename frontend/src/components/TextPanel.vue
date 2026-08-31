@@ -19,7 +19,7 @@ const form = reactive({ message: "", project: "", area: "", requester_role: "" }
 const busy = ref(false);
 const error = ref("");
 const latest = ref<TextTurnResponse | null>(null);
-const turns = ref<{ message: string; result: TextTurnResponse; seconds: number; steps: TextProgress[] }[]>([]);
+const turns = ref<{ message: string; result: TextTurnResponse; seconds: number; steps: TextProgress[]; thinking: "fast" | "deep" }[]>([]);
 const proposed = ref(false);
 const contextOpen = ref(false);
 const pendingMessage = ref("");
@@ -31,6 +31,8 @@ const steps = ref<TextProgress[]>([]);
 const streamedAnswer = ref("");
 const modelChoice = ref("");
 const customModel = ref("");
+const thinkingMode = ref<"fast" | "deep">("fast");
+const activeThinking = ref<"fast" | "deep">("fast");
 let startedAt = 0;
 let ticker: ReturnType<typeof setInterval> | null = null;
 const stageLabels: Record<TextProgress["stage"], string> = {
@@ -41,10 +43,12 @@ const stageLabels: Record<TextProgress["stage"], string> = {
 function stageLabel(step: TextProgress) {
   return step.stage === "model_running" && runtime.value?.mode === "mock"
     ? "AI 服务未启用，正在返回使用提示"
-    : step.stage === "model_running" ? "模型处理中，正在判断问题与工单路径" : stageLabels[step.stage];
+    : stageLabels[step.stage];
 }
 const currentStep = computed(() => steps.value.at(-1));
-const activeStepLabel = computed(() => currentStep.value ? stageLabel(currentStep.value) : "正在发送，等待服务端接收");
+const activeStepLabel = computed(() => currentStep.value?.stage === "model_running" && runtime.value?.mode === "real"
+  ? activeThinking.value === "deep" ? "深度思考已开启，等待回复" : "快速回复，等待模型输出"
+  : currentStep.value ? stageLabel(currentStep.value) : "正在发送，等待服务端接收");
 function beginProgress() {
   stopProgress(); steps.value = []; elapsedSeconds.value = 0; startedAt = performance.now();
   ticker = setInterval(() => { elapsedSeconds.value = Math.floor((performance.now() - startedAt) / 1000); }, 250);
@@ -84,9 +88,10 @@ onMounted(async () => {
   catch { error.value = "工作台未连接，请重新打开软件；已保存工单不受影响。"; }
 });
 watch(form, () => { if (!busy.value) pending = null; }, { flush: "sync" });
+watch([thinkingMode, modelChoice, customModel], () => { if (!busy.value) pending = null; }, { flush: "sync" });
 watch(busy, value => emit("busy", value), { flush: "sync" });
 watch(() => props.mode, () => reset(true));
-watch([pendingMessage, () => turns.value.length], async () => {
+watch([pendingMessage, streamedAnswer, () => turns.value.length], async () => {
   await nextTick();
   messageStage.value?.scrollTo({ top: messageStage.value.scrollHeight });
 });
@@ -132,9 +137,11 @@ async function send() {
   try {
     beginProgress();
     pending ||= { request_id: requestId(), intent: "auto", input,
+      thinking_mode: thinkingMode.value,
       model: selectedModel.value || null,
       consultation_id: latest.value?.consultation_id || null, expected_turn: latest.value?.turn || 0,
       allow_external: runtime.value?.mode === "real" };
+    activeThinking.value = pending.thinking_mode || "fast";
     const receiveProgress = (step: TextProgress) => {
       if (!requestController.signal.aborted) steps.value.push(step);
     };
@@ -145,10 +152,11 @@ async function send() {
     if (requestController.signal.aborted) return;
     latest.value = result;
     stopProgress();
-    turns.value.push({ message: input.message, result, seconds: elapsedSeconds.value, steps: [...steps.value] });
+    turns.value.push({ message: input.message, result, seconds: elapsedSeconds.value, steps: [...steps.value], thinking: activeThinking.value });
     pendingMessage.value = ""; streamedAnswer.value = ""; pending = null;
-    emit("analysis", result.reply.analysis);
-    if (result.can_propose) emit("ticket", result.reply.analysis);
+    const analysisAvailable = !result.analysis_status || result.analysis_status === "validated";
+    emit("analysis", analysisAvailable ? result.reply.analysis : null);
+    if (analysisAvailable && result.can_propose) emit("ticket", result.reply.analysis);
   } catch (cause) {
     if (requestController.signal.aborted) return;
     error.value = !pending ? "发送准备失败，请刷新页面或更换浏览器后重试。" : cause instanceof Error ? cause.message : String(cause);
@@ -217,7 +225,7 @@ async function propose() {
             <div class="message-body assistant-message">
               <div class="markdown-body" v-html="renderAssistantMarkdown(turn.result.mode === 'mock' ? 'AI 服务尚未启用。请在软件的模型设置中填写自己的密钥并启用 AI；也可以直接通过左侧“提交工单”填写问题。' : turn.result.reply.answer)"></div>
               <details class="execution-history">
-                <summary>用时 {{ turn.seconds }} 秒</summary>
+                <summary>用时 {{ turn.seconds }} 秒 · {{ turn.thinking === 'deep' ? '深度思考' : '快速回复' }}</summary>
                 <div class="execution-detail">
                   <p v-if="turn.result.mode === 'mock'">AI 服务未启用，本次未进行智能分析。</p>
                   <p v-if="!turn.steps.some(step => step.tool)">未调用业务工具。</p>
@@ -229,7 +237,8 @@ async function propose() {
               </div>
               <div v-for="action in turn.result.reply.analysis.immediate_actions" :key="action" class="urgent-callout">{{ action }}</div>
               <div v-if="mode === 'consult' && turn.result.reply.follow_up_questions.length" class="follow-up-box"><strong>还需要确认</strong><ul><li v-for="question in turn.result.reply.follow_up_questions" :key="question">{{ question }}</li></ul></div>
-              <details v-if="mode === 'consult'"><summary>查看已校验分析</summary><p>{{ turn.result.reply.analysis.summary }}</p><p>已述事实：{{ turn.result.reply.analysis.observed_facts.join("；") || "未确认" }}</p><p>不确定性：{{ turn.result.reply.analysis.uncertainties.join("；") || "仍需现场核验" }}</p><p>缺失信息：{{ turn.result.reply.analysis.missing_fields.join("；") || "无额外追问" }}</p></details>
+              <p v-if="turn.result.analysis_status === 'unavailable'" class="section-note" role="status">回答已保留，本次未能判断工单类型。需要上报时可从左侧“提交工单”填写；如有现场危险，请先远离危险并联系现场专业人员。</p>
+              <details v-if="mode === 'consult' && turn.result.analysis_status !== 'unavailable'"><summary>查看已校验分析</summary><p>{{ turn.result.reply.analysis.summary }}</p><p>已述事实：{{ turn.result.reply.analysis.observed_facts.join("；") || "未确认" }}</p><p>不确定性：{{ turn.result.reply.analysis.uncertainties.join("；") || "仍需现场核验" }}</p><p>缺失信息：{{ turn.result.reply.analysis.missing_fields.join("；") || "无额外追问" }}</p></details>
             </div>
           </div>
         </li>
@@ -248,7 +257,7 @@ async function propose() {
     </div>
 
     <div class="composer-dock">
-      <p v-if="error" class="composer-error" role="alert">{{ error }}。未自动重试，输入已保留。</p>
+      <p v-if="error" class="composer-error" role="alert">{{ error }} 未自动重试，输入已保留。</p>
       <p v-if="latest?.context_trimmed" class="section-note">本轮仅参考最近的部分对话；早期内容仍显示在页面，但未全部发送给模型。需要时请重新补充。</p>
       <p v-if="latest?.risk_retained" class="risk-retained">此前高风险已由服务端保留，补充文字不能自行降级或宣告解除。</p>
       <div v-if="canCreateProposal" class="proposal-ready">
@@ -256,19 +265,20 @@ async function propose() {
         <button type="button" class="primary-button" :disabled="busy || dirty" @click="propose">生成待确认提案</button>
       </div>
       <div class="composer">
-        <textarea v-model="form.message" :maxlength="maxInput" rows="1" :disabled="busy || proposed" :placeholder="mode === 'chat' ? '输入你的问题，或继续追问…' : latest ? '补充同一问题…' : '描述现场情况…'" aria-label="会话输入" @keydown="onComposerKeydown"></textarea>
+        <textarea v-model="form.message" :maxlength="maxInput" rows="1" :disabled="busy || proposed" :placeholder="mode !== 'consult' ? '输入你的问题，或继续追问…' : latest ? '补充同一问题…' : '描述现场情况…'" aria-label="会话输入" @keydown="onComposerKeydown"></textarea>
         <div class="composer-toolbar">
           <div class="composer-tools">
             <button type="button" class="tool-button" :disabled="busy" title="添加图片" @click="emit('attachment')">＋ <span>图片</span></button>
             <button type="button" class="tool-button" :class="{ active: contextOpen }" :disabled="busy" @click="contextOpen = !contextOpen">⌁ <span>背景</span></button>
           </div>
           <div class="send-controls">
-            <label class="model-picker" title="可选择服务端建议型号，或输入DeepSeek模型标识"><span class="sr-only">模型</span><select v-model="modelChoice" aria-label="选择模型" :disabled="!runtime?.configured || runtime.mode === 'mock'"><option v-for="model in runtime?.available_models || []" :key="model" :value="model">{{ modelLabel(model) }}</option><option v-if="runtime?.custom_model_allowed" value="__custom__">自定义…</option></select></label>
+            <label class="model-picker"><span class="sr-only">回复方式</span><select v-model="thinkingMode" aria-label="回复方式" :disabled="busy || runtime?.mode !== 'real'"><option value="fast">快速回复</option><option value="deep">深度思考</option></select></label>
+            <label class="model-picker" title="可选择服务端建议型号，或输入DeepSeek模型标识"><span class="sr-only">模型</span><select v-model="modelChoice" aria-label="选择模型" :disabled="busy || !runtime?.configured || runtime.mode === 'mock'"><option v-for="model in runtime?.available_models || []" :key="model" :value="model">{{ modelLabel(model) }}</option><option v-if="runtime?.custom_model_allowed" value="__custom__">自定义…</option></select></label>
             <span>{{ form.message.length }}/{{ maxInput }}</span><button type="button" class="send-button" :disabled="!canSend" :aria-label="latest ? '发送补充' : '发送消息'" @click="send">↑</button>
           </div>
         </div>
       </div>
-      <label v-if="modelChoice === '__custom__'" class="custom-model-field">模型名称<input v-model.trim="customModel" aria-label="自定义模型标识" maxlength="100" placeholder="请输入服务商提供的模型名称" /><span>需使用当前模型服务支持的名称。</span></label>
+      <label v-if="modelChoice === '__custom__'" class="custom-model-field">模型名称<input v-model.trim="customModel" :disabled="busy" aria-label="自定义模型标识" maxlength="100" placeholder="请输入服务商提供的模型名称" /><span>需使用当前模型服务支持的名称。</span></label>
       <div v-if="contextOpen" class="context-fields">
         <label>项目标签（可选）<input v-model="form.project" maxlength="100" /></label>
         <label>区域标签（可选）<input v-model="form.area" maxlength="200" /></label>

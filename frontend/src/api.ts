@@ -73,14 +73,14 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
       streamDone = done;
       buffer += decoder.decode(value, { stream: !done });
       total += value?.byteLength || 0;
-      if (total > 524288) throw invalid();
+      if (total > 8388608) throw invalid();
       let newline;
       while ((newline = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, newline).trim();
         buffer = buffer.slice(newline + 1);
         if (!line) continue;
         if (receivedResult) throw invalid();
-        if (++count > 160) throw invalid();
+        if (++count > 64032) throw invalid();
         let event;
         try { event = JSON.parse(line); } catch { throw invalid(); }
         if (!event || typeof event !== "object" || Array.isArray(event)) throw invalid();
@@ -95,8 +95,8 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
         } else if (event.type === "content_delta" && onDelta
           && Object.keys(event).sort().join() === "index,text,type"
           && Number.isInteger(event.index) && event.index === deltaIndex + 1
-          && typeof event.text === "string" && event.text.length >= 1 && event.text.length <= 1000) {
-          deltaIndex = event.index; deltaChars += event.text.length;
+          && typeof event.text === "string" && event.text.length >= 1 && [...event.text].length <= 1000) {
+          deltaIndex = event.index; deltaChars += [...event.text].length;
           if (deltaChars > 64000) throw invalid();
           onDelta(event as TextContentDelta);
         } else if (event.type === "result" && event.data && typeof event.data === "object" && !Array.isArray(event.data)) {

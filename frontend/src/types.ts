@@ -8,6 +8,7 @@ export interface RuntimeInfo {
 export interface TextTurnRequest {
   request_id: string;
   intent: "chat" | "consult" | "auto";
+  thinking_mode?: "fast" | "deep";
   model: string | null;
   input: { message: string; project: string | null; area: string | null; requester_role: string | null };
   consultation_id: string | null;
@@ -25,6 +26,7 @@ export interface TextTurnResponse {
   risk_retained: boolean;
   remaining_turns: number;
   context_trimmed?: boolean;
+  analysis_status?: "validated" | "unavailable" | "not_requested";
 }
 
 export interface RecordListItem {

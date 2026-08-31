@@ -14,7 +14,7 @@ from uuid import uuid4
 
 from agents.schemas import IssueAnalysis, TextConsultationInput
 from agents.text_assistant import DeepSeekTextBackend, MockTextBackend, TextAssistant, TextConfig, TextError, TextReply, ChatReply, select_chat_context
-from agents.chat_settings import CHAT_MAX_TURNS, CHAT_SESSION_CHARS, CHAT_HISTORY_PAIRS, CHAT_CONTEXT_CHARS
+from agents.chat_settings import CHAT_MAX_TURNS, CHAT_SESSION_CHARS
 from agents.tools import ToolAuditLog, ToolResult
 from backend.app.proposals import Phase2ProposalService, ProposalPreviewRequest
 from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse
@@ -158,23 +158,25 @@ class TextConsultationService:
         finally:
             self._lock.release()
 
-    def send(self, request: TextRequest, *, progress: ProgressSink = ignore_progress) -> TextResponse:
+    def send(self, request: TextRequest, *, progress: ProgressSink = ignore_progress,
+             on_text: Callable[[str], None] | None = None) -> TextResponse:
         started = time.monotonic()
         try:
-            response = self._send(request, progress)
+            response = self._send(request, progress, on_text)
         except TextError as exc:
             self._audit(request, False, exc.code, started)
             raise
-        self._audit(request, True, None, started)
+        self._audit(request, True, None, started, analysis_status=response.analysis_status)
         progress("completed", None)
         return response
 
-    def _audit(self, request: TextRequest, ok: bool, code: str | None, started: float) -> None:
+    def _audit(self, request: TextRequest, ok: bool, code: str | None, started: float,
+               analysis_status: str | None = None) -> None:
         self.audit.record(tool_name="text_consultation", arguments={"request_id": request.request_id}, result=ToolResult(
             tool_name="text_consultation", ok=ok, error_code=code, recoverable=not ok,
-            summary=f"文字请求{'完成' if ok else '失败'}；耗时{round(time.monotonic() - started, 2)}秒；无业务状态变化。"))
+            summary=f"文字请求{'完成' if ok else '失败'}；耗时{round(time.monotonic() - started, 2)}秒；分析状态{analysis_status or '未完成'}；无业务状态变化。"))
 
-    def _send(self, request: TextRequest, progress: ProgressSink) -> TextResponse:
+    def _send(self, request: TextRequest, progress: ProgressSink, on_text=None) -> TextResponse:
         digest = hashlib.sha256(request.model_dump_json().encode()).hexdigest()
         with self._operation(progress):
             self._expire()
@@ -210,6 +212,7 @@ class TextConsultationService:
                 consultation_id = "TXT-" + uuid4().hex
             inputs = [*session.inputs, request.input]
             context_trimmed = False
+            analysis_status = "not_requested" if request.intent == "chat" else "validated"
             if request.intent == "chat":
                 # Reuse committed responses: failures and idempotent replays add no history.
                 completed = sorted((response for _, response in session.responses.values()), key=lambda response: response.turn)
@@ -225,29 +228,30 @@ class TextConsultationService:
                 retained, response_model = False, selected_model
             else:
                 selected_inputs = inputs
+                selected_answers = None
                 if request.intent == "auto":
-                    if sum(len(item.model_dump_json()) for item in inputs) > CHAT_SESSION_CHARS:
+                    completed = sorted((response for _, response in session.responses.values()), key=lambda response: response.turn)
+                    answers = [response.reply.answer for response in completed]
+                    if sum(len(item.model_dump_json()) for item in inputs) + sum(map(len, answers)) > CHAT_SESSION_CHARS:
                         raise TextError("chat_capacity_limit", "本会话内容已达到容量上限，请开始新问题；已有消息未删除。", 409)
-                    size, start = 0, len(inputs) - 1
-                    for index in range(len(inputs) - 1, max(-1, len(inputs) - CHAT_HISTORY_PAIRS - 1), -1):
-                        item_size = len(inputs[index].model_dump_json())
-                        if size and size + item_size > CHAT_CONTEXT_CHARS:
-                            break
-                        size += item_size
-                        start = index
-                    selected_inputs = inputs[start:]
-                    context_trimmed = start > 0
+                    selected_inputs, selected_answers, context_trimmed = select_chat_context(inputs, answers)
+                retained_risk = session.latest is not None and session.latest.reply.analysis.risk_level in {"high", "emergency"}
                 progress("model_running", None)
                 reply = self.assistant_factory(str(runtime["mode"]), selected_model).reply(
                     selected_inputs, previous_questions=session.latest.reply.follow_up_questions if session.latest else None,
-                    unified=request.intent == "auto")
+                    unified=request.intent == "auto", previous_answers=selected_answers,
+                    thinking_mode=request.thinking_mode, on_text=None if retained_risk else on_text,
+                    current=self.today(), model=selected_model)
                 progress("validating", None)
+                if isinstance(reply, ChatReply) and reply.analysis_unavailable:
+                    analysis_status = "unavailable"
                 reply, retained = apply_boundaries(reply, session.latest.reply if session.latest else None)
                 response_model = selected_model
             response = TextResponse(consultation_id=consultation_id, turn=len(inputs), mode=runtime["mode"],
-                                    model=response_model, reply=reply, can_propose=can_propose(reply),
+                                    model=response_model, reply=reply,
+                                    can_propose=analysis_status == "validated" and can_propose(reply),
                                     risk_retained=retained, remaining_turns=(CHAT_MAX_TURNS if request.intent in {"chat", "auto"} else 6) - len(inputs),
-                                    context_trimmed=context_trimmed)
+                                    context_trimmed=context_trimmed, analysis_status=analysis_status)
             session.inputs, session.latest, session.updated = inputs, response, self.clock()
             session.responses[request.request_id] = (digest, response)
             self._sessions[consultation_id] = session

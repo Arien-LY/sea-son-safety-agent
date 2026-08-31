@@ -75,6 +75,22 @@ def test_customer_package_rejects_unknown_root_entries(tmp_path):
         validate_customer_tree(tmp_path)
 
 
+def test_customer_notices_are_internal_and_required(tmp_path):
+    for name in ("海之子.exe", "使用说明.txt"):
+        (tmp_path / name).touch()
+    for name in ("agents", "backend", "desktop", "knowledge", "web"):
+        (tmp_path / "_internal/app" / name).mkdir(parents=True)
+    with pytest.raises(ValueError, match="Missing internal"):
+        validate_customer_tree(tmp_path)
+    notices = tmp_path / "_internal/licenses/第三方许可.txt"
+    notices.parent.mkdir()
+    notices.write_text("synthetic notices", encoding="utf-8")
+    validate_customer_tree(tmp_path)
+    (tmp_path / "第三方许可.txt").touch()
+    with pytest.raises(ValueError, match="Unexpected"):
+        validate_customer_tree(tmp_path)
+
+
 def test_customer_templates_have_no_developer_labels():
     for file in (ROOT / "frontend/src").rglob("*.vue"):
         text = file.read_text(encoding="utf-8")

@@ -73,6 +73,67 @@ async function mountPanel(cryptoApi = crypto, clock = performance) {
 const result = { consultation_id: 'TXT-test', turn: 1, remaining_turns: 5,
   can_propose: false, reply: { answer: 'hello', analysis: { category: 'unknown' } } };
 
+test('thinking selection uses a per-request snapshot and changes retry identity', async () => {
+  const panel = await mountPanel();
+  try {
+    panel.state.form.message = '你好';
+    const first = panel.state.send();
+    assert.equal(panel.requests[0].input.thinking_mode, 'fast');
+    panel.requests[0].reject(new Error('offline'));
+    await first;
+    panel.state.thinkingMode = 'deep';
+    const second = panel.state.send();
+    assert.equal(panel.requests[1].input.thinking_mode, 'deep');
+    assert.notEqual(panel.requests[1].input.request_id, panel.requests[0].input.request_id);
+    panel.requests[1].onProgress({ type: 'progress', seq: 1, elapsed_ms: 1, stage: 'model_running', tool: null });
+    assert.match(panel.state.activeStepLabel, /深度思考已开启/);
+    panel.requests[1].resolve(result);
+    await second;
+    assert.equal(panel.state.turns[0].thinking, 'deep');
+  } finally { panel.app.unmount(); }
+});
+
+test('partial stream never triggers a ticket and failure clears it without duplicate turns', async () => {
+  const panel = await mountPanel();
+  try {
+    panel.state.form.message = '你好';
+    const first = panel.state.send();
+    panel.requests[0].onDelta({ type: 'content_delta', index: 1, text: '临时回答' });
+    assert.equal(panel.state.streamedAnswer, '临时回答');
+    assert.equal(panel.ticketEvents.length, 0);
+    panel.requests[0].reject(new Error('断流'));
+    await first;
+    assert.equal(panel.state.streamedAnswer, '');
+    assert.equal(panel.state.form.message, '你好');
+    assert.equal(panel.state.turns.length, 0);
+    const retry = panel.state.send();
+    panel.requests[1].onDelta({ type: 'content_delta', index: 1, text: '你好' });
+    panel.requests[1].resolve(result);
+    await retry;
+    assert.equal(panel.state.turns.length, 1);
+    assert.equal(panel.state.streamedAnswer, '');
+  } finally { panel.app.unmount(); }
+});
+
+test('unavailable analysis keeps one final answer and clears stale analysis without a ticket', async () => {
+  const panel = await mountPanel();
+  try {
+    panel.state.form.message = '你好';
+    const sent = panel.state.send();
+    panel.requests[0].onDelta({ type: 'content_delta', index: 1, text: '完整回答' });
+    panel.requests[0].resolve({ ...result, analysis_status: 'unavailable',
+      can_propose: true, reply: { ...result.reply, answer: '完整回答' } });
+    await sent;
+    assert.equal(panel.state.turns.length, 1);
+    assert.equal(panel.state.turns[0].result.reply.answer, '完整回答');
+    assert.equal(panel.state.streamedAnswer, '');
+    assert.equal(panel.state.form.message, '');
+    assert.equal(panel.state.error, '');
+    assert.equal(panel.analyses.at(-1), null);
+    assert.equal(panel.ticketEvents.length, 0);
+  } finally { panel.app.unmount(); }
+});
+
 test('LAN HTTP without randomUUID still sends and clears the composer', async () => {
   const panel = await mountPanel({ getRandomValues: crypto.getRandomValues.bind(crypto) });
   try {
@@ -190,7 +251,7 @@ test('elapsed time never invents steps; only server events update the work statu
     assert.equal(panel.state.steps.length, 0);
     assert.match(panel.state.activeStepLabel, /等待服务端接收/);
     panel.requests[0].onProgress({ type: 'progress', seq: 1, elapsed_ms: 10, stage: 'model_running', tool: null });
-    assert.match(panel.state.activeStepLabel, /模型处理中/);
+    assert.match(panel.state.activeStepLabel, /快速回复/);
     now = 4300;
     panel.requests[0].resolve(result);
     await sent;

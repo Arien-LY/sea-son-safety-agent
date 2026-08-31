@@ -4,11 +4,13 @@
 
 | 入口 | 文件与常量 | 用途 |
 |---|---|---|
-| 普通聊天 `/chat` | `agents/text_assistant.py` → `CHAT_SYSTEM_PROMPT` | 称呼、语气、语言、回答风格和日常安全边界 |
-| 专业咨询 `/consult` | 同文件 → `TEXT_SYSTEM_PROMPT` | 严格 JSON、信息提取、风险判断、追问和人工复核要求 |
+| 统一聊天 `/chat`（`intent=auto`） | `agents/text_assistant.py` → `UNIFIED_SYSTEM_PROMPT` | 组合自然聊天风格和工单分析规则 |
+| 自然对话基础 | 同文件 → `CHAT_SYSTEM_PROMPT` | 称呼、语气、语言、回答风格和日常安全边界 |
+| 工单分析规则 / 旧`intent=consult` API | 同文件 → `TEXT_SYSTEM_PROMPT` | JSON、风险、追问和人工复核；`/consult`页面已跳转到`/chat` |
 
-普通聊天由 `DeepSeekTextBackend.answer_brief()` 发送提示词；它另外添加服务器日期和当前配置的
-模型标识（来自 `LLM_MODEL`）。前端 `TextPanel.vue` 负责显示回答，不负责给模型设置人设。
+统一聊天由 `TextAssistant.reply(unified=True)` 使用SimpleAgent发送完整问答历史和独立当前问题，
+并添加服务器日期及本次模型标识。旧`intent=chat`仍由`DeepSeekTextBackend.answer_brief()`兼容。
+前端 `TextPanel.vue` 负责显示回答，不负责给模型设置人设。
 `agents/prompts.py` 是早期基础对话/结构化分析模块的提示词，不是当前 `/chat` 的入口。
 
 ## 为什么以前总说“中文日常问答助手”
@@ -26,16 +28,18 @@
 
 ## 修改方法
 
-普通聊天现已开启深度思考（enabled / high），不强制短答。资源预算统一放在
+统一聊天默认“快速回复”（disabled），可在输入框旁选择“深度思考”（enabled / high），两者都不强制短答。资源预算统一放在
 `agents/chat_settings.py`：32768输出token、180秒模型等待、16000字输入、64000字回答、50轮；
 前端190秒截止，可“停止等待”，但不保证服务商中止计算或计费。历史只发最近最多12对且不超过120000字，
-省略旧历史时页面明确提示。若修改这些参数，也需同步产品v2 Schema、前端限制和回归测试，不能只改一端。
-专业咨询仍使用独立JSON路径与原风险边界。深度思考不意味着故意延长简单问题的响应，也不展示隐藏推理。
+省略旧历史时页面明确提示。若修改这些参数，也需同步当前产品v4请求Schema、前端限制和回归测试，不能只改一端。
+统一入口仍一次生成JSON，增量提取answer正文供临时展示；完整分析校验后才有工单资格。
+供应商不按answer优先顺序输出时回退为完整校验后展示。深度思考不意味着故意延长简单问题，也不展示隐藏推理。
 
 1. 打开 `agents/text_assistant.py`，找到 `CHAT_SYSTEM_PROMPT = """..."""`，编辑三引号内的文字。
    例如把第一句改为“直接回答，先给结论，需要时再分点解释”，或在身份句中调整产品称呼。
 2. 保留不可信资料、现场危险、禁止最终工程判断/虚假工单操作等边界，不把 Key、个人资料或项目秘密写入提示词。
    不要为了调整普通聊天去删除 `TEXT_SYSTEM_PROMPT` 的 JSON、风险分类和人工复核要求。
+   聊天与工单衔接规则修改`UNIFIED_SYSTEM_PROMPT`；不要恢复为累计user_statements单包，否则会再次丢失问答角色。
 3. 保存。使用 `scripts/start-backend.ps1` 启动时 Python 文件会自动重载；其他启动方式需要手动重启后端。
    `.env` 中的模型配置变更通常需要完整重启进程，不要只改提示词里的型号来冒充切换模型。
 4. 点击页面“清空并开始新问题”，避免旧回答和旧会话影响比较。已显示的历史文本不会被自动重写。

@@ -142,3 +142,14 @@ test('maximum Chinese final answer fits the bounded stream decoder', async () =>
   const harness = apiHarness(async () => eventResponse([progress, { type: 'result', data: { answer } }], 1024));
   assert.deepEqual(await harness.api.sendText({ intent: 'chat' }, undefined, () => {}), { answer });
 });
+
+test('provider-sized deltas over the old 160-event limit are accepted including astral Unicode', async () => {
+  const frames = Array.from({ length: 200 }, (_, i) => ({ type: 'content_delta', index: i + 1, text: '🌊'.repeat(500) }));
+  const overLimit = apiHarness(async () => eventResponse(frames));
+  await assert.rejects(overLimit.api.sendText({ intent: 'auto' }, undefined, () => {}, () => {}), /格式无效/);
+  const smallFrames = Array.from({ length: 200 }, (_, i) => ({ type: 'content_delta', index: i + 1, text: '你好🌊' }));
+  const seen = [];
+  const harness = apiHarness(async () => eventResponse([...smallFrames, { type: 'result', data: { ok: true } }]));
+  await harness.api.sendText({ intent: 'auto' }, undefined, () => {}, event => seen.push(event.text));
+  assert.equal(seen.length, 200);
+});

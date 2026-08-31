@@ -48,8 +48,10 @@ def extract_checked(archive: Path, destination: Path) -> None:
 
 
 def validate_customer_tree(root: Path) -> None:
-    if {p.name for p in root.iterdir()} != {"海之子.exe", "使用说明.txt", "第三方许可.txt", "_internal"}:
+    if {p.name for p in root.iterdir()} != {"海之子.exe", "使用说明.txt", "_internal"}:
         raise ValueError("Unexpected customer root entry")
+    if not (root / "_internal/licenses/第三方许可.txt").is_file():
+        raise ValueError("Missing internal third-party notices")
     for path in root.rglob("*"):
         if path.is_symlink():
             raise ValueError("Refusing package symlink")
@@ -134,7 +136,7 @@ def build(version: str, *, allow_dirty: bool = False) -> Path:
     licenses = internal / "licenses"
     licenses.mkdir()
     shutil.copyfile(runtime / "LICENSE.txt", licenses / "CPython.txt")
-    notices = ["第三方许可声明\n本版仅供内部非商业试用。hello-agents 的许可含非商业与相同方式共享限制。\n完整许可见本目录的 _internal/licenses 和各组件附带的许可文件。\n"]
+    notices = ["第三方许可声明\n本版仅供内部非商业试用。hello-agents 的许可含非商业与相同方式共享限制。\n完整许可见本目录及各组件附带的许可文件。\n"]
     inventory = []
     for distribution in sorted(importlib.metadata.distributions(path=[str(runtime / "site-packages")]), key=lambda d: d.metadata["Name"].lower()):
         name, number = distribution.metadata["Name"], distribution.version
@@ -167,7 +169,7 @@ def build(version: str, *, allow_dirty: bool = False) -> Path:
             found = True
         if not found:
             raise ValueError("Missing frontend license: " + name)
-    (bundle / "第三方许可.txt").write_text("".join(notices), encoding="utf-8-sig")
+    (licenses / "第三方许可.txt").write_text("".join(notices), encoding="utf-8-sig")
     validate_customer_tree(bundle)
     manifest = {"version": version, "source_commit": commit, "dirty_build": bool(dirty),
                 "python_sha256": PYTHON_SHA256, "packages": inventory,

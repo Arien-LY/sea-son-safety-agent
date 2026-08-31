@@ -107,7 +107,8 @@ def test_minimal_message_template_has_no_avatars_and_keeps_pending_role() -> Non
     assert "message-avatar" not in panel and "message-meta" not in panel
     assert panel.count('class="message-row user-row" aria-label="你的消息"') == 2
     assert 'class="message-row assistant-row" aria-label="助手回复"' in panel
-    assert '<summary>用时 {{ turn.seconds }} 秒</summary>' in panel
+    assert '<summary>用时 {{ turn.seconds }} 秒 ·' in panel
+    assert "turn.thinking === 'deep'" in panel
     assert 'class="execution-history" open' not in panel
     assert "第 {{ turn.result.turn }} 轮" not in panel
     assert "AI 服务未启用，本次未进行智能分析" in panel
