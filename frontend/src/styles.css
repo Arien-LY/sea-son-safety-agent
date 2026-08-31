@@ -137,6 +137,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .user-message { width: fit-content; max-width: 72%; padding: 10px 17px; border-radius: 20px; color: #252525; background: #f1f1f1; white-space: pre-wrap; font-size: 16px; line-height: 1.65; }
 .user-message p { margin: 0; }
 .assistant-message { width: 100%; color: #202124; font-size: 17px; line-height: 1.78; }
+.streaming-answer { min-height: 1.78em; }
+.stream-caret { display: inline-block; width: 2px; height: 1em; margin-left: 3px; vertical-align: -.08em; background: #6f7478; animation: stream-blink .8s steps(1) infinite; }
+@keyframes stream-blink { 50% { opacity: 0; } }
 .markdown-body { width: 100%; min-width: 0; }
 .markdown-body > :first-child { margin-top: 0; }
 .markdown-body > :last-child { margin-bottom: 0; }
@@ -202,6 +205,9 @@ summary { cursor: pointer; font-weight: 700; }
 .model-picker::after { content: "⌄"; position: absolute; right: 8px; color: #777a7d; font-size: 10px; pointer-events: none; }
 .model-picker select { width: auto; max-width: 180px; height: 28px; padding: 4px 23px 4px 9px; border: 1px solid #e1e4e7; border-radius: 8px; color: #50545a; background: #f4f6f8; appearance: none; font-size: 10px; font-weight: 700; cursor: pointer; }
 .model-picker select:disabled { opacity: .72; cursor: wait; }
+.custom-model-field { display: grid; grid-template-columns: auto minmax(180px, 320px) 1fr; align-items: center; gap: 9px; margin: 8px 12px 11px; color: #666a6d; font-size: 10px; font-weight: 700; }
+.custom-model-field input { padding: 7px 9px; font-size: 11px; }
+.custom-model-field span { color: #929590; font-weight: 400; }
 .send-controls > span { color: #a0a19c; font-size: 10px; }
 .send-button { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 10px; color: #fff; background: #252a28; font-size: 18px; cursor: pointer; }
 .send-button:disabled { color: #9d9e99; background: #e7e7e3; cursor: not-allowed; }
@@ -339,6 +345,7 @@ input:focus, textarea:focus, select:focus { border-color: #6f9f8b; outline: 3px 
   .timeline li { grid-template-columns: 1fr; gap: 4px; }
   .tool-button span { display: none; }
   .model-picker select { max-width: 132px; }
+  .custom-model-field { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

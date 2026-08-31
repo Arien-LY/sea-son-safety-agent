@@ -66,18 +66,17 @@ onMounted(() => { restoreUser(); void loadRecent(); });
   <div class="app-shell">
     <header class="mobile-bar">
       <button class="icon-button" type="button" aria-label="打开导航" @click="drawerOpen = true"><span></span><span></span><span></span></button>
-      <RouterLink class="mobile-brand" to="/consult"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>海之子工作台</strong></RouterLink>
+      <RouterLink class="mobile-brand" to="/chat"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>海之子工作台</strong></RouterLink>
       <span class="mobile-spacer"></span>
     </header>
     <button v-if="drawerOpen" class="drawer-scrim" type="button" aria-label="关闭导航" @click="drawerOpen = false"></button>
     <aside class="sidebar" :class="{ open: drawerOpen }" aria-label="工作台导航">
       <div class="sidebar-head">
-        <RouterLink class="brand" to="/consult"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span><strong>海之子</strong><small>安全质量工作台</small></span></RouterLink>
+        <RouterLink class="brand" to="/chat"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span><strong>海之子</strong><small>安全质量工作台</small></span></RouterLink>
         <button class="close-drawer" type="button" aria-label="关闭导航" @click="drawerOpen = false">×</button>
       </div>
       <nav class="action-nav" aria-label="新建与提交">
-        <RouterLink to="/chat" class="nav-action"><span class="nav-icon">＋</span><span><strong>新建聊天</strong><small>一般问答，不生成工单</small></span></RouterLink>
-        <RouterLink to="/consult" class="nav-action"><span class="nav-icon">◇</span><span><strong>新建咨询</strong><small>提取信息与风险判断</small></span></RouterLink>
+        <RouterLink to="/chat" class="nav-action"><span class="nav-icon">＋</span><span><strong>新建聊天</strong><small>问答、咨询与AI工单判断</small></span></RouterLink>
         <RouterLink to="/submit" class="nav-action submit-action"><span class="nav-icon">↗</span><span><strong>提交工单</strong><small>结构化受控提交</small></span></RouterLink>
       </nav>
       <section class="sidebar-history" aria-labelledby="recent-title">

@@ -1346,3 +1346,37 @@ product-text-records-contract.md,architecture.md,tutorial-compliance.md,verifica
 
 仍未完成：另一位队员在另一台物理Windows电脑执行并签字；当前机Chrome桌面/390×844全流程；
 真实模型与现场专业验收。`TASKS.md`的双机/浏览器总项保持未勾选。
+
+## 2026-08-31：统一聊天、AI 工单交接与安全流式输出
+
+范围与契约：
+
+- 独立分支`feat/unified-chat-ticket-streaming`基于已合并Phase 6发布PR #24；契约见
+  `docs/unified-chat-routing-contract.md` U01–U08。合并“新建聊天/新建咨询”，旧`/consult`仅兼容跳转。
+- 新增产品文字请求v3：`intent=auto`和可选模型标识。旧v1/v2快照不改；模型仍只调用一次并返回严格
+  `ChatReply/IssueAnalysis`，保留180秒、32768 token、64000字答案和有界上下文预算。
+- `can_propose=true`且类别属于安全/质量/管理/后勤时，前端把服务端已校验分析交接到
+  `/submit?source=ai`并锁定分析字段。该导航不调用提案工具、不确认、不落库、不派工；后续仍须人工生成、
+  核对、确认和保存。Fake后勤案例证明协议路径，不声称真实模型必然正确分类。
+- NDJSON在完整结构化结果通过Schema和安全边界后发送`responding`及最多120个有序
+  `content_delta`；拼接文字必须等于最终`result.reply.answer`。这是真实的逐段页面展示，不是供应商原始
+  token直通，也不改善模型首字等待；没有输出未完成JSON、隐藏reasoning或随后可能被覆盖的未校验文字。
+- `/api/text/runtime`只公开建议型号和是否允许自定义；页面可选`LLM_MODEL_OPTIONS`或填写合法DeepSeek
+  model ID。浏览器不能覆盖密钥、官方HTTPS端点、超时、重试、Schema或业务权限；Mock不可自定义。
+
+自动验证：
+
+- `scripts/verify.ps1`：426项Python全部通过；35项实际Vue/API/Markdown前端行为测试通过；
+  `vue-tsc`与Vite生产构建（66 modules）通过。保留1条既有Pydantic弃用警告。
+- 专项覆盖统一长输入/严格model ID、后勤路由无副作用、深度JSON传输预算、运行信息脱敏、delta重建、
+  索引/大小/断流失败关闭、自动工单交接、模型切换、旧契约兼容及人工确认边界。
+- `.env`和真实密钥未读取或修改；仅更新`.env.example`说明。真实/付费文字及图片模型调用0次。
+
+Chrome与外部门禁：
+
+- 隔离Mock后端/前端在8020/5180启动，`/chat`返回HTTP 200，文字runtime仅返回Mock配置；服务随后停止。
+- 按用户指定连接Chrome：Chrome进程正在运行，原生消息主机清单与注册表正确；但选中Profile 4的
+  ChatGPT浏览器扩展`installed=false`、`enabled=false`，浏览器运行时返回`Browser is not available: chrome`。
+  因此桌面和390×844本轮未冒充通过。安装并启用扩展后须重跑U01–U08。
+- 自定义模型是否存在、真实分类/回答质量、首字等待、费用，以及现场专业结论仍需用户授权的真实抽样；
+  第二台物理Windows电脑验收仍是全项目独立发布门禁。

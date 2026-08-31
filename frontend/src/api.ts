@@ -20,6 +20,7 @@ import type {
   TextTurnResponse,
   RecordPage,
   TextProgress,
+  TextContentDelta,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
@@ -57,13 +58,15 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs?: number,
   }
 }
 
-async function readEvents<T>(response: Response, onProgress: (event: TextProgress) => void): Promise<T> {
+async function readEvents<T>(response: Response, onProgress: (event: TextProgress) => void,
+  onDelta?: (event: TextContentDelta) => void): Promise<T> {
   const invalid = () => new Error("执行状态连接中断或格式无效，请稍后手动重试；未自动重发请求。");
   if (!response.headers.get("content-type")?.includes("application/x-ndjson") || !response.body) throw invalid();
   const reader = response.body.getReader();
   const decoder = new TextDecoder("utf-8", { fatal: true });
-  const stages = ["queued", "preparing", "model_running", "validating", "tool_running", "completed"];
+  const stages = ["queued", "preparing", "model_running", "validating", "tool_running", "responding", "completed"];
   let buffer = "", total = 0, count = 0, sequence = 0, elapsed = 0;
+  let deltaIndex = 0, deltaChars = 0;
   let result: T | undefined, receivedResult = false, streamDone = false;
   try {
     while (true) {
@@ -71,14 +74,14 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
       streamDone = done;
       buffer += decoder.decode(value, { stream: !done });
       total += value?.byteLength || 0;
-      if (total > 262144) throw invalid();
+      if (total > 524288) throw invalid();
       let newline;
       while ((newline = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, newline).trim();
         buffer = buffer.slice(newline + 1);
         if (!line) continue;
         if (receivedResult) throw invalid();
-        if (++count > 16) throw invalid();
+        if (++count > 160) throw invalid();
         let event;
         try { event = JSON.parse(line); } catch { throw invalid(); }
         if (!event || typeof event !== "object" || Array.isArray(event)) throw invalid();
@@ -90,6 +93,13 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
             || event.tool !== (event.stage === "tool_running" ? "propose_issue_record" : null)) throw invalid();
           sequence = event.seq; elapsed = event.elapsed_ms;
           onProgress(event as TextProgress);
+        } else if (event.type === "content_delta" && onDelta
+          && Object.keys(event).sort().join() === "index,text,type"
+          && Number.isInteger(event.index) && event.index === deltaIndex + 1
+          && typeof event.text === "string" && event.text.length >= 1 && event.text.length <= 1000) {
+          deltaIndex = event.index; deltaChars += event.text.length;
+          if (deltaChars > 64000) throw invalid();
+          onDelta(event as TextContentDelta);
         } else if (event.type === "result" && event.data && typeof event.data === "object" && !Array.isArray(event.data)) {
           result = event.data as T; receivedResult = true;
         } else if (event.type === "error" && typeof event.message === "string"
@@ -110,10 +120,12 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
 
 export const api = {
   getTextRuntime() { return request<VisionRuntime>("/api/text/runtime", undefined, 5_000); },
-  sendText(input: TextTurnRequest, signal?: AbortSignal, onProgress?: (event: TextProgress) => void) {
+  sendText(input: TextTurnRequest, signal?: AbortSignal, onProgress?: (event: TextProgress) => void,
+    onDelta?: (event: TextContentDelta) => void) {
     return request<TextTurnResponse>(`/api/text-consultations${onProgress ? "/stream" : ""}`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal,
-    }, input.intent === "chat" ? 190_000 : 35_000, onProgress ? response => readEvents(response, onProgress) : undefined);
+    }, input.intent === "chat" || input.intent === "auto" ? 190_000 : 35_000,
+    onProgress ? response => readEvents(response, onProgress, onDelta) : undefined);
   },
   proposeText(consultationId: string, turn: number, onProgress?: (event: TextProgress) => void) {
     return request<ToolResult<IssueProposalPreviewData>>(`/api/text-consultations/${encodeURIComponent(consultationId)}/proposal${onProgress ? "/stream" : ""}`, {

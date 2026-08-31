@@ -28,9 +28,9 @@ def test_stream_reports_actual_steps_without_tools_and_replays_without_model(tmp
     client, service, workflow, fake = text_client(tmp_path)
     payload = request_payload()
     trace = events(client, payload)
-    progress = trace[:-1]
-    assert [p["stage"] for p in progress] == ["queued", "preparing", "model_running", "validating", "completed"]
-    assert [p["seq"] for p in progress] == list(range(1, 6))
+    progress = [event for event in trace if event["type"] == "progress"]
+    assert [p["stage"] for p in progress] == ["queued", "preparing", "model_running", "validating", "responding", "completed"]
+    assert [p["seq"] for p in progress] == list(range(1, 7))
     assert all(p["tool"] is None and p["elapsed_ms"] >= 0 for p in progress)
     assert trace[-1]["type"] == "result"
     assert workflow.store.snapshot() == ()

@@ -7,7 +7,8 @@ export interface RuntimeInfo {
 
 export interface TextTurnRequest {
   request_id: string;
-  intent: "chat" | "consult";
+  intent: "chat" | "consult" | "auto";
+  model: string | null;
   input: { message: string; project: string | null; area: string | null; requester_role: string | null };
   consultation_id: string | null;
   expected_turn: number;
@@ -82,6 +83,8 @@ export interface VisionRuntime {
   model: string;
   configured: boolean;
   external_provider: string | null;
+  available_models?: string[];
+  custom_model_allowed?: boolean;
 }
 
 export type KnowledgeJurisdiction = "unknown" | "cn_mainland" | "overseas";
@@ -295,6 +298,12 @@ export interface TextProgress {
   type: "progress";
   seq: number;
   elapsed_ms: number;
-  stage: "queued" | "preparing" | "model_running" | "validating" | "tool_running" | "completed";
+  stage: "queued" | "preparing" | "model_running" | "validating" | "tool_running" | "responding" | "completed";
   tool: "propose_issue_record" | null;
+}
+
+export interface TextContentDelta {
+  type: "content_delta";
+  index: number;
+  text: string;
 }

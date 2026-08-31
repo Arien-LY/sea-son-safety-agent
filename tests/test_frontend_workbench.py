@@ -8,12 +8,12 @@ def source(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_workbench_routes_are_distinct_and_root_defaults_to_consultation() -> None:
+def test_workbench_uses_one_ai_chat_entry_and_keeps_legacy_consult_redirect() -> None:
     router = source("frontend/src/router.ts")
-    assert '{ path: "/", redirect: "/consult" }' in router
+    assert '{ path: "/", redirect: "/chat" }' in router
+    assert '{ path: "/consult", redirect: "/chat" }' in router
     for path, name in (
         ("/chat", "chat"),
-        ("/consult", "consult"),
         ("/submit", "submit"),
         ("/records", "records"),
     ):
@@ -21,21 +21,23 @@ def test_workbench_routes_are_distinct_and_root_defaults_to_consultation() -> No
         assert f'name: "{name}"' in router
 
 
-def test_sidebar_exposes_new_chat_consult_submit_and_history() -> None:
+def test_sidebar_exposes_unified_chat_submit_and_history() -> None:
     shell = source("frontend/src/components/AppShell.vue")
     assert 'to="/chat"' in shell and "新建聊天" in shell
-    assert 'to="/consult"' in shell and "新建咨询" in shell
+    assert 'to="/consult"' not in shell and "新建咨询" not in shell
     assert 'to="/submit"' in shell and "提交工单" in shell
     assert 'to="/records"' in shell and "查看全部历史" in shell
     assert "api.listRecords" in shell
 
 
-def test_plain_chat_cannot_enter_the_proposal_api_path() -> None:
+def test_unified_chat_routes_eligible_analysis_to_a_human_controlled_ticket_form() -> None:
     panel = source("frontend/src/components/TextPanel.vue")
-    assert 'props.mode === "consult" && latest.value?.can_propose' in panel
-    assert "if (!canCreateProposal.value" in panel
-    assert "api.proposeText" in panel
-    assert "一般问答，不会在此模式生成或提交工单" in panel
+    home = source("frontend/src/views/HomeView.vue")
+    assert 'intent: "auto"' in panel
+    assert 'emit("ticket", result.reply.analysis)' in panel
+    assert "openTicketFromAnalysis" in home
+    assert 'router.push({ name: "submit", query: { source: "ai" } })' in home
+    assert "createIssueRecord" in home and "确认提案" in home
 
 
 def test_text_composer_optimistically_moves_message_and_has_no_confirmation_modal() -> None:
@@ -48,9 +50,9 @@ def test_text_composer_optimistically_moves_message_and_has_no_confirmation_moda
     send_body = panel[panel.index("async function send"):panel.index("function onComposerKeydown")]
     assert "pendingMessage.value = input.message" in send_body
     assert send_body.index('form.message = ""') < send_body.index("await api.sendText")
-    assert "api.sendText(pending, requestController.signal, receiveProgress)" in send_body
-    assert 'intent: props.mode' in send_body
-    assert "最多约 35 秒" in panel
+    assert "api.sendText(pending, requestController.signal, receiveProgress, receiveDelta)" in send_body
+    assert 'intent: "auto"' in send_body
+    assert "最多约 190 秒" in panel
     assert "35_000" in api and "AbortController" in api
 
 
@@ -111,7 +113,18 @@ def test_minimal_message_template_has_no_avatars_and_keeps_pending_role() -> Non
     assert "Mock 验证，未调用真实模型" in panel
     assert "step.tool" in panel and "activeStepLabel" in panel
     assert 'class="markdown-body" v-html="renderAssistantMarkdown(turn.result.reply.answer)"' in panel
+    assert "streaming-answer" in panel
     assert "preserve-lines" not in panel
+
+
+def test_model_picker_is_server_described_and_supports_a_custom_model_id() -> None:
+    panel = source("frontend/src/components/TextPanel.vue")
+    request = source("backend/app/text_models.py")
+    assert 'value="__custom__"' in panel
+    assert 'aria-label="自定义模型标识"' in panel
+    assert "available_models" in panel
+    assert "model: selectedModel.value" in panel
+    assert "model: str | None" in request
 
 
 def test_minimal_message_styles_align_user_right_without_avatar_gutter() -> None:

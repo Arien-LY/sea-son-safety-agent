@@ -54,13 +54,15 @@ function eventResponse(lines, size = 1000) {
 }
 
 test('stream decodes split UTF-8 frames and receives progress before final result', async () => {
-  const seen = [];
+  const seen = [], deltas = [];
   const harness = apiHarness(async url => {
     assert.equal(url, '/api/text-consultations/stream');
-    return eventResponse([progress, { type: 'result', data: { answer: '你好，老大' } }], 1);
+    return eventResponse([progress, { type: 'content_delta', index: 1, text: '你好，' },
+      { type: 'content_delta', index: 2, text: '老大' }, { type: 'result', data: { answer: '你好，老大' } }], 1);
   });
-  const result = await harness.api.sendText({}, undefined, p => seen.push(p));
+  const result = await harness.api.sendText({}, undefined, p => seen.push(p), delta => deltas.push(delta.text));
   assert.deepEqual(seen, [progress]);
+  assert.deepEqual(deltas, ['你好，', '老大']);
   assert.deepEqual(result, { answer: '你好，老大' });
   assert.equal(harness.cleared(), true);
 });
@@ -72,6 +74,8 @@ for (const [name, frames] of [
   ['wrong sequence', [{ ...progress, seq: 8 }]],
   ['negative time', [{ ...progress, elapsed_ms: -1 }]],
   ['unknown stage', [{ ...progress, stage: 'thinking_secret' }]],
+  ['wrong delta index', [{ type: 'content_delta', index: 2, text: 'bad' }]],
+  ['oversized delta', [{ type: 'content_delta', index: 1, text: 'x'.repeat(1001) }]],
 ]) test(`stream fails closed on ${name} without retry`, async () => {
   let calls = 0;
   const harness = apiHarness(async () => { calls++; return eventResponse(frames); });
