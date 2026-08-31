@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { api } from "../api";
+import { categoryNames, riskNames } from "../customerLabels";
 import { renderAssistantMarkdown } from "../markdown";
 import type { IssueAnalysis, IssueProposalPreviewData, TextTurnRequest, TextTurnResponse, VisionRuntime, TextProgress, TextContentDelta } from "../types";
 
@@ -33,13 +34,13 @@ const customModel = ref("");
 let startedAt = 0;
 let ticker: ReturnType<typeof setInterval> | null = null;
 const stageLabels: Record<TextProgress["stage"], string> = {
-  queued: "服务端已接收，等待执行", preparing: "正在校验请求与整理上下文",
-  model_running: "等待模型回复", validating: "正在校验结果与安全边界",
-  tool_running: "正在生成待确认提案", responding: "正在流式显示已校验回答", completed: "处理完成",
+  queued: "已收到，等待处理", preparing: "正在整理你的问题",
+  model_running: "等待模型回复", validating: "正在检查回答",
+  tool_running: "正在生成待确认提案", responding: "正在回复", completed: "处理完成",
 };
 function stageLabel(step: TextProgress) {
   return step.stage === "model_running" && runtime.value?.mode === "mock"
-    ? "正在执行 Mock 验证（未调用真实模型）"
+    ? "AI 服务未启用，正在返回使用提示"
     : step.stage === "model_running" ? "模型处理中，正在判断问题与工单路径" : stageLabels[step.stage];
 }
 const currentStep = computed(() => steps.value.at(-1));
@@ -70,7 +71,7 @@ function modelLabel(model: string) {
   if (!model) return "模型检查中";
   if (model === "deepseek-v4-flash") return "DeepSeek V4 Flash";
   if (model === "deepseek-v4-pro") return "DeepSeek V4 Pro";
-  if (runtime.value?.mode === "mock") return "本地 Mock";
+  if (runtime.value?.mode === "mock") return "AI 未启用";
   return model;
 }
 const prompt = "你好，今天想聊点什么？";
@@ -80,7 +81,7 @@ onMounted(async () => {
     runtime.value = await api.getTextRuntime();
     modelChoice.value = runtime.value.model;
   }
-  catch { error.value = "文字服务未连接，请启动后端并刷新；已有工单不受影响。"; }
+  catch { error.value = "工作台未连接，请重新打开软件；已保存工单不受影响。"; }
 });
 watch(form, () => { if (!busy.value) pending = null; }, { flush: "sync" });
 watch(busy, value => emit("busy", value), { flush: "sync" });
@@ -193,7 +194,7 @@ async function propose() {
           <h1 id="chat-title">新建聊天</h1>
           <p>可以日常交流，也可以描述现场问题；AI 判断需要跟进时会打开对应工单申请，保存前仍需人工确认。</p>
         </div>
-        <div class="connection-pill" :class="{ online: runtime?.configured }" title="仅检查本地配置，不代表模型已成功回复"><span></span>{{ runtime?.configured ? runtime.mode === 'mock' ? "Mock 已配置" : "模型已配置" : error ? "服务未连接" : "连接检查中" }}</div>
+        <div class="connection-pill" :class="{ online: runtime?.configured && runtime.mode === 'real' }" title="可在软件的模型设置中配置 AI 服务"><span></span>{{ runtime?.configured ? runtime.mode === 'mock' ? "AI 服务未启用" : "AI 已配置" : error ? "服务未连接" : "连接检查中" }}</div>
       </div>
     </header>
 
@@ -214,17 +215,17 @@ async function propose() {
           <div class="message-row user-row" aria-label="你的消息" role="group"><div class="message-body user-message"><p>{{ turn.message }}</p></div></div>
           <div class="message-row assistant-row" aria-label="助手回复" role="group">
             <div class="message-body assistant-message">
-              <div class="markdown-body" v-html="renderAssistantMarkdown(turn.result.reply.answer)"></div>
+              <div class="markdown-body" v-html="renderAssistantMarkdown(turn.result.mode === 'mock' ? 'AI 服务尚未启用。请在软件的模型设置中填写自己的密钥并启用 AI；也可以直接通过左侧“提交工单”填写问题。' : turn.result.reply.answer)"></div>
               <details class="execution-history">
                 <summary>用时 {{ turn.seconds }} 秒</summary>
                 <div class="execution-detail">
-                  <p v-if="turn.result.mode === 'mock'">Mock 验证，未调用真实模型。</p>
+                  <p v-if="turn.result.mode === 'mock'">AI 服务未启用，本次未进行智能分析。</p>
                   <p v-if="!turn.steps.some(step => step.tool)">未调用业务工具。</p>
-                  <ol v-if="turn.steps.length"><li v-for="step in turn.steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ` · ${step.tool}` : '' }}</li></ol>
+                  <ol v-if="turn.steps.length"><li v-for="step in turn.steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ' · 工单申请' : '' }}</li></ol>
                 </div>
               </details>
               <div v-if="mode === 'consult' || turn.result.reply.analysis.risk_level === 'high' || turn.result.reply.analysis.risk_level === 'emergency'" class="analysis-summary">
-                <span>类别 {{ turn.result.reply.analysis.category }}</span><span>风险 {{ turn.result.reply.analysis.risk_level }}</span><span>{{ turn.result.reply.analysis.requires_human_review ? "必须人工复核" : "需结合现场判断" }}</span>
+                <span>类别 {{ categoryNames[turn.result.reply.analysis.category] }}</span><span>风险 {{ riskNames[turn.result.reply.analysis.risk_level] }}</span><span>{{ turn.result.reply.analysis.requires_human_review ? "必须人工复核" : "需结合现场判断" }}</span>
               </div>
               <div v-for="action in turn.result.reply.analysis.immediate_actions" :key="action" class="urgent-callout">{{ action }}</div>
               <div v-if="mode === 'consult' && turn.result.reply.follow_up_questions.length" class="follow-up-box"><strong>还需要确认</strong><ul><li v-for="question in turn.result.reply.follow_up_questions" :key="question">{{ question }}</li></ul></div>
@@ -234,16 +235,16 @@ async function propose() {
         </li>
         <li v-if="pendingMessage" class="pending-turn">
           <div class="message-row user-row" aria-label="你的消息" role="group"><div class="message-body user-message"><p>{{ pendingMessage }}</p></div></div>
-          <div v-if="streamedAnswer" class="message-row assistant-row" aria-label="助手正在回复" role="group"><div class="message-body assistant-message streaming-answer"><div class="markdown-body" v-html="renderAssistantMarkdown(streamedAnswer)"></div><span class="stream-caret" aria-hidden="true"></span></div></div>
+          <div v-if="streamedAnswer && runtime?.mode === 'real'" class="message-row assistant-row" aria-label="助手正在回复" role="group"><div class="message-body assistant-message streaming-answer"><div class="markdown-body" v-html="renderAssistantMarkdown(streamedAnswer)"></div><span class="stream-caret" aria-hidden="true"></span></div></div>
         </li>
       </ol>
       <div v-if="busy" class="execution-status" role="status" aria-live="polite">
         <div class="execution-current"><span class="execution-spinner" aria-hidden="true"></span><strong>{{ activeStepLabel }}</strong><span class="elapsed-time" aria-live="off">已等待 {{ elapsedSeconds }} 秒</span></div>
-        <p v-if="currentStep?.tool">正在调用工具：{{ currentStep.tool }}</p>
+        <p v-if="currentStep?.tool">正在调用工具：工单申请</p>
         <button v-if="pendingMessage" type="button" class="tool-button" @click="stopWaiting">停止等待</button>
-        <details><summary>查看执行步骤</summary><p>{{ mode === 'consult' ? '最多约 35 秒' : '最多约 190 秒' }} · {{ currentStep?.tool ? '业务工具执行中' : '当前未调用业务工具' }}</p><ol v-if="steps.length"><li v-for="step in steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ` · ${step.tool}` : '' }}</li></ol></details>
+        <details><summary>查看执行步骤</summary><p>{{ mode === 'consult' ? '最多约 35 秒' : '最多约 190 秒' }} · {{ currentStep?.tool ? '工单申请处理中' : '当前未调用业务工具' }}</p><ol v-if="steps.length"><li v-for="step in steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}{{ step.tool ? ' · 工单申请' : '' }}</li></ol></details>
       </div>
-      <p v-else-if="proposed" class="execution-finished">提案工具 propose_issue_record 已完成 · 用时 {{ elapsedSeconds }} 秒 · 尚未保存工单</p>
+      <p v-else-if="proposed" class="execution-finished">工单申请已准备好 · 用时 {{ elapsedSeconds }} 秒 · 尚未保存工单</p>
     </div>
 
     <div class="composer-dock">
@@ -267,7 +268,7 @@ async function propose() {
           </div>
         </div>
       </div>
-      <label v-if="modelChoice === '__custom__'" class="custom-model-field">模型标识<input v-model.trim="customModel" aria-label="自定义模型标识" maxlength="100" placeholder="例如 deepseek-custom-2026" /><span>仅发送模型标识；密钥和官方端点仍由服务端管理。</span></label>
+      <label v-if="modelChoice === '__custom__'" class="custom-model-field">模型名称<input v-model.trim="customModel" aria-label="自定义模型标识" maxlength="100" placeholder="请输入服务商提供的模型名称" /><span>需使用当前模型服务支持的名称。</span></label>
       <div v-if="contextOpen" class="context-fields">
         <label>项目标签（可选）<input v-model="form.project" maxlength="100" /></label>
         <label>区域标签（可选）<input v-model="form.area" maxlength="200" /></label>

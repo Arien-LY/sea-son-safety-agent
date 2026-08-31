@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { api } from "../api";
+import { categoryNames, riskNames, routeNames, actorNames, actionNames } from "../customerLabels";
 import KnowledgePanel from "../components/KnowledgePanel.vue";
 import ImagePanel from "../components/ImagePanel.vue";
 import TextPanel from "../components/TextPanel.vue";
@@ -148,7 +149,7 @@ onMounted(async () => {
   try {
     runtime.value = await api.getRuntime();
   } catch {
-    runtimeError.value = "后端尚未启动";
+    runtimeError.value = "服务未连接，请重新打开软件";
   }
 });
 
@@ -195,7 +196,7 @@ async function createPreview() {
   try {
     const result = await api.previewIssueProposal(uniqueId("preview"), buildAnalysis());
     if (!result.ok) {
-      throw new Error(`${result.summary}（${result.error_code || "unknown_error"}）`);
+      throw new Error(result.summary);
     }
     proposal.value = result.data.proposal;
     proposalToken.value = result.data.proposal_token;
@@ -304,18 +305,18 @@ function displayValue(value: string | null): string {
 <template>
   <section v-if="isDetail || isSubmit" class="workspace-header">
     <div>
-      <p class="workspace-kicker">{{ isDetail ? "历史工单" : "结构化提交" }}</p>
+      <p class="workspace-kicker">{{ isDetail ? "历史工单" : "问题上报" }}</p>
       <h1>{{ isDetail ? "工单详情与整改" : "提交工单" }}</h1>
-      <p>{{ isDetail ? "从唯一状态源恢复记录，继续人工整改与复查。" : transferredAnalysis ? `AI 已判断为${categoryLabels[transferredAnalysis.category as keyof typeof categoryLabels]}问题并预填申请；仍需人工核对、确认和保存。` : "适合信息已经较完整的情况；仍需生成提案、核对并确认后保存。" }}</p>
+      <p>{{ isDetail ? "查看处理进展，继续整改与复查。" : transferredAnalysis ? `AI 已判断为${categoryLabels[transferredAnalysis.category as keyof typeof categoryLabels]}问题并预填申请；仍需人工核对、确认和保存。` : "填写问题信息，核对并确认后保存。" }}</p>
     </div>
-    <div class="connection-pill" :class="{ online: runtime }"><span></span>{{ runtime ? `服务已连接 · ${runtime.agent_mode}` : runtimeError || "正在检查服务" }}</div>
+    <div class="connection-pill" :class="{ online: runtime }"><span></span>{{ runtime ? "服务已连接" : runtimeError || "正在检查服务" }}</div>
   </section>
 
   <fieldset class="workspace-fields" :class="{ 'conversation-fields': isConversation }" :disabled="routeBlocking || loadingRecord" aria-label="咨询和工单操作区">
   <TextPanel v-if="isConversation" mode="auto" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @ticket="openTicketFromAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" @attachment="showImages = true" />
   <fieldset class="business-fields" :disabled="working || loadingRecord" aria-label="工单和附件操作区">
   <div v-if="isDetail" class="record-toolbar"><RouterLink to="/records" class="secondary-button">← 返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新详情</button></div>
-  <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在恢复工单详情</strong><small>从本地唯一状态源读取记录与轨迹…</small></p></div>
+  <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在读取工单详情</strong><small>正在获取处理记录…</small></p></div>
   <p v-if="recordError" class="error-message" role="alert">{{ recordError }}</p>
   <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
 
@@ -324,12 +325,12 @@ function displayValue(value: string | null): string {
     <div class="section-heading">
       <div>
         <p class="eyebrow">第 1 步 · 描述待提交问题</p>
-        <h2 id="proposal-workbench-title">结构化问题信息</h2>
+        <h2 id="proposal-workbench-title">问题信息</h2>
       </div>
       <span class="safe-chip">不调用模型</span>
     </div>
     <p class="section-note">
-      这里只创建待确认提案，不会直接落库、派工或归责。风险与人工复核字段提交后不可由页面降低。
+      请核对问题信息。确认保存前不会创建正式工单，也不会自动派工或确定责任。
     </p>
 
     <div class="form-grid">
@@ -378,9 +379,9 @@ function displayValue(value: string | null): string {
     </div>
 
     <div class="analysis-strip">
-      <div><span>类别</span><strong>{{ proposal.analysis.category }}</strong></div>
-      <div><span>风险</span><strong>{{ proposal.analysis.risk_level }}</strong></div>
-      <div><span>路由</span><strong>{{ proposal.analysis.recommended_route }}</strong></div>
+      <div><span>类别</span><strong>{{ categoryNames[proposal.analysis.category] }}</strong></div>
+      <div><span>风险</span><strong>{{ riskNames[proposal.analysis.risk_level] }}</strong></div>
+      <div><span>处理建议</span><strong>{{ routeNames[proposal.analysis.recommended_route] }}</strong></div>
       <div><span>人工复核</span><strong>{{ proposal.analysis.requires_human_review ? "需要" : "否" }}</strong></div>
     </div>
     <p class="locked-note">以上分析字段已锁定。用户只能补充记录展示字段，不能降低风险或取消人工复核。</p>
@@ -430,7 +431,7 @@ function displayValue(value: string | null): string {
 
   <section v-if="!isDetail && confirmed && !record" class="confirmation-card" aria-live="polite">
     <strong>第 3 步 · 提案已确认</strong>
-    <p>HMAC 完整性凭据已生成，但尚未保存正式记录。请显式保存完成建单。</p>
+    <p>信息已确认，尚未保存。点击下方按钮创建工单草稿。</p>
     <button class="primary-button" :disabled="saving" @click="saveDraft">
       {{ saving ? "正在保存，请勿重复点击…" : "保存为正式草稿" }}
     </button>
@@ -439,7 +440,7 @@ function displayValue(value: string | null): string {
   <section v-if="record" class="workflow-card" aria-labelledby="workflow-title">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">本地持久化记录 · revision {{ record.revision }}</p>
+        <p class="eyebrow">已保存工单</p>
         <h2 id="workflow-title">{{ record.record_id }}</h2>
       </div>
       <span :class="record.disposition === 'active' ? 'safe-chip' : 'warning-chip'">
@@ -451,9 +452,9 @@ function displayValue(value: string | null): string {
     <p class="section-note">项目：{{ record.review_fields.project || '待补充' }} · 区域：{{ record.review_fields.area || '待补充' }}</p>
     <p class="record-description">{{ record.review_fields.record_description }}</p>
     <p v-if="record.review_fields.reporter_note">补充说明：{{ record.review_fields.reporter_note }}</p>
-    <p class="section-note">报告人：{{ record.reporter_id }} · 更新：{{ new Date(record.updated_at).toLocaleString() }}</p>
+    <p class="section-note">更新：{{ new Date(record.updated_at).toLocaleString() }}</p>
     <details class="analysis-detail"><summary>查看完整问题分析</summary>
-      <p>类别：{{ record.analysis.category }} · 路由：{{ record.analysis.recommended_route }} · 置信度：{{ record.analysis.confidence }}（不代表风险程度）</p>
+      <p>类别：{{ categoryNames[record.analysis.category] }} · 处理建议：{{ routeNames[record.analysis.recommended_route] }}</p>
       <p>{{ record.analysis.summary }}</p>
       <p>已述事实：{{ record.analysis.observed_facts.join('；') || '无' }}</p>
       <p>不确定性：{{ record.analysis.uncertainties.join('；') || '仍需现场复核' }}</p>
@@ -461,13 +462,13 @@ function displayValue(value: string | null): string {
       <p v-for="action in record.analysis.suggested_actions" :key="action">建议：{{ action }}</p>
     </details>
     <p v-for="action in record.analysis.immediate_actions" :key="action" class="error-message">{{ action }}</p>
-    <p class="locked-note">当前操作者仍为演示角色，不代表真实身份或执业资质。高风险必须独立专业复查。</p>
+    <p class="locked-note">本机版尚未核验操作人员身份和资质，仅供内部试用。高风险必须独立专业复查。</p>
 
     <div class="record-summary-grid">
       <div><span>责任角色建议</span><strong>{{ roleLabels[record.suggested_responsible_role] }}</strong></div>
       <div><span>人工指派角色</span><strong>{{ record.assigned_role ? roleLabels[record.assigned_role] : "尚未指派" }}</strong></div>
-      <div><span>整改人</span><strong>{{ record.assigned_to || "尚未指派" }}</strong></div>
-      <div><span>风险</span><strong>{{ record.analysis.risk_level }}</strong></div>
+      <div><span>整改安排</span><strong>{{ record.assigned_to ? "已指派" : "尚未指派" }}</strong></div>
+      <div><span>风险</span><strong>{{ riskNames[record.analysis.risk_level] }}</strong></div>
     </div>
     <p class="locked-note">责任角色建议只供协调员参考；系统不会根据建议自动归责或自动派工。</p>
 
@@ -549,9 +550,9 @@ function displayValue(value: string | null): string {
       <h3>完整状态轨迹</h3>
       <ol>
         <li v-for="event in record.events" :key="event.sequence">
-          <strong>#{{ event.sequence }} · {{ event.action }}</strong>
-          <span>{{ event.from_status || "无" }} → {{ event.to_status }}</span>
-          <small>{{ event.note || event.summary }} · {{ event.actor_id }} / {{ event.actor_role }} · {{ new Date(event.occurred_at).toLocaleString() }}</small>
+          <strong>{{ actionNames[event.action] }}</strong>
+          <span>{{ event.from_status ? statusLabels[event.from_status] : "新建" }} → {{ statusLabels[event.to_status] }}</span>
+          <small>{{ event.note || event.summary }} · {{ actorNames[event.actor_role] }} · {{ new Date(event.occurred_at).toLocaleString() }}</small>
         </li>
       </ol>
     </div>
@@ -567,8 +568,8 @@ function displayValue(value: string | null): string {
   </fieldset>
 
   <section v-if="isDetail || isSubmit" class="boundary">
-    <h2>受控边界</h2>
-    <p>模型不能改变业务状态。保存、派工、整改与关闭均由人工动作和服务端规则执行；高风险必须独立专业复查。</p>
+    <h2>使用提醒</h2>
+    <p>AI 建议仅供参考。保存、派工、整改与关闭均需人工操作；高风险必须独立专业复查。</p>
   </section>
 </template>
 

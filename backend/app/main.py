@@ -50,6 +50,7 @@ def create_app(
     knowledge_tool: SearchKnowledgeTool | None = None,
     photo_service: PhotoService | None = None,
     text_service: TextConsultationService | None = None,
+    customer_mode: bool = False,
 ) -> FastAPI:
     proposal_boundary = proposal_service or Phase2ProposalService()
     workflow_boundary = workflow_service or IssueWorkflowService(
@@ -65,6 +66,9 @@ def create_app(
     app = FastAPI(
         title="海之子 · 安全质量 Agent API",
         version="0.1.0",
+        docs_url=None if customer_mode else "/docs",
+        redoc_url=None if customer_mode else "/redoc",
+        openapi_url=None if customer_mode else "/openapi.json",
     )
     app.add_middleware(
         CORSMiddleware,
@@ -88,7 +92,7 @@ def create_app(
         mode = os.getenv("AGENT_MODE", "mock").strip().casefold()
         if mode not in {"mock", "real"}:
             mode = "mock"
-        return {"agent_mode": mode, **runtime_info()}
+        return {"agent_mode": mode, **({} if customer_mode else runtime_info())}
 
     @app.post("/api/issue-proposals/preview", response_model=ToolResult)
     def preview_issue_proposal(payload: dict[str, Any]) -> ToolResult:

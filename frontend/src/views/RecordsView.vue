@@ -38,7 +38,7 @@ function clear() { router.push({ name: "records" }); }
 <template>
   <section class="records-workspace">
     <header class="records-header">
-      <div><p class="workspace-kicker">唯一状态来源</p><h1>历史工单</h1><p>查找已保存记录，恢复完整轨迹并继续人工整改。临时聊天与未确认提案不会出现在这里。</p></div>
+      <div><p class="workspace-kicker">工单管理</p><h1>历史工单</h1><p>查找已保存记录，查看处理进展并继续整改。临时聊天与未确认申请不会出现在这里。</p></div>
       <RouterLink to="/submit" class="primary-button">＋ 提交工单</RouterLink>
     </header>
 
@@ -52,7 +52,7 @@ function clear() { router.push({ name: "records" }); }
     </form>
 
     <div v-if="busy" class="records-loading" role="status">
-      <span></span><div><strong>正在读取历史工单</strong><small>从本地 Store 获取最新快照…</small></div>
+      <span></span><div><strong>正在读取历史工单</strong><small>正在获取最新记录…</small></div>
     </div>
     <div v-if="error" class="records-error" role="alert"><strong>历史工单暂时无法读取</strong><p>{{ error }}</p><button class="secondary-button" @click="load">重新加载</button></div>
 
@@ -72,7 +72,7 @@ function clear() { router.push({ name: "records" }); }
             </div>
             <div class="record-status">
               <span :class="{ cancelled: item.disposition === 'cancelled' }">{{ item.disposition === "cancelled" ? "已取消" : statusLabels[item.status] }}</span>
-              <small>风险 {{ riskLabels[item.risk_level] }} · rev.{{ item.revision }}</small>
+              <small>风险 {{ riskLabels[item.risk_level] }}</small>
               <time>{{ new Date(item.updated_at).toLocaleString() }}</time>
             </div>
             <span class="record-arrow">›</span>

@@ -39,6 +39,14 @@ async function mountPanel(cryptoApi = crypto, clock = performance) {
   new Function('require', 'exports', 'crypto', 'performance', js)(name => {
     if (name === '../api') return { api };
     if (name === '../markdown') return { renderAssistantMarkdown: source => source };
+    if (name === '../customerLabels') {
+      const labels = {};
+      const compiled = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/customerLabels.ts'), 'utf8'), {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+      }).outputText;
+      new Function('exports', compiled)(labels);
+      return labels;
+    }
     return require(name);
   }, exports, cryptoApi, clock);
   const component = exports.default;

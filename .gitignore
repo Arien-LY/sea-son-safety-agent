@@ -14,8 +14,8 @@ frontend/.vite/
 data/*.json
 uploads/
 *.log
+release-output/
 
 # Editors and operating systems
 .DS_Store
 Thumbs.db
-

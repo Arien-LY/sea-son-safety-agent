@@ -1,5 +1,14 @@
 # Third-party notices
 
+## Windows competition distribution
+
+The portable package preserves CPython's license and the installed Python distributions' original license files
+under `_internal/licenses`, plus the original runtime distribution metadata. The existing `hello-agents==0.2.9`
+distribution declares **CC-BY-NC-SA-4.0**; this competition build is not a promise of commercial distribution rights.
+No third-party framework is modified. Frontend runtime package licenses are also copied in full; the license omitted
+from the @vue/devtools-api 6.6.4 npm tarball is supplied from its exact upstream tag in
+`desktop/licenses/vue-devtools-api-6.6.4.txt`.
+
 ## markdown-it 15.0.1
 
 Source: <https://github.com/markdown-it/markdown-it>
