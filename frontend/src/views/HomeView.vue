@@ -26,10 +26,9 @@ const runtime = ref<RuntimeInfo | null>(null);
 const route = useRoute();
 const router = useRouter();
 const isDetail = computed(() => route.name === "record-detail");
-const workspaceMode = computed<"chat" | "consult" | "submit">(() => {
-  if (route.name === "chat") return "chat";
+const workspaceMode = computed<"chat" | "submit">(() => {
   if (route.name === "submit") return "submit";
-  return "consult";
+  return "chat";
 });
 const isConversation = computed(() => !isDetail.value && workspaceMode.value !== "submit");
 const isSubmit = computed(() => !isDetail.value && workspaceMode.value === "submit");
@@ -37,6 +36,7 @@ const showImages = ref(false);
 const loadingRecord = ref(false);
 const recordError = ref("");
 const textAnalysis = ref<IssueAnalysis | null>(null);
+const transferredAnalysis = ref<IssueAnalysis | null>(null);
 const activeAnalysis = computed(() => record.value?.analysis || proposal.value?.analysis || textAnalysis.value);
 let loadGeneration = 0;
 let saveKey = "";
@@ -89,6 +89,7 @@ const roleLabels: Record<ResponsibleRole, string> = {
   site_manager: "现场管理人员",
   facilities_staff: "后勤维修人员",
 };
+const categoryLabels = { safety: "安全", quality: "质量", management: "管理", logistics: "后勤" } as const;
 
 const liveChanges = computed<ProposalFieldChange[]>(() => {
   if (!proposal.value || !editedFields.value) return [];
@@ -120,7 +121,9 @@ async function loadRecord() {
   finally { if (current === loadGeneration) loadingRecord.value = false; }
 }
 watch(() => route.fullPath, () => {
-  proposal.value = null; confirmed.value = null; editedFields.value = null; textAnalysis.value = null;
+  const keepTransferred = isSubmit.value && transferredAnalysis.value !== null;
+  proposal.value = null; confirmed.value = null; editedFields.value = null;
+  if (!keepTransferred) { textAnalysis.value = null; transferredAnalysis.value = null; }
   showImages.value = false;
   void loadRecord();
 }, { immediate: true });
@@ -128,6 +131,17 @@ watch(editedFields, () => { confirmed.value = null; saveKey = ""; }, { deep: tru
 
 function useTextAnalysis(analysis: IssueAnalysis | null) {
   textAnalysis.value = analysis; proposal.value = null; confirmed.value = null; editedFields.value = null;
+}
+
+async function openTicketFromAnalysis(analysis: IssueAnalysis) {
+  if (!["safety", "quality", "management", "logistics"].includes(analysis.category)) return;
+  transferredAnalysis.value = structuredClone(analysis);
+  textAnalysis.value = transferredAnalysis.value;
+  analysisForm.category = analysis.category as typeof analysisForm.category;
+  analysisForm.issueType = analysis.issue_type;
+  analysisForm.summary = analysis.summary;
+  analysisForm.riskLevel = analysis.risk_level;
+  await router.push({ name: "submit", query: { source: "ai" } });
 }
 
 onMounted(async () => {
@@ -139,6 +153,9 @@ onMounted(async () => {
 });
 
 function buildAnalysis(): IssueAnalysis {
+  if (transferredAnalysis.value) {
+    return structuredClone(transferredAnalysis.value);
+  }
   const highRisk = ["high", "emergency"].includes(analysisForm.riskLevel);
   return {
     category: analysisForm.category,
@@ -289,13 +306,13 @@ function displayValue(value: string | null): string {
     <div>
       <p class="workspace-kicker">{{ isDetail ? "历史工单" : "结构化提交" }}</p>
       <h1>{{ isDetail ? "工单详情与整改" : "提交工单" }}</h1>
-      <p>{{ isDetail ? "从唯一状态源恢复记录，继续人工整改与复查。" : "适合信息已经较完整的情况；仍需生成提案、核对并确认后保存。" }}</p>
+      <p>{{ isDetail ? "从唯一状态源恢复记录，继续人工整改与复查。" : transferredAnalysis ? `AI 已判断为${categoryLabels[transferredAnalysis.category as keyof typeof categoryLabels]}问题并预填申请；仍需人工核对、确认和保存。` : "适合信息已经较完整的情况；仍需生成提案、核对并确认后保存。" }}</p>
     </div>
     <div class="connection-pill" :class="{ online: runtime }"><span></span>{{ runtime ? `服务已连接 · ${runtime.agent_mode}` : runtimeError || "正在检查服务" }}</div>
   </section>
 
   <fieldset class="workspace-fields" :class="{ 'conversation-fields': isConversation }" :disabled="routeBlocking || loadingRecord" aria-label="咨询和工单操作区">
-  <TextPanel v-if="isConversation" :mode="workspaceMode === 'chat' ? 'chat' : 'consult'" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" @attachment="showImages = true" />
+  <TextPanel v-if="isConversation" mode="auto" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @ticket="openTicketFromAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" @attachment="showImages = true" />
   <fieldset class="business-fields" :disabled="working || loadingRecord" aria-label="工单和附件操作区">
   <div v-if="isDetail" class="record-toolbar"><RouterLink to="/records" class="secondary-button">← 返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新详情</button></div>
   <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在恢复工单详情</strong><small>从本地唯一状态源读取记录与轨迹…</small></p></div>
@@ -318,7 +335,7 @@ function displayValue(value: string | null): string {
     <div class="form-grid">
       <label>
         问题类别
-        <select v-model="analysisForm.category">
+        <select v-model="analysisForm.category" :disabled="Boolean(transferredAnalysis)">
           <option value="safety">安全问题</option>
           <option value="quality">质量问题</option>
           <option value="management">管理问题</option>
@@ -327,7 +344,8 @@ function displayValue(value: string | null): string {
       </label>
       <label>
         风险等级
-        <select v-model="analysisForm.riskLevel">
+        <select v-model="analysisForm.riskLevel" :disabled="Boolean(transferredAnalysis)">
+          <option value="undetermined">待判断</option>
           <option value="low">低</option>
           <option value="medium">中</option>
           <option value="high">高</option>
@@ -336,11 +354,11 @@ function displayValue(value: string | null): string {
       </label>
       <label>
         问题类型
-        <input v-model.trim="analysisForm.issueType" maxlength="100" />
+        <input v-model.trim="analysisForm.issueType" maxlength="100" :disabled="Boolean(transferredAnalysis)" />
       </label>
       <label class="full-field">
         已观察问题摘要
-        <textarea v-model.trim="analysisForm.summary" maxlength="500" rows="3"></textarea>
+        <textarea v-model.trim="analysisForm.summary" maxlength="500" rows="3" :disabled="Boolean(transferredAnalysis)"></textarea>
       </label>
     </div>
     <button class="primary-button" :disabled="previewing" @click="createPreview">
@@ -544,7 +562,7 @@ function displayValue(value: string | null): string {
     <ImagePanel :record="record" @proposal="usePhotoProposal" @busy="imageBusy = $event" />
   </section>
   <ImagePanel v-if="isDetail" :record="record" evidence-only @proposal="usePhotoProposal" @busy="imageBusy = $event" />
-  <KnowledgePanel v-if="activeAnalysis && (isDetail || isSubmit || workspaceMode === 'consult')" :analysis="activeAnalysis" :record="record" />
+  <KnowledgePanel v-if="activeAnalysis && (isDetail || isSubmit)" :analysis="activeAnalysis" :record="record" />
   </fieldset>
   </fieldset>
 

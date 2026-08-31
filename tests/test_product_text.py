@@ -55,7 +55,7 @@ def text_client(tmp_path, responses=None, clock=None, today=None, quick_answerer
     options = {"clock": clock} if clock else {}
     if today: options["today"] = today
     if quick_answerer: options["quick_answerer"] = quick_answerer
-    service = TextConsultationService(proposals, assistant_factory=lambda mode: TextAssistant(fake), **options)
+    service = TextConsultationService(proposals, assistant_factory=lambda mode, model: TextAssistant(fake), **options)
     client = TestClient(create_app(proposal_service=proposals, workflow_service=workflow, text_service=service))
     return client, service, workflow, fake
 
@@ -94,8 +94,8 @@ def test_daily_chat_uses_brief_model_path_not_structured_analysis(tmp_path, monk
     monkeypatch.setenv("LLM_API_KEY", "FAKE-private-key")
     monkeypatch.setenv("LLM_BASE_URL", "https://api.deepseek.com")
     quick_calls = []
-    def quick_answer(mode, inputs, current, previous_answers):
-        quick_calls.append((mode, [item.message for item in inputs], current, previous_answers))
+    def quick_answer(mode, model, inputs, current, previous_answers):
+        quick_calls.append((mode, model, [item.message for item in inputs], current, previous_answers))
         return "今天是2026年8月30日，星期日。"
     client, _, workflow, fake = text_client(
         tmp_path, today=lambda: date(2026, 8, 30), quick_answerer=quick_answer)
@@ -106,7 +106,7 @@ def test_daily_chat_uses_brief_model_path_not_structured_analysis(tmp_path, monk
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["model"] == "deepseek-v4-flash" and "2026年8月30日" in result["reply"]["answer"]
-    assert quick_calls == [("real", ["今天几号了"], date(2026, 8, 30), [])]
+    assert quick_calls == [("real", "deepseek-v4-flash", ["今天几号了"], date(2026, 8, 30), [])]
     assert not result["can_propose"] and not fake.messages and workflow.store.snapshot() == ()
 
 
@@ -342,4 +342,7 @@ def test_sdk_errors_are_redacted(monkeypatch, failure, code):
 def test_frozen_product_schemas():
     root = Path(__file__).resolve().parents[1]
     for name, model in [("text_request", TextRequest), ("text_response", TextResponse)]:
-        assert json.loads((root / f"contracts/product_{name}.v2.schema.json").read_text(encoding="utf-8")) == model.model_json_schema()
+        assert json.loads((root / f"contracts/product_{name}.v3.schema.json").read_text(encoding="utf-8")) == model.model_json_schema()
+    v2 = json.loads((root / "contracts/product_text_request.v2.schema.json").read_text(encoding="utf-8"))
+    assert v2["properties"]["intent"]["enum"] == ["chat", "consult"]
+    assert "model" not in v2["properties"]

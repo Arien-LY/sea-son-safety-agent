@@ -14,12 +14,13 @@ function deferred() {
 }
 
 async function mountPanel(cryptoApi = crypto, clock = performance) {
-  const requests = [], busyEvents = [], analyses = [], proposalEvents = [], proposingEvents = [];
+  const requests = [], busyEvents = [], analyses = [], ticketEvents = [], proposalEvents = [], proposingEvents = [];
   const api = {
-    getTextRuntime: async () => ({ configured: true, mode: 'real', model: 'deepseek-v4-flash' }),
-    sendText: (input, signal, onProgress) => {
+    getTextRuntime: async () => ({ configured: true, mode: 'real', model: 'deepseek-v4-flash',
+      available_models: ['deepseek-v4-flash', 'deepseek-v4-pro'], custom_model_allowed: true }),
+    sendText: (input, signal, onProgress, onDelta) => {
       const response = deferred();
-      requests.push({ input, signal, onProgress, ...response });
+      requests.push({ input, signal, onProgress, onDelta, ...response });
       return response.promise;
     },
     proposeText: (_id, _turn, onProgress) => {
@@ -54,10 +55,11 @@ async function mountPanel(cryptoApi = crypto, clock = performance) {
     onBusy: value => busyEvents.push(value), onAnalysis: value => analyses.push(value),
     onProposal: value => proposalEvents.push(value),
     onProposing: value => proposingEvents.push(value),
+    onTicket: value => ticketEvents.push(value),
   }) });
   app.mount({});
   await vue.nextTick();
-  return { state: instance.setupState, app, mode, requests, busyEvents, analyses, proposalEvents, proposingEvents };
+  return { state: instance.setupState, app, mode, requests, busyEvents, analyses, ticketEvents, proposalEvents, proposingEvents };
 }
 
 const result = { consultation_id: 'TXT-test', turn: 1, remaining_turns: 5,
@@ -98,7 +100,8 @@ test('send shows the user message and clears composer before HTTP completes', as
   assert.equal(panel.state.form.message, '');
   assert.equal(panel.state.pendingMessage, '今天几号了');
   assert.equal(panel.state.busy, true);
-  assert.equal(panel.requests[0].input.intent, 'chat');
+  assert.equal(panel.requests[0].input.intent, 'auto');
+  assert.equal(panel.requests[0].input.model, 'deepseek-v4-flash');
   assert.equal(panel.requests[0].input.allow_external, true);
   panel.requests[0].resolve(result);
   await sent;
@@ -179,7 +182,7 @@ test('elapsed time never invents steps; only server events update the work statu
     assert.equal(panel.state.steps.length, 0);
     assert.match(panel.state.activeStepLabel, /等待服务端接收/);
     panel.requests[0].onProgress({ type: 'progress', seq: 1, elapsed_ms: 10, stage: 'model_running', tool: null });
-    assert.equal(panel.state.activeStepLabel, '模型处理中（已开启深度思考）');
+    assert.match(panel.state.activeStepLabel, /模型处理中/);
     now = 4300;
     panel.requests[0].resolve(result);
     await sent;
@@ -244,5 +247,46 @@ test('expanded input and turn capacity apply only to chat', async () => {
     assert.equal(panel.state.maxInput, 1000);
     assert.equal(panel.state.maxTurns, 6);
     assert.equal(panel.state.canSend, false);
+  } finally { panel.app.unmount(); }
+});
+
+test('validated answer deltas are visible before the final response resolves', async () => {
+  const panel = await mountPanel();
+  try {
+    panel.state.form.message = '空调坏了';
+    const sent = panel.state.send();
+    panel.requests[0].onDelta({ type: 'content_delta', index: 1, text: '正在' });
+    panel.requests[0].onDelta({ type: 'content_delta', index: 2, text: '整理工单' });
+    assert.equal(panel.state.streamedAnswer, '正在整理工单');
+    panel.requests[0].resolve(result);
+    await sent;
+    assert.equal(panel.state.streamedAnswer, '');
+  } finally { panel.app.unmount(); }
+});
+
+test('eligible unified result emits a ticket handoff but never persists automatically', async () => {
+  const panel = await mountPanel();
+  try {
+    panel.state.form.message = '宿舍空调坏了，帮我上报';
+    const sent = panel.state.send();
+    const logistics = { ...result, can_propose: true,
+      reply: { answer: '已识别为后勤问题。', analysis: { category: 'logistics', risk_level: 'medium' } } };
+    panel.requests[0].resolve(logistics);
+    await sent;
+    assert.deepEqual(panel.ticketEvents, [logistics.reply.analysis]);
+    assert.equal(panel.proposalEvents.length, 0);
+  } finally { panel.app.unmount(); }
+});
+
+test('model picker accepts a custom id and sends it with the next turn', async () => {
+  const panel = await mountPanel();
+  try {
+    panel.state.modelChoice = '__custom__';
+    panel.state.customModel = 'deepseek-custom-2026';
+    panel.state.form.message = '测试';
+    const sent = panel.state.send();
+    assert.equal(panel.requests[0].input.model, 'deepseek-custom-2026');
+    panel.requests[0].resolve(result);
+    await sent;
   } finally { panel.app.unmount(); }
 });

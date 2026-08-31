@@ -1,5 +1,8 @@
 # 文字请求等待与真实执行状态契约
 
+> 2026-08-31：`responding`和`content_delta`的安全流式展示增量见
+> `docs/unified-chat-routing-contract.md`；原 progress/result/error 边界继续兼容。
+
 目标：发送后立即显示用户消息、清空输入；等待展示经过秒数、真实后端步骤及实际工具名，失败可恢复。
 教程依据：Hello-Agents V1.0.3 第7/9/12章与 Extra09；不显示隐藏思维链，不用前端计时器编造执行进度。
 当前行为：基线 bb4206f 在localhost已修复消息滞留；Chrome DevTools在用户局域网HTTP页面证实

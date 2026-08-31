@@ -72,7 +72,7 @@ def create_product_router(texts: TextConsultationService, workflow: IssueWorkflo
 
     @router.post("/api/text-consultations/stream")
     def send_stream(payload: dict):
-        return stream_operation(texts.send, parse(TextRequest, payload))
+        return stream_operation(texts.send, parse(TextRequest, payload), stream_answer=True)
 
     @router.post("/api/text-consultations/{consultation_id}/proposal/stream")
     def propose_stream(consultation_id: str, payload: dict):
