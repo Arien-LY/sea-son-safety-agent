@@ -2,6 +2,18 @@
 
 ## 2026-08-31：Windows 比赛客户包
 
+正式发布结果：
+
+- 干净提交`d423026227390cdc6811df59164f824597724359`构建，`dirty_build=false`；标签
+  `v0.1.0-beta.1`固定在该提交，本段后补文档不会改动标签或发行文件。
+- 最终ZIP为45,105,575字节；4131文件散列复核、原生启动器、包内运行时、无开发工具PATH、Mock流式协议、
+  安全/后勤两类闭环和重启持久恢复再次全部通过，真实模型调用0次。
+- ZIP SHA256：`cb09b26afa956f13617f63f5855ef0dfff5246c7ca80bd9684fd50aa97a30e10`。
+- 已上传ZIP和SHA256SUMS.txt到GitHub，重新下载文件复算散列与本地一致；2026-08-31发布为非草稿的
+  prerelease，仓库仍为PRIVATE。Release：
+  https://github.com/Arien-LY/sea-son-safety-agent/releases/tag/v0.1.0-beta.1 。
+- 维护PR #26描述包含范围、教程依据、测试、限制和人工重点；未自动合并。
+
 范围：基于已合并PR #25的main 4ae12d1创建`release/windows-portable-beta`；冻结
 `docs/windows-release-contract.md` P01–P10。用户确认仅比赛上传，不建设生产身份或隐私平台。
 
