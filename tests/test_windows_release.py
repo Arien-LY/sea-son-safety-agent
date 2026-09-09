@@ -92,5 +92,8 @@ def test_launcher_keeps_credentials_off_cli_and_supports_local_user_encryption()
     assert "UseSystemPasswordChar = true" in text
     assert "IPAddress.Loopback" in text
     assert 'info.EnvironmentVariables["LLM_API_KEY"]' in text
+    assert 'info.EnvironmentVariables["LLM_PROVIDER"]' in text
+    assert 'info.EnvironmentVariables["TENCENT_TOKEN_PLAN_API_KEY"]' in text
+    assert 'info.EnvironmentVariables["VISION_API_KEY"]' in text
     argument_line = next(line for line in text.splitlines() if "info.Arguments =" in line)
     assert "Key" not in argument_line

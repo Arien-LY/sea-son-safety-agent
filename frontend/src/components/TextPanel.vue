@@ -263,7 +263,7 @@ async function propose() {
             <button type="button" class="tool-button" :class="{ active: contextOpen }" :disabled="busy" @click="contextOpen = !contextOpen">⌁ <span>背景</span></button>
           </div>
           <div class="send-controls">
-            <label class="model-picker" title="可选择服务端建议型号，或输入DeepSeek模型标识"><span class="sr-only">模型</span><select v-model="modelChoice" aria-label="选择模型" :disabled="!runtime?.configured || runtime.mode === 'mock'"><option v-for="model in runtime?.available_models || []" :key="model" :value="model">{{ modelLabel(model) }}</option><option v-if="runtime?.custom_model_allowed" value="__custom__">自定义…</option></select></label>
+            <label class="model-picker" title="可选择服务端建议型号，或输入当前模型服务支持的标识"><span class="sr-only">模型</span><select v-model="modelChoice" aria-label="选择模型" :disabled="!runtime?.configured || runtime.mode === 'mock'"><option v-for="model in runtime?.available_models || []" :key="model" :value="model">{{ modelLabel(model) }}</option><option v-if="runtime?.custom_model_allowed" value="__custom__">自定义…</option></select></label>
             <span>{{ form.message.length }}/{{ maxInput }}</span><button type="button" class="send-button" :disabled="!canSend" :aria-label="latest ? '发送补充' : '发送消息'" @click="send">↑</button>
           </div>
         </div>

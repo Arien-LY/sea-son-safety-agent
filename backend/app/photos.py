@@ -23,6 +23,13 @@ from backend.app.workflow import IssueWorkflowService
 from backend.app.workflow_models import ActorRole, RecordDisposition, WorkflowStatus
 
 
+def vision_credentials() -> tuple[str, str]:
+    """Image analysis stays on DeepSeek; explicit VISION_* overrides text env."""
+
+    return (os.getenv("VISION_API_KEY", "").strip() or os.getenv("LLM_API_KEY", "").strip(),
+            os.getenv("VISION_BASE_URL", "").strip() or os.getenv("LLM_BASE_URL", "").strip())
+
+
 def runtime_vision_info() -> dict[str, object]:
     mode = os.getenv("AGENT_MODE", "mock").strip().casefold()
     mode = "real" if mode == "real" else "mock"
@@ -30,9 +37,9 @@ def runtime_vision_info() -> dict[str, object]:
     if mode == "mock":
         return {"mode": mode, "model": "mock-no-image-recognition", "configured": True,
                 "external_provider": None}
+    api_key, base_url = vision_credentials()
     try:
-        VisionConfig(api_key=os.getenv("LLM_API_KEY", ""), model=model,
-                     base_url=os.getenv("LLM_BASE_URL", "")).validate()
+        VisionConfig(api_key=api_key, model=model, base_url=base_url).validate()
         configured = True
     except VisionError:
         configured = False
@@ -44,9 +51,9 @@ def runtime_vision_info() -> dict[str, object]:
 def default_analyzer(mode: str) -> SingleImageAnalyzer:
     if mode == "mock":
         return SingleImageAnalyzer(MockVisionBackend())
-    config = VisionConfig(api_key=os.getenv("LLM_API_KEY", ""),
-                          model=os.getenv("VISION_MODEL", ""),
-                          base_url=os.getenv("LLM_BASE_URL", ""))
+    api_key, base_url = vision_credentials()
+    config = VisionConfig(api_key=api_key, model=os.getenv("VISION_MODEL", ""),
+                          base_url=base_url)
     return SingleImageAnalyzer(DeepSeekVisionBackend(config))
 
 

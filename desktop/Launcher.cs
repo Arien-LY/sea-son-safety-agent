@@ -16,15 +16,25 @@ using System.Windows.Forms;
 
 public sealed class Settings {
     public bool Enabled = false;
+    public string Provider = "deepseek";
     public string Model = "deepseek-v4-flash";
     public string VisionModel = "deepseek-v4-flash-vision-exp";
     public string EncryptedKey = "";
+    public string EncryptedVisionKey = "";
     public string Key() {
         return EncryptedKey.Length == 0 ? "" : Encoding.UTF8.GetString(
             ProtectedData.Unprotect(Convert.FromBase64String(EncryptedKey), null, DataProtectionScope.CurrentUser));
     }
     public void SetKey(string key) {
         EncryptedKey = key.Length == 0 ? "" : Convert.ToBase64String(
+            ProtectedData.Protect(Encoding.UTF8.GetBytes(key), null, DataProtectionScope.CurrentUser));
+    }
+    public string VisionKey() {
+        return EncryptedVisionKey.Length == 0 ? "" : Encoding.UTF8.GetString(
+            ProtectedData.Unprotect(Convert.FromBase64String(EncryptedVisionKey), null, DataProtectionScope.CurrentUser));
+    }
+    public void SetVisionKey(string key) {
+        EncryptedVisionKey = key.Length == 0 ? "" : Convert.ToBase64String(
             ProtectedData.Protect(Encoding.UTF8.GetBytes(key), null, DataProtectionScope.CurrentUser));
     }
 }
@@ -44,12 +54,22 @@ public sealed class Host : IDisposable {
         info.WorkingDirectory = data;
         info.UseShellExecute = false; info.CreateNoWindow = true;
         info.RedirectStandardOutput = true; info.RedirectStandardError = true;
-        // Fixed trusted endpoint; never accept endpoint, store path or Python path from a webpage.
+        bool tencent = settings.Provider == "tencent_token_plan";
+        // Fixed trusted endpoints; never accept endpoint, store path or Python path from a webpage.
         info.EnvironmentVariables["AGENT_MODE"] = settings.Enabled ? "real" : "mock";
-        info.EnvironmentVariables["LLM_API_KEY"] = settings.Enabled ? settings.Key() : "";
-        info.EnvironmentVariables["LLM_MODEL"] = settings.Model;
+        info.EnvironmentVariables["LLM_PROVIDER"] = tencent ? "tencent_token_plan" : "deepseek";
+        info.EnvironmentVariables["LLM_API_KEY"] = settings.Enabled && !tencent ? settings.Key() : "";
+        info.EnvironmentVariables["LLM_MODEL"] = tencent ? "" : settings.Model;
+        info.EnvironmentVariables["TENCENT_TOKEN_PLAN_API_KEY"] = settings.Enabled && tencent ? settings.Key() : "";
+        info.EnvironmentVariables["TENCENT_TOKEN_PLAN_MODEL"] = tencent ? settings.Model : "";
+        info.EnvironmentVariables["TENCENT_TOKEN_PLAN_MODEL_OPTIONS"] = "";
+        info.EnvironmentVariables["TENCENT_TOKEN_PLAN_BASE_URL"] = tencent
+            ? "https://api.lkeap.cloud.tencent.com/plan/v3" : "";
         info.EnvironmentVariables["VISION_MODEL"] = settings.VisionModel;
-        info.EnvironmentVariables["LLM_MODEL_OPTIONS"] = "";
+        info.EnvironmentVariables["VISION_API_KEY"] = settings.Enabled && settings.VisionKey().Length != 0
+            ? settings.VisionKey() : (!tencent && settings.Enabled ? settings.Key() : "");
+        info.EnvironmentVariables["VISION_BASE_URL"] = "https://api.deepseek.com";
+        info.EnvironmentVariables["LLM_MODEL_OPTIONS"] = tencent ? "" : "deepseek-v4-pro";
         info.EnvironmentVariables["LLM_BASE_URL"] = "https://api.deepseek.com";
         info.EnvironmentVariables["PYTHON_DOTENV_DISABLED"] = "1";
         child = new Process(); child.StartInfo = info;
@@ -108,7 +128,7 @@ public sealed class Workbench : Form {
     Settings LoadSettings() {
         string path = Path.Combine(data, "settings.json");
         if (!File.Exists(path)) return new Settings();
-        try { var value = new JavaScriptSerializer().Deserialize<Settings>(File.ReadAllText(path)); value.Key(); return value; }
+        try { var value = new JavaScriptSerializer().Deserialize<Settings>(File.ReadAllText(path)); value.Key(); value.VisionKey(); return value; }
         catch { MessageBox.Show("无法读取本机模型设置，请重新填写。原设置文件未修改。", "海之子"); return new Settings(); }
     }
     void StartService() {
@@ -119,29 +139,44 @@ public sealed class Workbench : Form {
     void OpenBrowser() { try { Process.Start(new ProcessStartInfo(host.Url + "/chat") { UseShellExecute = true }); } catch { MessageBox.Show("请在浏览器打开：" + host.Url, "海之子"); } }
     void Configure() {
         using (var dialog = new Form()) {
-            dialog.Text = "模型设置"; dialog.Size = new Size(520, 405); dialog.Font = Font;
+            dialog.Text = "模型设置"; dialog.Size = new Size(540, 560); dialog.Font = Font;
             dialog.StartPosition = FormStartPosition.CenterParent; dialog.FormBorderStyle = FormBorderStyle.FixedDialog; dialog.MaximizeBox = false; dialog.MinimizeBox = false;
-            var enabled = new CheckBox { Text = "启用 AI（需要联网，模型服务可能收费）", Checked = settings.Enabled, Left = 24, Top = 22, Width = 450 };
-            var key = new TextBox { Text = settings.Key(), UseSystemPasswordChar = true, Left = 24, Top = 87, Width = 450, MaxLength = 512 };
-            var model = new TextBox { Text = settings.Model, Left = 24, Top = 150, Width = 450, MaxLength = 100 };
-            var vision = new TextBox { Text = settings.VisionModel, Left = 24, Top = 213, Width = 450, MaxLength = 100 };
-            var tip = new Label { Text = "连接 DeepSeek 官方服务。密钥在本机加密保存。\n保存将重启工作台，未保存的聊天和申请将丢失。", Left = 24, Top = 250, Width = 460, Height = 50 };
-            var save = new Button { Text = "保存并重启", Left = 320, Top = 312, Width = 154, Height = 34 };
+            var enabled = new CheckBox { Text = "启用 AI（需要联网，模型服务可能收费）", Checked = settings.Enabled, Left = 24, Top = 16, Width = 470 };
+            var provider = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = 24, Top = 76, Width = 470 };
+            provider.Items.AddRange(new object[] { "DeepSeek 官方", "腾讯云 Token Plan" });
+            provider.SelectedIndex = settings.Provider == "tencent_token_plan" ? 1 : 0;
+            var key = new TextBox { Text = settings.Key(), UseSystemPasswordChar = true, Left = 24, Top = 136, Width = 470, MaxLength = 512 };
+            var model = new TextBox { Text = settings.Model, Left = 24, Top = 198, Width = 470, MaxLength = 100 };
+            var visionKey = new TextBox { Text = settings.VisionKey(), UseSystemPasswordChar = true, Left = 24, Top = 258, Width = 470, MaxLength = 512 };
+            var vision = new TextBox { Text = settings.VisionModel, Left = 24, Top = 318, Width = 470, MaxLength = 100 };
+            var tip = new Label { Left = 24, Top = 360, Width = 480, Height = 110 };
+            var save = new Button { Text = "保存并重启", Left = 330, Top = 478, Width = 164, Height = 34 };
+            Action updateTip = delegate {
+                tip.Text = provider.SelectedIndex == 1
+                    ? "文字将连接腾讯云 Token Plan 官方 OpenAI 兼容入口，密钥和额度均在本机。\n图片分析仍走 DeepSeek：若需保留，请另填 DeepSeek 图片密钥；留空时图片 AI 显示为未启用。\n保存将重启工作台，未保存的聊天和申请将丢失。"
+                    : "连接 DeepSeek 官方服务，文字与图片共用密钥（或可另填图片密钥）。\n保存将重启工作台，未保存的聊天和申请将丢失。";
+            };
+            updateTip();
+            provider.SelectedIndexChanged += delegate { updateTip(); };
             save.Click += delegate {
-                if (!Regex.IsMatch(model.Text.Trim(), @"\A[A-Za-z0-9][A-Za-z0-9._:-]{0,99}\z") || !Regex.IsMatch(vision.Text.Trim(), @"\A[A-Za-z0-9][A-Za-z0-9._:-]{0,99}\z") || (enabled.Checked && String.IsNullOrWhiteSpace(key.Text))) { MessageBox.Show("请填写有效的模型名称和密钥。", "模型设置"); return; }
+                bool tencent = provider.SelectedIndex == 1;
+                if (!Regex.IsMatch(model.Text.Trim(), @"\A[A-Za-z0-9][A-Za-z0-9._:-]{0,99}\z") || !Regex.IsMatch(vision.Text.Trim(), @"\A[A-Za-z0-9][A-Za-z0-9._:-]{0,99}\z") || (enabled.Checked && String.IsNullOrWhiteSpace(key.Text))) { MessageBox.Show("请填写有效的模型名称和所选服务商的密钥。", "模型设置"); return; }
                 if (MessageBox.Show("确认保存设置并重启？未保存内容将丢失，已保存工单会保留。", "海之子", MessageBoxButtons.OKCancel) != DialogResult.OK) return;
                 try {
-                    var next = new Settings { Enabled = enabled.Checked, Model = model.Text.Trim(), VisionModel = vision.Text.Trim() }; next.SetKey(key.Text.Trim());
+                    var next = new Settings { Enabled = enabled.Checked, Provider = tencent ? "tencent_token_plan" : "deepseek", Model = model.Text.Trim(), VisionModel = vision.Text.Trim() };
+                    next.SetKey(key.Text.Trim()); next.SetVisionKey(visionKey.Text.Trim());
                     string path = Path.Combine(data, "settings.json"), temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
                     File.WriteAllText(temporary, new JavaScriptSerializer().Serialize(next), new UTF8Encoding(false));
                     if (File.Exists(path)) File.Replace(temporary, path, null); else File.Move(temporary, path);
                     settings = next; opened = false; poll.Stop(); StartService(); dialog.Close();
                 } catch { MessageBox.Show("设置保存失败，请检查用户目录是否可写。", "海之子"); }
             };
-            dialog.Controls.AddRange(new Control[] { enabled, key, model, vision, tip, save,
-                new Label { Text = "接口密钥", Left = 24, Top = 61, Width = 450 },
-                new Label { Text = "聊天模型", Left = 24, Top = 124, Width = 450 },
-                new Label { Text = "图片模型", Left = 24, Top = 187, Width = 450 } });
+            dialog.Controls.AddRange(new Control[] { enabled, provider, key, model, visionKey, vision, tip, save,
+                new Label { Text = "文字服务商", Left = 24, Top = 54, Width = 470 },
+                new Label { Text = "聊天接口密钥（对应所选服务商）", Left = 24, Top = 114, Width = 470 },
+                new Label { Text = "聊天模型", Left = 24, Top = 176, Width = 470 },
+                new Label { Text = "图片接口密钥（DeepSeek，可留空）", Left = 24, Top = 236, Width = 470 },
+                new Label { Text = "图片模型", Left = 24, Top = 296, Width = 470 } });
             dialog.ShowDialog(this);
         }
     }
@@ -155,8 +190,9 @@ public sealed class Workbench : Form {
                     if (!check.Ready()) return 1;
                     if (!check.Read("/chat").Contains("<html")) return 2;
                     if (check.Read("/api/runtime").Contains("tutorial")) return 3;
-                    var sample = new Settings(); sample.SetKey("synthetic-local-test");
-                    if (sample.Key() != "synthetic-local-test" || sample.EncryptedKey.Contains("synthetic")) return 4;
+                    var sample = new Settings(); sample.SetKey("synthetic-local-test"); sample.SetVisionKey("synthetic-vision-test");
+                    if (sample.Key() != "synthetic-local-test" || sample.VisionKey() != "synthetic-vision-test"
+                        || sample.EncryptedKey.Contains("synthetic") || sample.EncryptedVisionKey.Contains("synthetic")) return 4;
                     return 0;
                 } catch { return 5; }
             }

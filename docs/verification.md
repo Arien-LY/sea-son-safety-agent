@@ -1424,3 +1424,30 @@ Chrome与外部门禁：
   因此桌面和390×844本轮未冒充通过。安装并启用扩展后须重跑U01–U08。
 - 自定义模型是否存在、真实分类/回答质量、首字等待、费用，以及现场专业结论仍需用户授权的真实抽样；
   第二台物理Windows电脑验收仍是全项目独立发布门禁。
+
+## 2026-09-09：腾讯云 Token Plan 文字 Provider
+
+范围与依据：
+
+- 分支`feat/tencent-token-plan-text-provider`只新增可选文字服务商，不改变原 DeepSeek 默认接入、
+  Frozen Schema、知识/提案/工单状态机、人工确认与派工权限；未新增多 Agent、RAG 或浏览器搜索。
+- 官方依据（腾讯云文档中心/国际站，2026-09-04后复核）：Token Plan 个人版快速入门
+  `cloud.tencent.com/document/product/1823/130119`给出 OpenAI 兼容入口
+  `https://api.lkeap.cloud.tencent.com/plan/v3`、`Authorization: Bearer sk-tp-xxx`与套餐 Model ID；
+  OpenAI Chat Completions 协议字段说明`/document/product/1823/135872`确认支持
+  `response_format`、`thinking.type`、`reasoning_effort`、`max_tokens`；国际站 Quick Start
+  `tencentcloud.com/document/product/1300/81317`与模型列表交叉核对。未依据截图猜测参数。
+- `LLM_PROVIDER=deepseek`保留原 `LLM_*` 配置；`LLM_PROVIDER=tencent_token_plan`读取
+  `TENCENT_TOKEN_PLAN_API_KEY/MODEL/MODEL_OPTIONS/BASE_URL`。两端点均在服务端白名单校验；
+  桌面“模型设置”增加服务商选择，并为图片保留独立 DeepSeek 密钥字段。
+- Token Plan 文本请求继续走 OpenAI 兼容 Chat Completions 与现有严格 JSON Schema/零重试/
+  超时/错误脱敏边界。腾讯云 Token Plan 的多模态模型未接入图片路径，文档与 UI 均不伪装为已支持。
+
+自动验证：
+
+- `scripts/verify.ps1`：454项Python全部通过；35项前端行为测试通过；`vue-tsc`与Vite生产构建
+  （67 modules）通过。保留1条既有Pydantic弃用警告。
+- 新增7项Fake/Mock专项：腾讯云运行信息识别与脱敏、官方端点白名单、结构化/日常聊天传输、
+  超时与Provider错误脱敏、HTTP费用确认与服务商文案。真实/付费文字或图片模型调用0次。
+- 未读取、未输出、未提交任何真实 API Key；桌面旧截图中暴露的密钥未使用，请用户轮换后再自行填入
+  本地 `.env` 或“模型设置”。真实腾讯云 Token Plan 文字冒烟步骤与配置见 README。

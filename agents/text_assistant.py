@@ -107,16 +107,112 @@ class TextBackend(Protocol):
     def invoke(self, messages: list[dict[str, str]], **kwargs: object) -> str: ...
 
 
+TEXT_PROVIDER_DEEPSEEK = "deepseek"
+TEXT_PROVIDER_TENCENT_TOKEN_PLAN = "tencent_token_plan"
+TENCENT_TOKEN_PLAN_OFFICIAL_BASE_URL = "https://api.lkeap.cloud.tencent.com/plan/v3"
+TEXT_PROVIDER_LABELS = {
+    TEXT_PROVIDER_DEEPSEEK: "DeepSeek",
+    TEXT_PROVIDER_TENCENT_TOKEN_PLAN: "腾讯云 Token Plan",
+}
+
+
+def text_provider_label(provider: str) -> str:
+    return TEXT_PROVIDER_LABELS.get(provider, "模型服务")
+
+
 @dataclass(frozen=True, slots=True)
 class TextConfig:
     api_key: str = field(repr=False)
     model: str
     base_url: str
+    provider: str = TEXT_PROVIDER_DEEPSEEK
 
     def validate(self) -> None:
+        allowed = {
+            TEXT_PROVIDER_DEEPSEEK: {"https://api.deepseek.com", "https://api.deepseek.com/v1"},
+            TEXT_PROVIDER_TENCENT_TOKEN_PLAN: {
+                "https://api.lkeap.cloud.tencent.com/plan/v3",
+                "https://tokenhub-intl.tencentcloudmaas.com/plan/v3",
+            },
+        }
+        label = text_provider_label(self.provider)
         if (not self.api_key.strip() or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,99}", self.model)
-                or self.base_url.rstrip("/") not in {"https://api.deepseek.com", "https://api.deepseek.com/v1"}):
-            raise TextError("text_configuration_error", "文字模型标识无效，或未使用已核验的DeepSeek官方HTTPS端点。")
+                or self.provider not in allowed
+                or self.base_url.rstrip("/") not in allowed[self.provider]):
+            raise TextError(
+                "text_configuration_error",
+                f"{label}文字模型标识无效，或未使用已核验的官方HTTPS端点。",
+            )
+
+
+def _openai_json_completion(config: TextConfig, messages: list[dict[str, str]], *, unified: bool) -> str:
+    try:
+        with OpenAI(api_key=config.api_key, base_url=config.base_url,
+                    timeout=CHAT_TIMEOUT_SECONDS if unified else 30, max_retries=0) as client:
+            options = {
+                "model": config.model,
+                "messages": messages,
+                "max_tokens": CHAT_MAX_OUTPUT_TOKENS if unified else 4096,
+                "response_format": {"type": "json_object"},
+                "extra_body": {"thinking": {"type": "enabled" if unified else "disabled"}},
+            }
+            if unified:
+                options["reasoning_effort"] = "high"
+            response = client.chat.completions.create(**options)
+        if (not response.choices or response.choices[0].finish_reason not in ({"stop", "length"} if unified else {"stop"})
+                or response.choices[0].message.tool_calls):
+            raise TextError("invalid_text_output", "文字模型未完整返回无工具的可用结果。")
+        return response.choices[0].message.content or ""
+    except APITimeoutError as exc:
+        raise TextError("text_timeout", "文字分析超时；未自动重试，可继续使用已有工单。") from exc
+    except TextError:
+        raise
+    except Exception as exc:
+        raise TextError("text_provider_error", "文字服务暂不可用；请稍后手动重试。") from exc
+
+
+def _openai_brief_completion(
+    config: TextConfig,
+    inputs: list[TextConsultationInput],
+    current: date,
+    previous_answers: list[str],
+) -> str:
+    inputs, previous_answers, _ = select_chat_context(inputs, previous_answers)
+    messages = [{"role": "system", "content": (
+        CHAT_SYSTEM_PROMPT
+        + f"\n服务器当前日期是{current.year}年{current.month}月{current.day}日。"
+        + f"\n当前服务端配置的模型标识：{config.model}。"
+    )}]
+    for item, answer in zip(inputs[:-1], previous_answers, strict=True):
+        messages.append({"role": "user", "content": item.model_dump_json()})
+        messages.append({"role": "assistant", "content": answer})
+    messages.append({"role": "user", "content": inputs[-1].model_dump_json()})
+    try:
+        with OpenAI(api_key=config.api_key, base_url=config.base_url,
+                    timeout=CHAT_TIMEOUT_SECONDS, max_retries=0) as client:
+            response = client.chat.completions.create(
+                model=config.model,
+                messages=messages,
+                max_tokens=CHAT_MAX_OUTPUT_TOKENS,
+                reasoning_effort="high",
+                extra_body={"thinking": {"type": "enabled"}},
+            )
+        if (not response.choices or response.choices[0].finish_reason not in {"stop", "length"}
+                or response.choices[0].message.tool_calls):
+            raise TextError("invalid_text_output", "文字模型未完整返回可用结果。")
+        answer = (response.choices[0].message.content or "").strip()
+        if not answer or len(answer) > CHAT_MAX_ANSWER_CHARS:
+            raise TextError("invalid_text_output", "文字模型返回为空或过长。")
+        if response.choices[0].finish_reason == "length":
+            notice = "\n\n[本次输出达到预算上限，内容可能未完成；可发送‘继续’。]"
+            answer = answer[:CHAT_MAX_ANSWER_CHARS - len(notice)] + notice
+        return answer
+    except APITimeoutError as exc:
+        raise TextError("text_timeout", "深度思考请求超时；未自动重试，可稍后手动重试。") from exc
+    except TextError:
+        raise
+    except Exception as exc:
+        raise TextError("text_provider_error", "文字服务暂不可用；请稍后手动重试。") from exc
 
 
 class DeepSeekTextBackend:
@@ -125,68 +221,24 @@ class DeepSeekTextBackend:
         self.config = config
 
     def invoke(self, messages: list[dict[str, str]], **kwargs: object) -> str:
-        unified = kwargs.get("unified") is True
-        try:
-            with OpenAI(api_key=self.config.api_key, base_url=self.config.base_url,
-                        timeout=CHAT_TIMEOUT_SECONDS if unified else 30, max_retries=0) as client:
-                options = {
-                    "model": self.config.model,
-                    "messages": messages,
-                    "max_tokens": CHAT_MAX_OUTPUT_TOKENS if unified else 4096,
-                    "response_format": {"type": "json_object"},
-                    "extra_body": {"thinking": {"type": "enabled" if unified else "disabled"}},
-                }
-                if unified:
-                    options["reasoning_effort"] = "high"
-                response = client.chat.completions.create(**options)
-            if (not response.choices or response.choices[0].finish_reason not in ({"stop", "length"} if unified else {"stop"})
-                    or response.choices[0].message.tool_calls):
-                raise TextError("invalid_text_output", "文字模型未完整返回无工具的可用结果。")
-            return response.choices[0].message.content or ""
-        except APITimeoutError as exc:
-            raise TextError("text_timeout", "文字分析超时；未自动重试，可继续使用已有工单。") from exc
-        except TextError:
-            raise
-        except Exception as exc:
-            raise TextError("text_provider_error", "文字服务暂不可用；请稍后手动重试。") from exc
+        return _openai_json_completion(self.config, messages, unified=kwargs.get("unified") is True)
 
     def answer_brief(self, inputs: list[TextConsultationInput], current: date, previous_answers: list[str]) -> str:
-        inputs, previous_answers, _ = select_chat_context(inputs, previous_answers)
-        messages = [{"role": "system", "content": (
-            CHAT_SYSTEM_PROMPT
-            + f"\n服务器当前日期是{current.year}年{current.month}月{current.day}日。"
-            + f"\n当前服务端配置的模型标识：{self.config.model}。"
-        )}]
-        for item, answer in zip(inputs[:-1], previous_answers, strict=True):
-            messages.append({"role": "user", "content": item.model_dump_json()})
-            messages.append({"role": "assistant", "content": answer})
-        messages.append({"role": "user", "content": inputs[-1].model_dump_json()})
-        try:
-            with OpenAI(api_key=self.config.api_key, base_url=self.config.base_url,
-                        timeout=CHAT_TIMEOUT_SECONDS, max_retries=0) as client:
-                response = client.chat.completions.create(
-                    model=self.config.model,
-                    messages=messages,
-                    max_tokens=CHAT_MAX_OUTPUT_TOKENS,
-                    reasoning_effort="high",
-                    extra_body={"thinking": {"type": "enabled"}},
-                )
-            if (not response.choices or response.choices[0].finish_reason not in {"stop", "length"}
-                    or response.choices[0].message.tool_calls):
-                raise TextError("invalid_text_output", "文字模型未完整返回可用结果。")
-            answer = (response.choices[0].message.content or "").strip()
-            if not answer or len(answer) > CHAT_MAX_ANSWER_CHARS:
-                raise TextError("invalid_text_output", "文字模型返回为空或过长。")
-            if response.choices[0].finish_reason == "length":
-                notice = "\n\n[本次输出达到预算上限，内容可能未完成；可发送‘继续’。]"
-                answer = answer[:CHAT_MAX_ANSWER_CHARS - len(notice)] + notice
-            return answer
-        except APITimeoutError as exc:
-            raise TextError("text_timeout", "深度思考请求超时；未自动重试，可稍后手动重试。") from exc
-        except TextError:
-            raise
-        except Exception as exc:
-            raise TextError("text_provider_error", "文字服务暂不可用；请稍后手动重试。") from exc
+        return _openai_brief_completion(self.config, inputs, current, previous_answers)
+
+
+class TencentTokenPlanTextBackend:
+    """Token Plan OpenAI-compatible text backend; same bounded transport as DeepSeek."""
+
+    def __init__(self, config: TextConfig) -> None:
+        config.validate()
+        self.config = config
+
+    def invoke(self, messages: list[dict[str, str]], **kwargs: object) -> str:
+        return _openai_json_completion(self.config, messages, unified=kwargs.get("unified") is True)
+
+    def answer_brief(self, inputs: list[TextConsultationInput], current: date, previous_answers: list[str]) -> str:
+        return _openai_brief_completion(self.config, inputs, current, previous_answers)
 
 
 class MockTextBackend:

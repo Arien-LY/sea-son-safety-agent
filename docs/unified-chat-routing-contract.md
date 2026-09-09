@@ -50,8 +50,10 @@
 ## 模型选择
 
 - `/api/text/runtime`公开`available_models`和`custom_model_allowed`，不返回 API Key、请求头或环境内容。
-- `LLM_MODEL`是默认值；`LLM_MODEL_OPTIONS`提供逗号分隔的建议列表。页面还允许填写最多100字符的
-  DeepSeek模型标识，只接受字母数字开头及字母数字、点、下划线、冒号、短横线。
+- 文字服务商由服务端 `LLM_PROVIDER` 选择：`deepseek`（默认）读取 `LLM_*`，
+  `tencent_token_plan`（腾讯云 Token Plan）读取 `TENCENT_TOKEN_PLAN_*`；两者都只允许官方白名单端点。
+- 当前服务商的 `*_MODEL`是默认值；`LLM_MODEL_OPTIONS`/`TENCENT_TOKEN_PLAN_MODEL_OPTIONS`提供建议列表。
+  页面还允许填写最多100字符的当前服务商模型标识，只接受字母数字开头及字母数字、点、下划线、冒号、短横线。
 - 自定义值仅替换本次文字请求的 model；官方 HTTPS 端点、密钥、超时、重试、输出上限和人工边界不能
   由浏览器覆盖。Mock 模式不可自定义，也不会调用外部模型。
 

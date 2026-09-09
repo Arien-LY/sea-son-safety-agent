@@ -17,7 +17,8 @@ Windows 10/11 64位用户可从 [GitHub Releases](https://github.com/Arien-LY/se
 当前仓库是从 `sea-son-agent` 的 `main` 选择性迁移得到的干净起点，不包含旧 MiC 数据、
 旧演示任务和复杂后台 Agent job。当前已完成 Phase 1–4 的离线分析契约、受控提案、
 本地整改工作流和只读知识检索，并完成 Phase 5 单图证据能力、文字/历史工单产品补齐及会话工作台体验重构。
-文字与图片均有独立模型入口和逐次外发确认；真实文字调用尚未独立冒烟，现场效果仍需专业验收。
+文字模型支持 DeepSeek 官方或腾讯云 Token Plan 两种服务商，图片仍使用 DeepSeek 官方视觉模型；
+文字与图片均有逐次外发确认。腾讯云 Token Plan 适配器本轮只通过 Fake/Mock 与协议测试，未发起付费调用。
 当前是本机受控演示产品，不是具备生产身份鉴权的上线系统。
 
 ## 当前能力
@@ -118,13 +119,34 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 启动前后端后，左侧“新建聊天”统一承接一般问答和现场咨询；同一次结构化 AI 回答会判断是否需要跟进。
 只有服务端返回四类可提案结果时，页面才自动打开并预填对应工单申请；不会自动确认、保存或派工。
 “提交工单”仍用于信息已较完整的手工结构化路径，旧`/consult`会兼容跳转到`/chat`。
-real模式右下角可选择服务端建议型号，也可填写合法的DeepSeek模型标识；密钥和官方端点不能由网页覆盖。
+real模式右下角可选择服务端建议型号，也可填写当前服务商支持的合法模型标识；密钥和官方端点不能由网页覆盖。
 每次点击发送箭头即确认将当前消息、标签及预算范围内的本会话历史问答
-发给DeepSeek并承担费用，不形成后续消息的持续授权，也不再显示额外确认弹窗。
+发给当前文字服务商并承担费用，不形成后续消息的持续授权，也不再显示额外确认弹窗。
 `LLM_MODEL`定义默认型号，`LLM_MODEL_OPTIONS`定义逗号分隔的建议列表。统一聊天开启深度思考（high），
 180秒模型等待/最多32768输出token，页面190秒截止且可停止等待；保持严格 JSON Schema、零自动重试、
 每轮一次请求。停止等待不保证供应商停止计费。
 无需改变VISION_MODEL。
+
+### 文字服务商切换
+
+`.env` 的 `LLM_PROVIDER` 控制文字服务商：
+
+```text
+LLM_PROVIDER=deepseek            # 默认：保留现有 DeepSeek 官方接入
+LLM_API_KEY=你的DeepSeek密钥
+LLM_MODEL=deepseek-v4-flash
+
+# 或切换为腾讯云 Token Plan（密钥只在服务端/.env，禁止提交到 Git）
+LLM_PROVIDER=tencent_token_plan
+TENCENT_TOKEN_PLAN_API_KEY=sk-tp-...
+TENCENT_TOKEN_PLAN_MODEL=deepseek-v4-flash-202605
+TENCENT_TOKEN_PLAN_BASE_URL=https://api.lkeap.cloud.tencent.com/plan/v3
+```
+
+桌面试用包的“模型设置”同样可选择服务商；切换腾讯云后，图片分析仍走 DeepSeek，需要时可单独填写
+DeepSeek 图片密钥，留空则图片 AI 显示“未启用”，文字对话不受影响。Model ID 必须使用腾讯云
+Token Plan 控制台该套餐实际支持的模型，且页面只接受字母数字开头、含字母数字/点/下划线/冒号/短横线、
+不含路径分隔符的标识。
 
 日常问题直接回答；信息不足时显示追问；四类明确需跟进问题才自动进入“生成待确认提案”页面。
 同一问题已出现高风险后，后续描述不能自行降级；仍须专业复核。生成提案后会话停止补充，
@@ -163,7 +185,8 @@ Mock模式明确不执行真实文字理解；如只需离线演示流程，可�
 ## 单张图片与 real 模式
 
 图片模型单独配置 `VISION_MODEL=deepseek-v4-flash-vision-exp`；原 `LLM_MODEL=deepseek-v4-flash`
-保留用于文字能力，不自动拿不支持图片的模型代替。端点目前仅支持 DeepSeek 官方 HTTPS API。
+保留用于 DeepSeek 文字能力，不自动拿不支持图片的模型代替。图片端点仍只支持 DeepSeek 官方 HTTPS API；
+腾讯云 Token Plan 支持的多模态模型与现有视觉契约需要单独适配和真实图片验收，本轮不伪装已支持。
 
 更新依赖并重启后端，确保 `.env` 被加载：
 

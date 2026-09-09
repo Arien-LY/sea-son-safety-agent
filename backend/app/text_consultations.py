@@ -13,7 +13,12 @@ from threading import RLock
 from uuid import uuid4
 
 from agents.schemas import IssueAnalysis, TextConsultationInput
-from agents.text_assistant import DeepSeekTextBackend, MockTextBackend, TextAssistant, TextConfig, TextError, TextReply, ChatReply, select_chat_context
+from agents.text_assistant import (
+    DeepSeekTextBackend, MockTextBackend, TencentTokenPlanTextBackend, TextAssistant,
+    TextConfig, TextError, TextReply, ChatReply, select_chat_context,
+    TEXT_PROVIDER_DEEPSEEK, TEXT_PROVIDER_TENCENT_TOKEN_PLAN,
+    TENCENT_TOKEN_PLAN_OFFICIAL_BASE_URL, text_provider_label,
+)
 from agents.chat_settings import CHAT_MAX_TURNS, CHAT_SESSION_CHARS, CHAT_HISTORY_PAIRS, CHAT_CONTEXT_CHARS
 from agents.tools import ToolAuditLog, ToolResult
 from backend.app.proposals import Phase2ProposalService, ProposalPreviewRequest
@@ -23,15 +28,38 @@ from backend.app.text_progress import ProgressSink, ignore_progress
 WORKFLOW_CATEGORIES = {"safety", "quality", "management", "logistics"}
 
 
+def text_provider() -> str:
+    return os.getenv("LLM_PROVIDER", TEXT_PROVIDER_DEEPSEEK).strip().casefold()
+
+
 def text_config(model: str | None = None) -> TextConfig:
+    provider = text_provider()
+    if provider == TEXT_PROVIDER_TENCENT_TOKEN_PLAN:
+        configured_model = os.getenv("TENCENT_TOKEN_PLAN_MODEL", "").strip() or os.getenv("LLM_MODEL", "").strip()
+        return TextConfig(
+            api_key=os.getenv("TENCENT_TOKEN_PLAN_API_KEY", ""),
+            model=(model or configured_model).strip(),
+            base_url=(os.getenv("TENCENT_TOKEN_PLAN_BASE_URL", "").strip()
+                      or TENCENT_TOKEN_PLAN_OFFICIAL_BASE_URL),
+            provider=TEXT_PROVIDER_TENCENT_TOKEN_PLAN,
+        )
     return TextConfig(api_key=os.getenv("LLM_API_KEY", ""), model=(model or os.getenv("LLM_MODEL", "")).strip(),
-                      base_url=os.getenv("LLM_BASE_URL", "").strip())
+                      base_url=os.getenv("LLM_BASE_URL", "").strip(),
+                      provider=TEXT_PROVIDER_DEEPSEEK)
 
 
 def text_model_options() -> list[str]:
-    configured = os.getenv("LLM_MODEL", "").strip()
+    provider = text_provider()
     extras = [item.strip() for item in os.getenv("LLM_MODEL_OPTIONS", "").split(",")]
-    candidates = [configured, "deepseek-v4-flash", "deepseek-v4-pro", *extras]
+    if provider == TEXT_PROVIDER_TENCENT_TOKEN_PLAN:
+        configured = (os.getenv("TENCENT_TOKEN_PLAN_MODEL", "").strip()
+                      or os.getenv("LLM_MODEL", "").strip())
+        provider_options = [item.strip() for item in os.getenv(
+            "TENCENT_TOKEN_PLAN_MODEL_OPTIONS", "").split(",")]
+        candidates = [configured, *provider_options, *extras]
+    else:
+        configured = os.getenv("LLM_MODEL", "").strip()
+        candidates = [configured, "deepseek-v4-flash", "deepseek-v4-pro", *extras]
     return list(dict.fromkeys(item for item in candidates if item))
 
 
@@ -40,21 +68,29 @@ def text_runtime() -> dict[str, object]:
     if mode == "mock":
         return {"mode": "mock", "model": "mock-no-text-understanding", "configured": True,
                 "external_provider": None, "available_models": ["mock-no-text-understanding"],
-                "custom_model_allowed": False}
+                "custom_model_allowed": False, "provider": None}
     config = text_config()
+    provider = text_provider()
     try:
         config.validate()
         configured = mode == "real"
     except TextError:
         configured = False
     return {"mode": "real", "model": config.model if configured else "not-configured",
-            "configured": configured, "external_provider": "DeepSeek",
+            "configured": configured, "external_provider": text_provider_label(provider),
+            "provider": provider,
             "available_models": text_model_options() if configured else [],
             "custom_model_allowed": configured}
 
 
 def default_text_assistant(mode: str, model: str) -> TextAssistant:
-    return TextAssistant(MockTextBackend() if mode == "mock" else DeepSeekTextBackend(text_config(model)))
+    if mode == "mock":
+        return TextAssistant(MockTextBackend())
+    config = text_config(model)
+    backend = (TencentTokenPlanTextBackend(config)
+               if config.provider == TEXT_PROVIDER_TENCENT_TOKEN_PLAN
+               else DeepSeekTextBackend(config))
+    return TextAssistant(backend)
 
 
 def apply_boundaries(reply: TextReply, previous: TextReply | None) -> tuple[TextReply, bool]:
@@ -109,7 +145,11 @@ def default_quick_answerer(mode: str, model: str, inputs: list[TextConsultationI
                            previous_answers: list[str]) -> str:
     if mode == "mock":
         return "Mock模式未调用真实模型，仅用于验证日常聊天界面。"
-    return DeepSeekTextBackend(text_config(model)).answer_brief(inputs, current, previous_answers)
+    config = text_config(model)
+    backend = (TencentTokenPlanTextBackend(config)
+               if config.provider == TEXT_PROVIDER_TENCENT_TOKEN_PLAN
+               else DeepSeekTextBackend(config))
+    return backend.answer_brief(inputs, current, previous_answers)
 
 
 @dataclass
@@ -186,7 +226,12 @@ class TextConsultationService:
                     return previous[1].model_copy(deep=True)
             runtime = text_runtime()
             if runtime["mode"] == "real" and not request.allow_external:
-                raise TextError("text_consent_required", "请确认本次将问题及本会话用户补充发送至DeepSeek并承担费用。", 403)
+                provider_name = str(runtime.get("external_provider") or "模型服务")
+                raise TextError(
+                    "text_consent_required",
+                    f"请确认本次将问题及本会话用户补充发送至{provider_name}并承担费用。",
+                    403,
+                )
             if not runtime["configured"]:
                 raise TextError("text_configuration_error", "文字模型未正确配置，请核对本地配置。")
             selected_model = str(runtime["model"])

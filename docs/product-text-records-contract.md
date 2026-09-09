@@ -34,8 +34,10 @@
   unknown/undetermined占位，不用于工单、风险认定或提案。
 - `consult` 每轮使用临时SimpleAgent一次，无工具循环；JSON为answer、follow_up_questions、analysis。
   用既有IssueAnalysis校验风险结构；补充提问必须覆盖缺失信息；模型输入不含隐藏思维链或业务权限。
-- 新页面仅支持已核验DeepSeek官方HTTPS端点、deepseek-v4-flash/pro文字模型，沿用LLM_MODEL和密钥；
-  专业咨询30秒/4096token，日常聊天10秒/256token，均为0重试。不修改.env，不执行付费验证。
+- 新页面文字服务商由 `LLM_PROVIDER=deepseek`（默认，保留现有 DeepSeek 官方接入）或
+  `LLM_PROVIDER=tencent_token_plan`（腾讯云 Token Plan）选择，两端点均在服务端白名单校验；
+  腾讯云 Token Plan 使用 `TENCENT_TOKEN_PLAN_*` 配置。专业咨询30秒/4096token，
+  日常聊天10秒/256token，均为0重试。不修改.env，不执行付费验证。
 - [官方JSON输出](https://api-docs.deepseek.com/guides/json_mode/)与
   [thinking设置](https://api-docs.deepseek.com/guides/thinking_mode/)于2026-08-30核对：json_object、
   明示JSON Schema，thinking disabled；只读取最终content，截断/空输出/工具调用/无效结构均失败。

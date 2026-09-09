@@ -83,6 +83,7 @@ export interface VisionRuntime {
   model: string;
   configured: boolean;
   external_provider: string | null;
+  provider?: "deepseek" | "tencent_token_plan" | null;
   available_models?: string[];
   custom_model_allowed?: boolean;
 }
