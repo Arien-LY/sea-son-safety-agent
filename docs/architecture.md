@@ -47,7 +47,8 @@ Vue 3 SPA
 - 文字API服务端维护有界临时会话及幂等请求，高风险跨轮保留；提案只使用最新服务端分析，成功后冻结会话。
 - 文字real外发逐次确认；文字服务商按 `LLM_PROVIDER=deepseek`（默认 `LLM_*`）或
   `tencent_token_plan`（`TENCENT_TOKEN_PLAN_*`，官方 OpenAI 兼容端点）选择，密钥只在服务端或桌面本机。
-  Mock明确不执行文字理解。腾讯云 Token Plan 适配器本轮仅用 Fake SDK 与协议测试验收，未发起付费调用。
+  Mock明确不执行文字理解。腾讯云 Token Plan 适配器先用 Fake SDK 与协议测试验收，授权真实冒烟因该套餐
+  Key 返回 HTTP 401 `not_authorized` 未取得模型内容；DeepSeek 官方普通聊天路径真实冒烟已通过。
 - `/records`查询本地记录摘要，`/records/:recordId`详情从后端恢复，继续原工作流并展示照片和依据。
 - Vue 会话工作台用独立 `/chat`、`/consult`、`/submit` 入口表达三种用户意图；左侧只恢复正式工单，
   未保存会话不伪装为持久历史。普通聊天开启深度思考high，使用180秒/32768-token预算且不暴露提案动作；专业咨询

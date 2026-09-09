@@ -1448,6 +1448,16 @@ Chrome与外部门禁：
 - `scripts/verify.ps1`：454项Python全部通过；35项前端行为测试通过；`vue-tsc`与Vite生产构建
   （67 modules）通过。保留1条既有Pydantic弃用警告。
 - 新增7项Fake/Mock专项：腾讯云运行信息识别与脱敏、官方端点白名单、结构化/日常聊天传输、
-  超时与Provider错误脱敏、HTTP费用确认与服务商文案。真实/付费文字或图片模型调用0次。
+  超时与Provider错误脱敏、HTTP费用确认与服务商文案。
 - 未读取、未输出、未提交任何真实 API Key；桌面旧截图中暴露的密钥未使用，请用户轮换后再自行填入
   本地 `.env` 或“模型设置”。真实腾讯云 Token Plan 文字冒烟步骤与配置见 README。
+
+授权后的真实冒烟补充（同一分支，2026-09-09）：
+
+- 用户明确授权后先以腾讯云 Token Plan Key 请求 `plan/v3/chat/completions`：运行时配置识别正常，
+  供应商返回 HTTP 401 `not_authorized`，鉴权阶段即被拒绝，无模型内容、无成功计费。
+- 用户随后指示改用 DeepSeek 官方 Key 冒烟：`intent=chat` 真实文字对话成功（`real` /
+  `deepseek-v4-flash` / turn 1，返回中文自我介绍）。普通聊天路径验证通过。
+- `intent=consult` 严格结构化路径抽样被正确拒绝一次：模型返回含 `missing_fields` 但缺少
+  `follow_up_questions/uncertainties` 的 JSON，现有 Pydantic/安全校验拒绝，未静默降级或放宽契约。
+- 真实 Key 只写入被 Git 忽略的本地 `.env`，未进入仓库提交、测试、报告或本日志正文。

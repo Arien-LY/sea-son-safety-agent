@@ -18,7 +18,9 @@ Windows 10/11 64位用户可从 [GitHub Releases](https://github.com/Arien-LY/se
 旧演示任务和复杂后台 Agent job。当前已完成 Phase 1–4 的离线分析契约、受控提案、
 本地整改工作流和只读知识检索，并完成 Phase 5 单图证据能力、文字/历史工单产品补齐及会话工作台体验重构。
 文字模型支持 DeepSeek 官方或腾讯云 Token Plan 两种服务商，图片仍使用 DeepSeek 官方视觉模型；
-文字与图片均有逐次外发确认。腾讯云 Token Plan 适配器本轮只通过 Fake/Mock 与协议测试，未发起付费调用。
+文字与图片均有逐次外发确认。腾讯云 Token Plan 适配器已通过 Fake/Mock 与协议测试；经授权的真实冒烟中
+该套餐 Key 返回 HTTP 401 `not_authorized`，未获得模型内容，因此不视为已通过真实调用。DeepSeek 官方
+文字聊天路径已用真实 Key 完成冒烟。
 当前是本机受控演示产品，不是具备生产身份鉴权的上线系统。
 
 ## 当前能力
