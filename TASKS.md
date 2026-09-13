@@ -1,5 +1,7 @@
 # 安全质量 Agent 工作清单
 
+- [x] PR #28：在功能分支解决与main的压缩合并历史冲突，保留现有功能；不自动合并主线。
+
 ## 当前：持久聊天与受控联网（2026-09-13）
 
 契约：`docs/persistent-chat-tools-contract.md` C01–C09；基线 f0aacd3，独立分支 feat/persistent-chat-web-tools。
