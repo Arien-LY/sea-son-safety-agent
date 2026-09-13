@@ -13,7 +13,7 @@
 仅本地改动；腾讯分支未合并，真实付费模型/搜索待授权验收，未重新打包发布。
 
 - [x] 按项目补齐 search_knowledge/calculate，与联网/网页/时间组成5项原生工具；523项Python与43项前端通过。
-- [ ] 用户已授权提交PR；准备本地提交及PR说明，远端登录待恢复。
+- [x] 已提交并推送功能分支，创建 PR #27：https://github.com/Arien-LY/sea-son-safety-agent/pull/27；基线 fix/unified-chat-regression，未合并。
 
 ## 当前：聊天校验失败隔离与比赛包更新
 
