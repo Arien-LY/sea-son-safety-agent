@@ -14,6 +14,8 @@ class TextRequest(BaseModel):
 
     request_id: str = Field(min_length=8, max_length=100, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
     intent: Literal["chat", "consult", "auto"] = "consult"
+    thinking_mode: Literal["fast", "deep"] = "fast"
+    tools_enabled: bool = False
     model: str | None = Field(default=None, min_length=1, max_length=100,
                               pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
     input: ChatInput
@@ -44,6 +46,9 @@ class TextResponse(BaseModel):
     risk_retained: bool
     remaining_turns: int
     context_trimmed: bool = False
+    analysis_status: Literal["validated", "unavailable", "not_requested"] = "validated"
+    sources: list[dict[str, str]] = Field(default_factory=list, max_length=20)
+    tool_results: list[dict] = Field(default_factory=list, max_length=4)
 
 
 class TextProposalRequest(BaseModel):

@@ -1,5 +1,156 @@
 # 验证记录
 
+## PR #28 主线冲突修复
+
+- GitHub报告CONFLICTING/DIRTY。main的6507387是旧打包改动的压缩提交，其文件树与功能分支祖先2d9640c完全一致（git diff为空）。
+- 在功能分支合入origin/main，12处冲突保留已验证的后续版本；解决后与原HEAD代码树一致，没有丢失main独有内容。
+- 范围仅合并历史、交付记录和PR说明；不升级依赖、不改业务权限、不强推、不自动合并PR。
+- 验证通过：无未解决冲突、git diff --check；全量scripts/verify.ps1为523项Python、43项前端和生产构建通过。
+
+## 2026-09-13：按项目补齐原生工具
+
+- 将已有 search_knowledge 接入同一原生注册表，保留地区未知不命中、过期过滤、配置禁用和释义来源。
+  增加受限十进制 calculate，无 eval/shell，只允许有界数字、四则与括号，固定精度并说明工程判断边界。
+- 两项工具均通过 Fake SDK 验证真实本地执行、匹配 tool_call_id 回填、步骤记录及最终结果；不是界面假状态。
+  新增18项回归，包括0.1+0.2、比例、括号、除零、代码输入、过深表达式、知识来源和禁用状态。
+- 最终 verify.ps1：523项Python、43项前端通过，vue-tsc/Vite构建通过；既有Pydantic弃用警告不变。
+  5个工具选型及有意保留在人工流程的能力见 codex-reuse.md；没有引入任意系统控制或真实付费测试。
+- 用户随后明确授权提交PR，覆盖此前“不提交/推送”的阶段边界；沙箱内gh曾报401，沙箱外已确认 Windows keyring 登录有效并恢复访问。
+- 已推送提交514fa8e并创建PR #27：https://github.com/Arien-LY/sea-son-safety-agent/pull/27，
+  基线fix/unified-chat-regression仍为f0aacd3；未自动合并或发布。
+
+## 2026-09-11 至 2026-09-13：持久聊天与受控联网
+
+- 基线 `f0aacd3`，独立分支 `feat/persistent-chat-web-tools`；基线482项Python、39项前端通过。
+  远端 main 为 `650738734e011ff7f8a26fe9055329e5f69c7ca3`，腾讯分支为
+  `f41631c5830fa775d1454080bd5fb40e48eb0d9f`；均未覆盖/合并现有 beta.3 修复。
+  Git 默认 Schannel 出现 SEC_E_NO_CREDENTIALS/远程辅助程序错误；仅该命令使用
+  `git -c http.sslBackend=openssl` 完成远端核对，未修改全局配置。
+- C01–C09 实现见 `persistent-chat-tools-contract.md`：原子成功历史及幂等快照、重启恢复、
+  标签页待重试输入、版本冲突；严格原生工具、实际来源、单独 Tavily 凭据与窗口设置。
+  读取损坏的聊天文件不会阻止服务构造，聊天读写关闭且不覆盖原文件。
+- Codex 原件参考固定 `rust-v0.114.0` / `b9904c0ae4ecb773549efd6ea3fb05229402fdb9`，
+  Apache-2.0 LICENSE/NOTICE 原件保留并加入打包白名单；来源和适配边界见 `codex-reuse.md`。
+- 2026-09-13 最终 `scripts/verify.ps1`：**505项Python、43项前端通过**；vue-tsc/Vite构建通过（67模块）。
+  pytest 使用 `-p no:cacheprovider --basetemp=release-output/pytest-final-0913b` 避开受限系统临时目录。
+  唯一警告是已有第三方 Pydantic class-based config 弃用提示。
+- 新专项覆盖重启幂等/旧标签冲突/磁盘写入失败/损坏数据库隔离、DNS混合内外网阻断、
+  无密钥零网络调用、重复参数拒绝、畸形搜索响应、调用上限、深度协议回传且无隐藏内容落盘。
+  前端覆盖刷新待重试、已提交请求不覆盖较新轮次、导航迟到响应隔离。
+- 9月11日使用 `scripts/run-chat-tools-browser-fixture.py` 的隔离SDK/搜索返回，在真实本地工作台
+  完成1280×900与390×844浏览器验收：普通回答可在结束前看到正文；追问、原生搜索→读网页→展开来源、
+  刷新与服务重启后保留聊天；手机宽度 scrollWidth/clientWidth 均390，无横向溢出。
+  全部来源明确标注“隔离合成来源（非工程依据）”，没有把 Fixture 当真实检索或模型能力。
+- 后勤聊天→核对项目/区域→人工确认→明确“尚未保存”→点击保存后生成隔离草稿
+  `ISS-02F1703858C0`，未派工。安全高风险聊天→专业复核提示→人工确认可达保存入口，没有自动保存。
+  浏览器发现 Vue 响应式 analysis 导致 structuredClone 的 DataCloneError；以 toRaw 局部修复并新增行为回归，
+  验证提案是独立副本。中断撤回临时正文、保留输入，刷新和取消均不自动重发。
+- 9月11日生产 HTTPS 读取器实际读取 `https://example.com` 成功（142字），只验证公开传输路径。
+  未调用真实付费模型或 Tavily。9月13日浏览器库存已无遗留测试页。
+- 最终范围检查包含所有跟踪/未跟踪改动，无二进制或未知行数；功能增量在1500行预算内，
+  测试、v5 schema、原始许可及文档另计。`git diff --check` 通过，仅有Git行尾转换提示。
+  未提交、推送、合并、生成新版比赛包或发布。
+
+待外部配置/验收：DeepSeek有效密钥及支持原生工具/深度模式的模型、可选独立Tavily密钥与额度；
+需要另行授权真实付费冒烟。配置提示不代表远端能力已验证。腾讯适配未合并；本机单进程、200会话上限、
+无删除归档；不支持登录/脚本/PDF/重定向网页。旧发布压缩包不包含本次变更。
+
+## 2026-08-31：聊天正文与工单分析失败隔离
+
+- 先冻结`docs/chat-answer-isolation-contract.md`；10项新增回归先全部失败，证实完整answer会被
+  缺失/非法analysis一并拒绝。没有获取用户当次供应商原始响应，不能断言其具体哪个字段错误。
+- `agents/text_assistant.py`：完整JSON/重复键/正文先独立校验；辅助分析不合法时保留正文，
+  用确定性的unknown/undetermined占位替换分析。状态为服务端私有属性，不接受模型伪造。
+  SimpleAgent后仅解析一次，防止降级状态在序列化中丢失；旧consult仍严格拒绝无效结果。
+- `backend/app/text_models.py`、`text_consultations.py`、响应v4快照：新增analysis_status，
+  降级会话仍配对记录正文、支持幂等重放；can_propose=false，不继承上轮提案资格。
+  既有高风险提示仍保留；审计仅记录安全状态摘要，不保存供应商原文或隐藏推理。
+- `frontend/src/components/TextPanel.vue`、`types.ts`：显示完整回答和客户降级提示，
+  清空过期分析、不触发工单；流式最终正文只保留一次，输入框可继续使用。
+- `desktop/build_release.py`、`USER-GUIDE.txt`、`RELEASE-NOTES.md`、发布契约：
+  根目录第三方声明移至_internal/licenses，完整依赖许可原样保留，无客户许可入口。
+- 测试：`tests/test_chat_regression.py`、`test_product_text.py`、`test_windows_release.py`、
+  `frontend/tests/text-panel.test.cjs`，并扩展离线浏览器Fixture；正文空/类型错/超长仍拒绝。
+- 专项97通过；`scripts/verify.ps1`：482项Python、39项前端全部通过，vue-tsc/Vite 67模块通过；
+  第三方Pydantic弃用警告仍存在。过长参数的测试ID触发Windows环境变量长度限制，改用短ID后重跑通过。
+- 应用内Browser技能在隔离8036/5196页面验证：看到临时增量，最终完整正文保留，降级提示可见，
+  输入框清空可继续输入、无红色失败条、不跳转工单、侧栏没有新增工单；桌面截图检查通过。
+  离线Fixture硬禁止真实OpenAI客户端构造，没有把Fake结果冒称真实模型效果。
+
+限制：真实模型调用0次；仍是单次结构化生成，不支持损坏/截断JSON的正文抢救。
+旧版本软件不会自动更新，需要退出旧启动器并从新目录运行新版。
+
+发布结果：
+
+- 干净源提交`912d6b5088cb57a1466eac0a71b6ead4f1d234f0`构建，dirty_build=false；28个源文件变更，
+  包括前一轮尚未发布的逐轮历史、快速/深度与真流式修复。完整改动清单见该提交。
+- 包：`release-output/v0.1.0-beta.3-912d6b5-cf8faae4/SeaSon-v0.1.0-beta.3-windows-x64.zip`，
+  45,431,681字节；SHA256 `ca7c79463fff89ff99f2c7cfa0cd3afec858bc485d9c75b3173faa2cf6913e3b`。
+- 独立解压验证4135文件散列、原生启动器、合成DPAPI往返、同源SPA、Mock流、安全/后勤闭环及重启持久化。
+  验收目录：`C:/Users/Administrator/AppData/Local/Temp/sea-son-package-wz50sy86`。
+  另用包内Python执行离线适配器/服务测试：分析无效保留正文、禁止提案、幂等不重复调用通过。
+- ZIP根目录只有海之子.exe、使用说明.txt、_internal；内部licenses含100个声明/许可文件。
+- 已推送fix/unified-chat-regression；在私有仓库创建草稿、上传ZIP及SHA256SUMS，
+  下载到独立临时目录复算一致后发布
+  [v0.1.0-beta.3](https://github.com/Arien-LY/sea-son-safety-agent/releases/tag/v0.1.0-beta.3)。
+  GitHub资产digest一致；标签及targetCommitish都指向912d6b5，isDraft=false、isPrerelease=true。
+- 旧beta.1资产未修改，未合并main或任何PR；此段后补文档不更改已发布源码标签。
+
+## 2026-08-31：统一聊天上下文、思考选择与真流式修复
+
+原因与失败基线：
+
+- 对比实际适配器离线请求：旧chat角色为system/user/assistant/user，而auto只有system/user，
+  把历史问题包装为user_statements且缺失已答正文；PR #25合并入口时绕过旧逐轮修复。
+  发布打包未改这些模块，旧测试只覆盖chat入口，不能阻止auto回退。
+- 新增截图“解释人工智能→你好→把上一段改短”及参数/增量测试；修改前6项确定性失败。
+- auto原先每次enabled/high并等待完整JSON再分段显示，不能改善首字等待。真实供应商耗时未测。
+
+实现与文件：
+
+- `agents/text_assistant.py`、`agents/answer_stream.py`：SimpleAgent使用成功问答对；最新问题独立，
+  自然风格与工单规则组合为UNIFIED_SYSTEM_PROMPT；按fast/deep发送参数；单次stream=true消费正文，
+  增量解码顶层首字段answer，处理跨块转义与Unicode；不读取reasoning_content。超时/截断/非法JSON
+  （包括重复键）失败，不把临时文字当完整结果。
+- `backend/app/text_consultations.py`、`text_models.py`、`text_progress.py`及
+  `contracts/product_text_request.v4.schema.json`：auto预算包含助手历史，默认fast；128槽有界队列，
+  取消停止消费、关闭流，移除生产代码打字sleep。完整Schema/风险门禁前不提交历史或工单资格；
+  既有高风险会话不提前输出将被风险保留规则覆盖的正文。旧v1–v3快照保留。
+- `frontend/src/components/TextPanel.vue`、`api.ts`、`types.ts`：回复方式选择、逐次快照、实际等待/完成标签，
+  增量正文及时更新与滚动，失败清空临时内容并恢复输入，最终只追加一次；选择变更后重试使用新请求ID。
+- 回归：`tests/test_chat_regression.py`、`test_product_text.py`、`test_frontend_workbench.py`、
+  `frontend/tests/text-panel.test.cjs`、`api.test.cjs`；修复浏览器Fixture旧factory签名并增加显式离线流模式
+  （`scripts/run-workbench-browser-fixture.py`，真实模型构造器被禁止，模拟延时仅在Fixture）。
+- 文档：`TASKS.md`、本记录、`docs/chat-regression-contract.md`、`chat-prompt-guide.md`、
+  `unified-chat-routing-contract.md`、`tutorial-compliance.md`。
+
+验证结果：
+
+- `scripts/verify.ps1`：467项Python、38项前端行为测试全部通过；vue-tsc与Vite生产构建67 modules通过。
+  保留第三方Pydantic弃用警告。先前一条静态模板断言未适配新增思考标签，更新后全量重跑通过。
+- 20项专项覆盖配对上下文、fast/deep参数、重复键/非法结构、Unicode跨块、完整问答裁剪、风险保留、
+  失败重试/幂等、deadline和消费者取消；阻塞供应商尾块时，NDJSON消费者先收到正文再释放尾块，证明
+  真流式而非完成后重放。未把Fake答案作为真实模型重复率改善证据。
+- Browser技能应用内浏览器（不是Chrome）隔离8035/5195 Fixture：第一轮正文生成时截图已显示部分文字，
+  输入框为空/禁用且用户消息已靠右；第二轮你好、deep选择、失败清空和恢复输入通过。
+  后勤预设分析在最终结果后到`/submit?source=ai`，类别锁定后勤；没有确认、保存或派工。
+  1280宽与390×844实测scrollWidth=clientWidth；手机/桌面截图检查，控制台error/warn为0。
+
+本地软件包：
+
+- 构建`desktop.build_release --version v0.1.0-beta.2 --allow-dirty`；来源基线2d9640c，
+  包含本次未提交代码，清晰标记dirty_build=true，仅供本地试用，未上传GitHub。
+- `release-output/v0.1.0-beta.2-2d9640c-4d241b5f/SeaSon-v0.1.0-beta.2-windows-x64.zip`。
+  SHA256：`1f0646f246021c17eac9c3f16b3a4e79f200bc1f30df8564bb749067e0bd5975`。
+- `scripts/verify-windows-release.py`独立解压：4134文件散列、原生启动器、合成DPAPI往返、同源SPA、
+  Mock流、安全/后勤闭环及重启持久化全部通过。测试目录：
+  `C:/Users/Administrator/AppData/Local/Temp/sea-son-package-kp_4142h`。
+
+边界：真实/付费模型调用0次；未读改.env/真实密钥，不承诺真实首字速度或完全消除模型重复。
+普通问题仍由单次JSON调用判断路由，但answer优先显示；供应商未按answer优先输出时回退为完整校验后展示。
+深度模式在首字前仍可能有推理等待；取消不保证供应商立即停费。临时正文不等于已核验工程结论。
+新包需单独解压、退出旧启动器后运行；未提交/推送/合并/更新GitHub发布，旧v0.1.0-beta.1资产保持不变。
+
 ## 2026-08-31：Windows 比赛客户包
 
 正式发布结果：

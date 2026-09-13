@@ -39,7 +39,7 @@ def analysis(category: str, risk: str, *, missing: bool = False) -> dict[str, ob
 
 
 class WorkbenchFakeBackend:
-    def invoke(self, messages: list[dict[str, str]], **_: object) -> str:
+    def invoke(self, messages: list[dict[str, str]], **options: object) -> str:
         content = messages[-1]["content"]
         if "模拟错误" in content:
             raise TextError("fixture_error", "Fake 验收错误：本次请求未执行模型调用。")
@@ -63,10 +63,25 @@ class WorkbenchFakeBackend:
                 "follow_up_questions": [],
                 "analysis": analysis("consultation", "low"),
             }
+        if "人工智能" in content:
+            payload["answer"] = "人工智能是让计算机学习规律、帮助解决问题的技术。\n\n这是离线预设回答，用于验证界面。"
+        if "你好" in content:
+            payload["answer"] = "你好！有什么我可以帮你的吗？\n\n这是离线预设回答，没有重新解释上一轮的人工智能问题。"
+        if "空调" in content:
+            payload["analysis"] = {**analysis("logistics", "medium"), "recommended_route": "propose_workflow", "issue_type": "空调报修"}
+            payload["answer"] = "我会打开后勤工单申请，请核对位置和故障描述后再确认保存。这是离线预设结果。"
+        if "模拟分析失败" in content:
+            payload = {"answer": "完整回答会保留，你可以继续聊天。", "analysis": {}}
+        if callable(options.get("on_text")):
+            for offset in range(0, len(payload["answer"]), 4):
+                options["on_text"](payload["answer"][offset:offset + 4])
+                time.sleep(0.12)  # Only this explicitly offline browser fixture simulates latency.
+                if "模拟中断" in content and offset > 8:
+                    raise TextError("fixture_error", "离线模拟连接中断。")
         return json.dumps(payload, ensure_ascii=False)
 
 
-def chat_answer(_mode, inputs, _today, _previous):
+def chat_answer(_mode, _model, inputs, _today, _previous):
     if "模拟加载" in inputs[-1].message:
         time.sleep(4)
         return "这是 Fake 延迟回答；消息应已进入聊天区，且页面导航仍可使用。"
@@ -102,7 +117,7 @@ def app():
     backend = WorkbenchFakeBackend()
     texts = TextConsultationService(
         proposals,
-        assistant_factory=lambda _mode: TextAssistant(backend),
+        assistant_factory=lambda _mode, _model: TextAssistant(backend),
         quick_answerer=chat_answer,
     )
     return create_app(proposal_service=proposals, workflow_service=workflow, text_service=texts)
@@ -110,5 +125,13 @@ def app():
 
 if __name__ == "__main__":
     os.environ["AGENT_MODE"] = "mock"
+    if os.getenv("WORKBENCH_STREAM_FIXTURE") == "1":
+        # Exercise the enabled UI with an injected Fake backend; no provider is constructed.
+        os.environ.update(AGENT_MODE="real", LLM_API_KEY="FAKE-OFFLINE",
+                          LLM_MODEL="deepseek-v4-flash", LLM_BASE_URL="https://api.deepseek.com")
+        import agents.text_assistant as text_adapter
+        def forbidden(*args, **kwargs):
+            raise AssertionError("Browser fixture cannot construct a real model client")
+        text_adapter.OpenAI = forbidden
     os.environ["PHOTO_STORE_PATH"] = str(Path(os.environ["WORKBENCH_FIXTURE_DIR"]) / "photos")
     uvicorn.run(app(), host="127.0.0.1", port=int(os.getenv("WORKBENCH_FIXTURE_PORT", "8000")), log_level="warning")

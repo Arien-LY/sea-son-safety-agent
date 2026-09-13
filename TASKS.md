@@ -1,5 +1,48 @@
 # 安全质量 Agent 工作清单
 
+- [x] PR #28：在功能分支解决与main的压缩合并历史冲突，保留现有功能；不自动合并主线。
+
+## 当前：持久聊天与受控联网（2026-09-13）
+
+契约：`docs/persistent-chat-tools-contract.md` C01–C09；基线 f0aacd3，独立分支 feat/persistent-chat-web-tools。
+
+- [x] 核对 beta.3 基线，482项离线 Python 回归通过。
+- [x] 原子持久会话、刷新/重启恢复、幂等及上下文预算。
+- [x] 核验 Codex 公开源码版本/许可，接入最小原生联网工具与来源。
+- [x] DeepSeek/Tavily独立配置与真实工具状态、桌面/移动隔离界面验收。
+- [x] 505项Python、43项前端及构建通过，客户说明与配置缺口已记录。
+
+仅本地改动；腾讯分支未合并，真实付费模型/搜索待授权验收，未重新打包发布。
+
+- [x] 按项目补齐 search_knowledge/calculate，与联网/网页/时间组成5项原生工具；523项Python与43项前端通过。
+- [x] 已提交并推送功能分支，创建 PR #27：https://github.com/Arien-LY/sea-son-safety-agent/pull/27；基线 fix/unified-chat-regression，未合并。
+
+## 当前：聊天校验失败隔离与比赛包更新
+
+契约：`docs/chat-answer-isolation-contract.md` I01–I06。
+
+- [x] 正文独立Pydantic校验；分析无效保留正文，不自动补调模型。
+- [x] 降级不沿用旧工单资格；已有高风险仍保留，旧consult边界不变。
+- [x] 客户展示降级提示；第三方声明收纳到内部目录，原始许可保留。
+- [x] 482项Python、39项前端行为测试及构建通过。
+- [x] 干净版本v0.1.0-beta.3构建、独立包验证与GitHub上传核验。
+
+发布：私有仓库v0.1.0-beta.3，源提交912d6b5；4135文件散列、原生启动、双类别闭环、
+重启持久化与GitHub下载SHA256复核通过。旧beta.1保留；没有合并main或PR。
+
+## 历史：统一聊天回退修复
+
+契约：`docs/chat-regression-contract.md` R01–R07。
+
+- [x] 统一入口恢复完整逐轮问答，并覆盖截图中的切换问题场景。
+- [x] 默认快速回复、可选深度思考，按实际请求展示状态。
+- [x] 供应商正文真流式，失败无历史/工单副作用，高风险边界不变。
+- [x] 467项Python、38项前端、构建和1280/390×844隔离界面验证通过。
+- [x] 本地v0.1.0-beta.2修复试用包独立解压、4134文件散列及双类别闭环验证通过。
+
+此包为未提交工作区的本地试用构建（dirty_build=true），不能冒称已发布正式包；
+上述本地修复完成时GitHub仍是v0.1.0-beta.1，当次未提交、推送、合并或上传。真实模型质量/速度未抽测。
+
 ## Windows 客户试用版发布
 
 目标、教程依据、范围、测试和人工门禁见 `docs/windows-release-contract.md` P01–P10。

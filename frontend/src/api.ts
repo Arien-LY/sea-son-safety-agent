@@ -21,6 +21,7 @@ import type {
   RecordPage,
   TextProgress,
   TextContentDelta,
+  ChatSession, ChatSessionItem,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
@@ -63,7 +64,7 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
   if (!response.headers.get("content-type")?.includes("application/x-ndjson") || !response.body) throw invalid();
   const reader = response.body.getReader();
   const decoder = new TextDecoder("utf-8", { fatal: true });
-  const stages = ["queued", "preparing", "model_running", "validating", "tool_running", "responding", "completed"];
+  const stages = ["queued", "preparing", "model_running", "validating", "tool_running", "tool_completed", "responding", "completed"];
   let buffer = "", total = 0, count = 0, sequence = 0, elapsed = 0;
   let deltaIndex = 0, deltaChars = 0;
   let result: T | undefined, receivedResult = false, streamDone = false;
@@ -73,14 +74,14 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
       streamDone = done;
       buffer += decoder.decode(value, { stream: !done });
       total += value?.byteLength || 0;
-      if (total > 524288) throw invalid();
+      if (total > 8388608) throw invalid();
       let newline;
       while ((newline = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, newline).trim();
         buffer = buffer.slice(newline + 1);
         if (!line) continue;
         if (receivedResult) throw invalid();
-        if (++count > 160) throw invalid();
+        if (++count > 64032) throw invalid();
         let event;
         try { event = JSON.parse(line); } catch { throw invalid(); }
         if (!event || typeof event !== "object" || Array.isArray(event)) throw invalid();
@@ -89,14 +90,16 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
             || !Number.isInteger(event.seq) || event.seq !== sequence + 1
             || !Number.isInteger(event.elapsed_ms) || event.elapsed_ms < elapsed
             || !stages.includes(event.stage)
-            || event.tool !== (event.stage === "tool_running" ? "propose_issue_record" : null)) throw invalid();
+            || (["tool_running", "tool_completed"].includes(event.stage)
+              ? !["propose_issue_record", "web_search", "read_webpage", "current_time", "search_knowledge", "calculate"].includes(event.tool)
+              : event.tool !== null)) throw invalid();
           sequence = event.seq; elapsed = event.elapsed_ms;
           onProgress(event as TextProgress);
         } else if (event.type === "content_delta" && onDelta
           && Object.keys(event).sort().join() === "index,text,type"
           && Number.isInteger(event.index) && event.index === deltaIndex + 1
-          && typeof event.text === "string" && event.text.length >= 1 && event.text.length <= 1000) {
-          deltaIndex = event.index; deltaChars += event.text.length;
+          && typeof event.text === "string" && event.text.length >= 1 && [...event.text].length <= 1000) {
+          deltaIndex = event.index; deltaChars += [...event.text].length;
           if (deltaChars > 64000) throw invalid();
           onDelta(event as TextContentDelta);
         } else if (event.type === "result" && event.data && typeof event.data === "object" && !Array.isArray(event.data)) {
@@ -118,6 +121,8 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
 }
 
 export const api = {
+  listChatSessions() { return request<ChatSessionItem[]>("/api/chat-sessions", undefined, 5_000); },
+  getChatSession(id: string) { return request<ChatSession>(`/api/chat-sessions/${encodeURIComponent(id)}`, undefined, 5_000); },
   getTextRuntime() { return request<VisionRuntime>("/api/text/runtime", undefined, 5_000); },
   sendText(input: TextTurnRequest, signal?: AbortSignal, onProgress?: (event: TextProgress) => void,
     onDelta?: (event: TextContentDelta) => void) {
