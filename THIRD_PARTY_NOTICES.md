@@ -1,5 +1,13 @@
 # Third-party notices
 
+## OpenAI Codex design reference
+
+The local chat/tool implementation independently adapts public design ideas from OpenAI Codex
+`rust-v0.114.0`, commit `b9904c0ae4ecb773549efd6ea3fb05229402fdb9` (Apache-2.0).
+No Rust implementation or complete prompt was copied. Original LICENSE and NOTICE are preserved in
+`desktop/licenses/codex-apache-2.0.txt` and `desktop/licenses/codex-NOTICE.txt`, and copied into package licenses.
+See `docs/codex-reuse.md` for exact source links, adaptations and API boundaries.
+
 ## Windows competition distribution
 
 The portable package preserves CPython's license and the installed Python distributions' original license files

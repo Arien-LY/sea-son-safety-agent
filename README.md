@@ -1,5 +1,10 @@
 # 海之子 · 安全质量 Agent
 
+当前开发分支 `feat/persistent-chat-web-tools` 基于 beta.3 后续提交 `f0aacd3`，尚未重新打包发布。
+增加 SQLite 多会话恢复、刷新待重试输入、原生搜索/网页/时间工具、实际来源与状态；继续保留人工工单确认。
+配置与客户操作见 [使用说明](desktop/USER-GUIDE.txt)，验收边界见 [持久聊天与联网契约](docs/persistent-chat-tools-contract.md)，
+公开实现参考见 [Codex 复用记录](docs/codex-reuse.md)。DeepSeek 与 Tavily 使用独立密钥；腾讯适配未合并，真实付费服务尚待验收。
+
 ## 下载比赛试用版
 
 Windows 10/11 64位用户可从 [GitHub Releases](https://github.com/Arien-LY/sea-son-safety-agent/releases)
@@ -31,7 +36,7 @@ Windows 10/11 64位用户可从 [GitHub Releases](https://github.com/Arien-LY/se
 - 六状态本地整改工作流、人工派工与复查事件。
 - 2 份公开法规、8 条可追溯释义；模型建议、检索依据和人工结论分开展示。
 - 单图安全上传、EXIF清理、最多5个待人工核对候选，整改前后照片关联。
-- 自然语言文字回答/分析、最多6轮补充追问、高风险跨轮保留和最新服务端分析提案。
+- 自然聊天最多50轮、模型最近12对/120000字预算、持久多会话；旧专业咨询保留6轮契约、高风险跨轮保留和服务端分析提案。
 - 历史记录搜索、类别/状态/处置筛选、分页、详情恢复和继续人工整改。
 - Windows 安装、启动和验证脚本。
 - 教程约束、迁移清单、架构决策和阶段任务清单。

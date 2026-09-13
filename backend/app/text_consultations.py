@@ -1,8 +1,10 @@
-"""Bounded in-memory follow-ups; only server-owned analysis may become a proposal."""
+"""Bounded persistent follow-ups; only server-owned analysis may become a proposal."""
 
 from __future__ import annotations
 
 import hashlib
+import copy
+import json
 import os
 import time
 from collections.abc import Callable
@@ -11,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from threading import RLock
 from uuid import uuid4
+from pathlib import Path
 
 from agents.schemas import IssueAnalysis, TextConsultationInput
 from agents.text_assistant import DeepSeekTextBackend, MockTextBackend, TextAssistant, TextConfig, TextError, TextReply, ChatReply, select_chat_context
@@ -19,13 +22,15 @@ from agents.tools import ToolAuditLog, ToolResult
 from backend.app.proposals import Phase2ProposalService, ProposalPreviewRequest
 from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse
 from backend.app.text_progress import ProgressSink, ignore_progress
+from backend.app.chat_store import ChatStore
+from agents.tools.web_tools import WebTools, web_runtime
 
 WORKFLOW_CATEGORIES = {"safety", "quality", "management", "logistics"}
 
 
 def text_config(model: str | None = None) -> TextConfig:
-    return TextConfig(api_key=os.getenv("LLM_API_KEY", ""), model=(model or os.getenv("LLM_MODEL", "")).strip(),
-                      base_url=os.getenv("LLM_BASE_URL", "").strip())
+    return TextConfig(api_key=os.getenv("DEEPSEEK_API_KEY", "") or os.getenv("LLM_API_KEY", ""), model=(model or os.getenv("LLM_MODEL", "")).strip(),
+                      base_url=os.getenv("LLM_BASE_URL", "").strip(), provider=os.getenv("LLM_PROVIDER", "deepseek").strip().casefold())
 
 
 def text_model_options() -> list[str]:
@@ -40,7 +45,7 @@ def text_runtime() -> dict[str, object]:
     if mode == "mock":
         return {"mode": "mock", "model": "mock-no-text-understanding", "configured": True,
                 "external_provider": None, "available_models": ["mock-no-text-understanding"],
-                "custom_model_allowed": False}
+                "custom_model_allowed": False, "web_tools": web_runtime()}
     config = text_config()
     try:
         config.validate()
@@ -50,7 +55,7 @@ def text_runtime() -> dict[str, object]:
     return {"mode": "real", "model": config.model if configured else "not-configured",
             "configured": configured, "external_provider": "DeepSeek",
             "available_models": text_model_options() if configured else [],
-            "custom_model_allowed": configured}
+            "custom_model_allowed": configured, "web_tools": web_runtime()}
 
 
 def default_text_assistant(mode: str, model: str) -> TextAssistant:
@@ -120,6 +125,7 @@ class _Session:
     responses: dict[str, tuple[str, TextResponse]] = field(default_factory=dict)
     latest: TextResponse | None = None
     proposal: ToolResult | None = None
+    requests: list[dict] = field(default_factory=list)
 
 
 class TextConsultationService:
@@ -127,14 +133,66 @@ class TextConsultationService:
                  assistant_factory: Callable[[str, str], TextAssistant] = default_text_assistant,
                  clock: Callable[[], float] = time.monotonic,
                  today: Callable[[], date] = date.today,
+                 store_path: Path | None = None,
                  quick_answerer: Callable[[str, str, list[TextConsultationInput], date, list[str]], str] = default_quick_answerer) -> None:
         self.proposals, self.assistant_factory = proposals, assistant_factory
         self.clock, self.today, self.quick_answerer = clock, today, quick_answerer
         self._sessions: dict[str, _Session] = {}
         self._lock = RLock()
         self.audit = ToolAuditLog()
+        self.store = ChatStore(store_path) if store_path else None
+        self._store_error: TextError | None = None
+        if self.store:
+            try:
+                for key, raw in sorted(self.store.load().items(), key=lambda pair: json.loads(pair[1])["updated"]):
+                    data = json.loads(raw)
+                    responses = {request_id: (digest, TextResponse.model_validate_json(json.dumps(response)))
+                                 for request_id, (digest, response) in data["responses"].items()}
+                    inputs = [TextRequest.model_validate_json(json.dumps(item)).input for item in data["requests"]]
+                    ordered = sorted((response for _, response in responses.values()), key=lambda r: r.turn)
+                    if len(inputs) != len(ordered) or any(r.consultation_id != key or r.turn != i for i, r in enumerate(ordered, 1)):
+                        raise ValueError("Broken conversation pairs")
+                    self._sessions[key] = _Session(updated=data["updated"], intent=data["intent"], inputs=inputs,
+                        responses=responses, latest=ordered[-1],
+                        proposal=ToolResult.model_validate_json(json.dumps(data["proposal"])) if data["proposal"] else None,
+                        requests=data["requests"])
+            except (TextError, ValueError, KeyError, TypeError, IndexError):
+                self._sessions.clear()
+                self._store_error = TextError("chat_store_error", "聊天历史无法读取；原数据未覆盖，请检查文件或恢复备份后重启。")
+
+    def _check_store(self):
+        if self._store_error:
+            raise self._store_error
+
+    def _save(self, key: str, session: _Session):
+        if self.store:
+            self.store.save(key, json.dumps({"updated": time.time(), "intent": session.intent,
+                "requests": session.requests,
+                "responses": {rid: [digest, response.model_dump(mode="json")] for rid, (digest, response) in session.responses.items()},
+                "proposal": session.proposal.model_dump(mode="json") if session.proposal else None}, ensure_ascii=False))
+
+    def list_sessions(self) -> list[dict]:
+        self._check_store()
+        return [{"consultation_id": key, "title": session.inputs[0].message[:60],
+                 "turns": len(session.inputs), "intent": session.intent}
+                for key, session in reversed(list(self._sessions.items())) if session.inputs]
+
+    def get_session(self, key: str) -> dict:
+        self._check_store()
+        session = self._sessions.get(key)
+        if not session:
+            raise TextError("consultation_expired", "未找到该聊天，请新建聊天。", 404)
+        responses = sorted((r for _, r in session.responses.values()), key=lambda r: r.turn)
+        request_ids = {response.turn: rid for rid, (_, response) in session.responses.items()}
+        return {"consultation_id": key, "proposed": session.proposal is not None,
+                "turns": [{"message": item.message, "result": result.model_dump(mode="json"),
+                           "request_id": request_ids[result.turn],
+                           "thinking": session.requests[i].get("thinking_mode", "fast") if session.requests else "fast"}
+                          for i, (item, result) in enumerate(zip(session.inputs, responses, strict=True))]}
 
     def _expire(self) -> None:
+        if self.store:
+            return
         now = self.clock()
         for key in [key for key, value in self._sessions.items() if now - value.updated >= 1800]:
             del self._sessions[key]
@@ -149,6 +207,7 @@ class TextConsultationService:
 
     @contextmanager
     def _operation(self, progress: ProgressSink):
+        self._check_store()
         progress("queued", None)
         if not self._lock.acquire(timeout=1):
             raise TextError("text_busy", "文字服务繁忙，前一次请求可能仍在运行；请稍后手动重试。", 429)
@@ -212,6 +271,7 @@ class TextConsultationService:
                 consultation_id = "TXT-" + uuid4().hex
             inputs = [*session.inputs, request.input]
             context_trimmed = False
+            tools = WebTools(progress=progress) if request.intent == "auto" and request.tools_enabled and runtime["mode"] == "real" else None
             analysis_status = "not_requested" if request.intent == "chat" else "validated"
             if request.intent == "chat":
                 # Reuse committed responses: failures and idempotent replays add no history.
@@ -241,7 +301,7 @@ class TextConsultationService:
                     selected_inputs, previous_questions=session.latest.reply.follow_up_questions if session.latest else None,
                     unified=request.intent == "auto", previous_answers=selected_answers,
                     thinking_mode=request.thinking_mode, on_text=None if retained_risk else on_text,
-                    current=self.today(), model=selected_model)
+                    current=self.today(), model=selected_model, **({"tools": tools} if tools else {}))
                 progress("validating", None)
                 if isinstance(reply, ChatReply) and reply.analysis_unavailable:
                     analysis_status = "unavailable"
@@ -251,9 +311,14 @@ class TextConsultationService:
                                     model=response_model, reply=reply,
                                     can_propose=analysis_status == "validated" and can_propose(reply),
                                     risk_retained=retained, remaining_turns=(CHAT_MAX_TURNS if request.intent in {"chat", "auto"} else 6) - len(inputs),
-                                    context_trimmed=context_trimmed, analysis_status=analysis_status)
+                                    context_trimmed=context_trimmed, analysis_status=analysis_status,
+                                    sources=tools.sources if tools else [], tool_results=tools.results if tools else [])
+            session = copy.deepcopy(session)
             session.inputs, session.latest, session.updated = inputs, response, self.clock()
+            session.requests.append(request.model_dump(mode="json"))
             session.responses[request.request_id] = (digest, response)
+            self._save(consultation_id, session)
+            self._sessions.pop(consultation_id, None)
             self._sessions[consultation_id] = session
             return response.model_copy(deep=True)
 
@@ -272,6 +337,9 @@ class TextConsultationService:
                 invocation_id="text-" + uuid4().hex, analysis=session.latest.reply.analysis))
             if not result.ok:
                 raise TextError("text_proposal_failed", "提案暂时生成失败，可手动重试。")
+            session = copy.deepcopy(session)
             session.proposal, session.updated = result, self.clock()
+            self._save(consultation_id, session)
+            self._sessions[consultation_id] = session
             progress("completed", None)
             return result.model_copy(deep=True)

@@ -1,0 +1,295 @@
+{
+  "$defs": {
+    "ChatReply": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "maxLength": 64000,
+          "minLength": 1,
+          "title": "Answer",
+          "type": "string"
+        },
+        "follow_up_questions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Follow Up Questions",
+          "type": "array"
+        },
+        "analysis": {
+          "$ref": "#/$defs/IssueAnalysis"
+        }
+      },
+      "required": [
+        "answer",
+        "follow_up_questions",
+        "analysis"
+      ],
+      "title": "ChatReply",
+      "type": "object"
+    },
+    "IssueAnalysis": {
+      "additionalProperties": false,
+      "description": "模型分析结果；不能直接创建或修改业务记录。",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/IssueCategory"
+        },
+        "issue_type": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Issue Type",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "observed_facts": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Observed Facts",
+          "type": "array"
+        },
+        "uncertainties": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Uncertainties",
+          "type": "array"
+        },
+        "missing_fields": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "risk_level": {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        "immediate_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Immediate Actions",
+          "type": "array"
+        },
+        "suggested_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Suggested Actions",
+          "type": "array"
+        },
+        "recommended_route": {
+          "$ref": "#/$defs/RecommendedRoute"
+        },
+        "requires_human_review": {
+          "title": "Requires Human Review",
+          "type": "boolean"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "category",
+        "issue_type",
+        "summary",
+        "observed_facts",
+        "uncertainties",
+        "missing_fields",
+        "risk_level",
+        "immediate_actions",
+        "suggested_actions",
+        "recommended_route",
+        "requires_human_review",
+        "confidence"
+      ],
+      "title": "IssueAnalysis",
+      "type": "object"
+    },
+    "IssueCategory": {
+      "enum": [
+        "safety",
+        "quality",
+        "management",
+        "logistics",
+        "consultation",
+        "unknown"
+      ],
+      "title": "IssueCategory",
+      "type": "string"
+    },
+    "RecommendedRoute": {
+      "enum": [
+        "direct_answer",
+        "collect_more_info",
+        "propose_workflow",
+        "human_review"
+      ],
+      "title": "RecommendedRoute",
+      "type": "string"
+    },
+    "RiskLevel": {
+      "enum": [
+        "undetermined",
+        "low",
+        "medium",
+        "high",
+        "emergency"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "TextReply": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Answer",
+          "type": "string"
+        },
+        "follow_up_questions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Follow Up Questions",
+          "type": "array"
+        },
+        "analysis": {
+          "$ref": "#/$defs/IssueAnalysis"
+        }
+      },
+      "required": [
+        "answer",
+        "follow_up_questions",
+        "analysis"
+      ],
+      "title": "TextReply",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "consultation_id": {
+      "title": "Consultation Id",
+      "type": "string"
+    },
+    "turn": {
+      "title": "Turn",
+      "type": "integer"
+    },
+    "mode": {
+      "enum": [
+        "mock",
+        "real"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "reply": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TextReply"
+        },
+        {
+          "$ref": "#/$defs/ChatReply"
+        }
+      ],
+      "title": "Reply"
+    },
+    "can_propose": {
+      "title": "Can Propose",
+      "type": "boolean"
+    },
+    "risk_retained": {
+      "title": "Risk Retained",
+      "type": "boolean"
+    },
+    "remaining_turns": {
+      "title": "Remaining Turns",
+      "type": "integer"
+    },
+    "context_trimmed": {
+      "default": false,
+      "title": "Context Trimmed",
+      "type": "boolean"
+    },
+    "analysis_status": {
+      "default": "validated",
+      "enum": [
+        "validated",
+        "unavailable",
+        "not_requested"
+      ],
+      "title": "Analysis Status",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "maxItems": 20,
+      "title": "Sources",
+      "type": "array"
+    },
+    "tool_results": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "maxItems": 4,
+      "title": "Tool Results",
+      "type": "array"
+    }
+  },
+  "required": [
+    "consultation_id",
+    "turn",
+    "mode",
+    "model",
+    "reply",
+    "can_propose",
+    "risk_retained",
+    "remaining_turns"
+  ],
+  "title": "TextResponse",
+  "type": "object"
+}

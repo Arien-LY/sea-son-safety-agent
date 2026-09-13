@@ -9,6 +9,7 @@ export interface TextTurnRequest {
   request_id: string;
   intent: "chat" | "consult" | "auto";
   thinking_mode?: "fast" | "deep";
+  tools_enabled?: boolean;
   model: string | null;
   input: { message: string; project: string | null; area: string | null; requester_role: string | null };
   consultation_id: string | null;
@@ -27,7 +28,12 @@ export interface TextTurnResponse {
   remaining_turns: number;
   context_trimmed?: boolean;
   analysis_status?: "validated" | "unavailable" | "not_requested";
+  sources?: { id: string; title: string; url: string; excerpt: string }[];
+  tool_results?: { tool: string; ok: boolean; summary: string }[];
 }
+
+export interface ChatSessionItem { consultation_id: string; title: string; turns: number; intent: string }
+export interface ChatSession { consultation_id: string; proposed: boolean; turns: { request_id: string; message: string; result: TextTurnResponse; thinking: "fast" | "deep" }[] }
 
 export interface RecordListItem {
   record_id: string;
@@ -87,6 +93,7 @@ export interface VisionRuntime {
   external_provider: string | null;
   available_models?: string[];
   custom_model_allowed?: boolean;
+  web_tools?: { search_configured: boolean; search_provider: string; read_webpage: boolean; current_time: boolean };
 }
 
 export type KnowledgeJurisdiction = "unknown" | "cn_mainland" | "overseas";
@@ -300,8 +307,8 @@ export interface TextProgress {
   type: "progress";
   seq: number;
   elapsed_ms: number;
-  stage: "queued" | "preparing" | "model_running" | "validating" | "tool_running" | "responding" | "completed";
-  tool: "propose_issue_record" | null;
+  stage: "queued" | "preparing" | "model_running" | "validating" | "tool_running" | "tool_completed" | "responding" | "completed";
+  tool: "propose_issue_record" | "web_search" | "read_webpage" | "current_time" | "search_knowledge" | "calculate" | null;
 }
 
 export interface TextContentDelta {

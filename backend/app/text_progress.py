@@ -15,7 +15,7 @@ from starlette.responses import StreamingResponse
 
 from agents.text_assistant import TextError
 
-Stage = Literal["queued", "preparing", "model_running", "validating", "tool_running", "responding", "completed"]
+Stage = Literal["queued", "preparing", "model_running", "validating", "tool_running", "tool_completed", "responding", "completed"]
 ProgressSink = Callable[[Stage, str | None], None]
 
 
@@ -29,7 +29,7 @@ class ProgressEvent(BaseModel):
     seq: int = Field(ge=1)
     elapsed_ms: int = Field(ge=0)
     stage: Stage
-    tool: Literal["propose_issue_record"] | None = None
+    tool: Literal["propose_issue_record", "web_search", "read_webpage", "current_time", "search_knowledge", "calculate"] | None = None
 
 
 class ContentDeltaEvent(BaseModel):
