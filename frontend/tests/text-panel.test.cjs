@@ -13,9 +13,10 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-async function mountPanel(cryptoApi = crypto, clock = performance) {
+async function mountPanel(cryptoApi = crypto, clock = performance, options = {}) {
   const requests = [], busyEvents = [], analyses = [], ticketEvents = [], proposalEvents = [], proposingEvents = [];
   const api = {
+    getChatSession: options.getChatSession || (async () => { throw new Error('fixture missing'); }),
     getTextRuntime: async () => ({ configured: true, mode: 'real', model: 'deepseek-v4-flash',
       available_models: ['deepseek-v4-flash', 'deepseek-v4-pro'], custom_model_allowed: true }),
     sendText: (input, signal, onProgress, onDelta) => {
@@ -36,7 +37,7 @@ async function mountPanel(cryptoApi = crypto, clock = performance) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const exports = {};
-  new Function('require', 'exports', 'crypto', 'performance', js)(name => {
+  new Function('require', 'exports', 'crypto', 'performance', 'window', js)(name => {
     if (name === '../api') return { api };
     if (name === '../markdown') return { renderAssistantMarkdown: source => source };
     if (name === '../customerLabels') {
@@ -48,7 +49,7 @@ async function mountPanel(cryptoApi = crypto, clock = performance) {
       return labels;
     }
     return require(name);
-  }, exports, cryptoApi, clock);
+  }, exports, cryptoApi, clock, options.window);
   const component = exports.default;
   component.render = () => null;
   const renderer = vue.createRenderer({
@@ -57,9 +58,10 @@ async function mountPanel(cryptoApi = crypto, clock = performance) {
     parentNode: () => null, nextSibling: () => null,
   });
   const mode = vue.ref('chat');
+  const sessionId = vue.ref(options.sessionId);
   let instance;
   const app = renderer.createApp({ render: () => vue.h(component, {
-    mode: mode.value, ref: value => { if (value) instance = value.$; },
+    mode: mode.value, sessionId: sessionId.value, ref: value => { if (value) instance = value.$; },
     onBusy: value => busyEvents.push(value), onAnalysis: value => analyses.push(value),
     onProposal: value => proposalEvents.push(value),
     onProposing: value => proposingEvents.push(value),
@@ -67,11 +69,63 @@ async function mountPanel(cryptoApi = crypto, clock = performance) {
   }) });
   app.mount({});
   await vue.nextTick();
-  return { state: instance.setupState, app, mode, requests, busyEvents, analyses, ticketEvents, proposalEvents, proposingEvents };
+  await vue.nextTick();
+  return { state: instance.setupState, app, mode, sessionId, requests, busyEvents, analyses, ticketEvents, proposalEvents, proposingEvents };
 }
 
 const result = { consultation_id: 'TXT-test', turn: 1, remaining_turns: 5,
   can_propose: false, reply: { answer: 'hello', analysis: { category: 'unknown' } } };
+
+function browserDraft(request, key = 'new') {
+  const data = new Map([[`sea-son-pending:${key}`, JSON.stringify(request)]]);
+  return { data, window: { sessionStorage: { getItem: k => data.get(k), setItem: (k,v) => data.set(k,v), removeItem: k => data.delete(k) } } };
+}
+
+test('refresh restores an interrupted initial request without automatic resend', async () => {
+  const saved = { request_id: 'persist-draft', consultation_id: null, expected_turn: 0,
+    input: { message: '继续原问题' }, thinking_mode: 'deep', model: 'deepseek-v4-flash', tools_enabled: true };
+  const draft = browserDraft(saved);
+  const panel = await mountPanel(crypto, performance, draft);
+  try {
+    assert.equal(panel.requests.length, 0);
+    assert.equal(panel.state.form.message, '继续原问题');
+    const response = panel.state.send();
+    assert.equal(panel.requests[0].input.request_id, 'persist-draft');
+    panel.requests[0].resolve(result);
+    await response;
+    assert.equal(draft.data.size, 0);
+  } finally { panel.app.unmount(); }
+});
+
+test('restored completed request does not overwrite a newer conversation turn', async () => {
+  const saved = { request_id: 'already-saved', consultation_id: 'TXT-test', expected_turn: 0, input: { message: 'old' } };
+  const draft = browserDraft(saved, 'TXT-test');
+  const panel = await mountPanel(crypto, performance, { ...draft, sessionId: 'TXT-test', getChatSession: async () => ({ proposed: false, turns: [
+    { request_id: 'already-saved', message: 'old', thinking: 'fast', result },
+    { request_id: 'newer', message: 'new', thinking: 'deep', result: { ...result, turn: 2 } },
+  ] }) });
+  try {
+    assert.equal(panel.state.turns.length, 2);
+    assert.equal(panel.state.latest.turn, 2);
+    assert.equal(panel.state.form.message, '');
+    assert.equal(panel.requests.length, 0);
+    assert.equal(draft.data.size, 0);
+  } finally { panel.app.unmount(); }
+});
+
+test('switching sessions ignores a late restore response', async () => {
+  const first = deferred(), second = deferred();
+  const panel = await mountPanel(crypto, performance, { sessionId: 'TXT-first', getChatSession: id => id === 'TXT-first' ? first.promise : second.promise });
+  try {
+    panel.sessionId.value = 'TXT-second'; await vue.nextTick();
+    second.resolve({ proposed: false, turns: [{ request_id: 'second', message: 'second', thinking: 'fast', result: { ...result, consultation_id: 'TXT-second' } }] });
+    await vue.nextTick(); await vue.nextTick();
+    first.resolve({ proposed: false, turns: [{ request_id: 'first', message: 'first', thinking: 'fast', result }] });
+    await vue.nextTick(); await vue.nextTick();
+    assert.equal(panel.state.latest.consultation_id, 'TXT-second');
+    assert.equal(panel.state.turns[0].message, 'second');
+  } finally { panel.app.unmount(); }
+});
 
 test('thinking selection uses a per-request snapshot and changes retry identity', async () => {
   const panel = await mountPanel();

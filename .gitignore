@@ -12,6 +12,7 @@ frontend/.vite/
 # Local configuration and runtime data
 .env
 data/*.json
+data/*.sqlite3*
 uploads/
 *.log
 release-output/

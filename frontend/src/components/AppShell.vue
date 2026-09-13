@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { api } from "../api";
 import { statusNames } from "../customerLabels";
-import type { RecordListItem } from "../types";
+import type { RecordListItem, ChatSessionItem } from "../types";
 
 const route = useRoute();
 const drawerOpen = ref(false);
 const recent = ref<RecordListItem[]>([]);
+const chats = ref<ChatSessionItem[]>([]);
+const chatError = ref('');
+const newChatNumber = ref(0);
+async function loadChats() {
+  try { chats.value = (await api.listChatSessions()).filter(item => item.intent === 'auto' || item.intent === 'chat'); chatError.value = ''; }
+  catch { chatError.value = '聊天历史暂时无法读取'; }
+}
 const historyBusy = ref(false);
 const loginOpen = ref(false);
 const userMenuOpen = ref(false);
@@ -33,6 +40,7 @@ watch(() => route.fullPath, () => {
   drawerOpen.value = false;
   userMenuOpen.value = false;
   void loadRecent();
+  void loadChats();
 });
 
 function restoreUser() {
@@ -60,7 +68,8 @@ function logout() {
   try { window.localStorage.removeItem(DEMO_USER_KEY); } catch { /* Ignore unavailable local storage. */ }
 }
 
-onMounted(() => { restoreUser(); void loadRecent(); });
+onMounted(() => { restoreUser(); void loadRecent(); void loadChats(); window.addEventListener('sea-son-chat-saved', loadChats); });
+onBeforeUnmount(() => window.removeEventListener('sea-son-chat-saved', loadChats));
 </script>
 
 <template>
@@ -77,9 +86,15 @@ onMounted(() => { restoreUser(); void loadRecent(); });
         <button class="close-drawer" type="button" aria-label="关闭导航" @click="drawerOpen = false">×</button>
       </div>
       <nav class="action-nav" aria-label="新建与提交">
-        <RouterLink to="/chat" class="nav-action"><span class="nav-icon">＋</span><span><strong>新建聊天</strong><small>问答、咨询与AI工单判断</small></span></RouterLink>
+        <RouterLink :to="`/chat?new=${newChatNumber}`" class="nav-action" @click="newChatNumber = Date.now()"><span class="nav-icon">＋</span><span><strong>新建聊天</strong><small>问答、咨询与AI工单判断</small></span></RouterLink>
         <RouterLink to="/submit" class="nav-action submit-action"><span class="nav-icon">↗</span><span><strong>提交工单</strong><small>填写并确认问题信息</small></span></RouterLink>
       </nav>
+      <section class="sidebar-history chat-history" aria-labelledby="chat-history-title">
+        <div class="sidebar-section-title"><span id="chat-history-title">最近聊天</span><button type="button" aria-label="刷新聊天历史" @click="loadChats">↻</button></div>
+        <p v-if="chatError" class="sidebar-muted">{{ chatError }}</p>
+        <p v-else-if="!chats.length" class="sidebar-muted">发送后自动保存在本机</p>
+        <RouterLink v-for="chat in chats" :key="chat.consultation_id" :to="`/chat?chat=${chat.consultation_id}`" class="history-link"><span>{{ chat.title }}</span><small>{{ chat.turns }} 轮对话</small></RouterLink>
+      </section>
       <section class="sidebar-history" aria-labelledby="recent-title">
         <div class="sidebar-section-title"><span id="recent-title">最近工单</span><button type="button" :disabled="historyBusy" aria-label="刷新最近工单" @click="loadRecent">↻</button></div>
         <p v-if="historyBusy && !recent.length" class="sidebar-muted">正在同步…</p>

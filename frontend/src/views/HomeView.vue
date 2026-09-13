@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch, toRaw } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { api } from "../api";
 import { categoryNames, riskNames, routeNames, actorNames, actionNames } from "../customerLabels";
@@ -33,6 +33,10 @@ const workspaceMode = computed<"chat" | "submit">(() => {
 });
 const isConversation = computed(() => !isDetail.value && workspaceMode.value !== "submit");
 const isSubmit = computed(() => !isDetail.value && workspaceMode.value === "submit");
+function rememberChat(id: string) {
+  window.dispatchEvent(new Event('sea-son-chat-saved'));
+  if (isConversation.value) void router.replace({ path: '/chat', query: id ? { chat: id } : { new: String(Date.now()) } });
+}
 const showImages = ref(false);
 const loadingRecord = ref(false);
 const recordError = ref("");
@@ -136,7 +140,7 @@ function useTextAnalysis(analysis: IssueAnalysis | null) {
 
 async function openTicketFromAnalysis(analysis: IssueAnalysis) {
   if (!["safety", "quality", "management", "logistics"].includes(analysis.category)) return;
-  transferredAnalysis.value = structuredClone(analysis);
+  transferredAnalysis.value = structuredClone(toRaw(analysis));
   textAnalysis.value = transferredAnalysis.value;
   analysisForm.category = analysis.category as typeof analysisForm.category;
   analysisForm.issueType = analysis.issue_type;
@@ -155,7 +159,7 @@ onMounted(async () => {
 
 function buildAnalysis(): IssueAnalysis {
   if (transferredAnalysis.value) {
-    return structuredClone(transferredAnalysis.value);
+    return structuredClone(toRaw(transferredAnalysis.value));
   }
   const highRisk = ["high", "emergency"].includes(analysisForm.riskLevel);
   return {
@@ -313,7 +317,7 @@ function displayValue(value: string | null): string {
   </section>
 
   <fieldset class="workspace-fields" :class="{ 'conversation-fields': isConversation }" :disabled="routeBlocking || loadingRecord" aria-label="咨询和工单操作区">
-  <TextPanel v-if="isConversation" mode="auto" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @ticket="openTicketFromAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" @attachment="showImages = true" />
+  <TextPanel v-if="isConversation" mode="auto" :session-id="typeof route.query.chat === 'string' ? route.query.chat : undefined" :new-chat-key="String(route.query.new || '')" @session="rememberChat" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @ticket="openTicketFromAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" @attachment="showImages = true" />
   <fieldset class="business-fields" :disabled="working || loadingRecord" aria-label="工单和附件操作区">
   <div v-if="isDetail" class="record-toolbar"><RouterLink to="/records" class="secondary-button">← 返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新详情</button></div>
   <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在读取工单详情</strong><small>正在获取处理记录…</small></p></div>

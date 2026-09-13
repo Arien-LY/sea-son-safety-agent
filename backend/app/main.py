@@ -81,7 +81,8 @@ def create_app(
         PhotoStore(Path(os.getenv("PHOTO_STORE_PATH", "uploads"))),
         proposal_boundary, workflow_boundary,
     )))
-    app.include_router(create_product_router(text_service or TextConsultationService(proposal_boundary), workflow_boundary))
+    app.include_router(create_product_router(text_service or TextConsultationService(
+        proposal_boundary, store_path=Path(os.getenv("CHAT_STORE_PATH", str(workflow_boundary.store.path.parent / "chat-sessions.sqlite3")))), workflow_boundary))
 
     @app.get("/health")
     def health() -> dict[str, str]:

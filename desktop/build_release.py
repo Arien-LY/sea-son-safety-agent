@@ -169,6 +169,8 @@ def build(version: str, *, allow_dirty: bool = False) -> Path:
             found = True
         if not found:
             raise ValueError("Missing frontend license: " + name)
+    for name in ("codex-apache-2.0.txt", "codex-NOTICE.txt"):
+        shutil.copyfile(ROOT / "desktop/licenses" / name, licenses / name)
     (licenses / "第三方许可.txt").write_text("".join(notices), encoding="utf-8-sig")
     validate_customer_tree(bundle)
     manifest = {"version": version, "source_commit": commit, "dirty_build": bool(dirty),

@@ -66,6 +66,14 @@ def create_product_router(texts: TextConsultationService, workflow: IssueWorkflo
     def runtime():
         return text_runtime()
 
+    @router.get("/api/chat-sessions")
+    def sessions():
+        return call(texts.list_sessions)
+
+    @router.get("/api/chat-sessions/{consultation_id}")
+    def session(consultation_id: str):
+        return call(texts.get_session, consultation_id)
+
     @router.post("/api/text-consultations", response_model=TextResponse)
     def send(payload: dict):
         return call(texts.send, parse(TextRequest, payload))

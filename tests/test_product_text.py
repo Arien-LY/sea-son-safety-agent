@@ -342,7 +342,7 @@ def test_sdk_errors_are_redacted(monkeypatch, failure, code):
 def test_frozen_product_schemas():
     root = Path(__file__).resolve().parents[1]
     for name, model in [("text_request", TextRequest), ("text_response", TextResponse)]:
-        version = "v4"
+        version = "v5"
         assert json.loads((root / f"contracts/product_{name}.{version}.schema.json").read_text(encoding="utf-8")) == model.model_json_schema()
     assert "thinking_mode" not in json.loads((root / "contracts/product_text_request.v3.schema.json").read_text(encoding="utf-8"))["properties"]
     v2 = json.loads((root / "contracts/product_text_request.v2.schema.json").read_text(encoding="utf-8"))

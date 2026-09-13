@@ -1,5 +1,53 @@
 # 验证记录
 
+## 2026-09-13：按项目补齐原生工具
+
+- 将已有 search_knowledge 接入同一原生注册表，保留地区未知不命中、过期过滤、配置禁用和释义来源。
+  增加受限十进制 calculate，无 eval/shell，只允许有界数字、四则与括号，固定精度并说明工程判断边界。
+- 两项工具均通过 Fake SDK 验证真实本地执行、匹配 tool_call_id 回填、步骤记录及最终结果；不是界面假状态。
+  新增18项回归，包括0.1+0.2、比例、括号、除零、代码输入、过深表达式、知识来源和禁用状态。
+- 最终 verify.ps1：523项Python、43项前端通过，vue-tsc/Vite构建通过；既有Pydantic弃用警告不变。
+  5个工具选型及有意保留在人工流程的能力见 codex-reuse.md；没有引入任意系统控制或真实付费测试。
+- 用户随后明确授权提交PR，覆盖此前“不提交/推送”的阶段边界；沙箱内gh曾报401，沙箱外已确认 Windows keyring 登录有效并恢复访问。
+- 已推送提交514fa8e并创建PR #27：https://github.com/Arien-LY/sea-son-safety-agent/pull/27，
+  基线fix/unified-chat-regression仍为f0aacd3；未自动合并或发布。
+
+## 2026-09-11 至 2026-09-13：持久聊天与受控联网
+
+- 基线 `f0aacd3`，独立分支 `feat/persistent-chat-web-tools`；基线482项Python、39项前端通过。
+  远端 main 为 `650738734e011ff7f8a26fe9055329e5f69c7ca3`，腾讯分支为
+  `f41631c5830fa775d1454080bd5fb40e48eb0d9f`；均未覆盖/合并现有 beta.3 修复。
+  Git 默认 Schannel 出现 SEC_E_NO_CREDENTIALS/远程辅助程序错误；仅该命令使用
+  `git -c http.sslBackend=openssl` 完成远端核对，未修改全局配置。
+- C01–C09 实现见 `persistent-chat-tools-contract.md`：原子成功历史及幂等快照、重启恢复、
+  标签页待重试输入、版本冲突；严格原生工具、实际来源、单独 Tavily 凭据与窗口设置。
+  读取损坏的聊天文件不会阻止服务构造，聊天读写关闭且不覆盖原文件。
+- Codex 原件参考固定 `rust-v0.114.0` / `b9904c0ae4ecb773549efd6ea3fb05229402fdb9`，
+  Apache-2.0 LICENSE/NOTICE 原件保留并加入打包白名单；来源和适配边界见 `codex-reuse.md`。
+- 2026-09-13 最终 `scripts/verify.ps1`：**505项Python、43项前端通过**；vue-tsc/Vite构建通过（67模块）。
+  pytest 使用 `-p no:cacheprovider --basetemp=release-output/pytest-final-0913b` 避开受限系统临时目录。
+  唯一警告是已有第三方 Pydantic class-based config 弃用提示。
+- 新专项覆盖重启幂等/旧标签冲突/磁盘写入失败/损坏数据库隔离、DNS混合内外网阻断、
+  无密钥零网络调用、重复参数拒绝、畸形搜索响应、调用上限、深度协议回传且无隐藏内容落盘。
+  前端覆盖刷新待重试、已提交请求不覆盖较新轮次、导航迟到响应隔离。
+- 9月11日使用 `scripts/run-chat-tools-browser-fixture.py` 的隔离SDK/搜索返回，在真实本地工作台
+  完成1280×900与390×844浏览器验收：普通回答可在结束前看到正文；追问、原生搜索→读网页→展开来源、
+  刷新与服务重启后保留聊天；手机宽度 scrollWidth/clientWidth 均390，无横向溢出。
+  全部来源明确标注“隔离合成来源（非工程依据）”，没有把 Fixture 当真实检索或模型能力。
+- 后勤聊天→核对项目/区域→人工确认→明确“尚未保存”→点击保存后生成隔离草稿
+  `ISS-02F1703858C0`，未派工。安全高风险聊天→专业复核提示→人工确认可达保存入口，没有自动保存。
+  浏览器发现 Vue 响应式 analysis 导致 structuredClone 的 DataCloneError；以 toRaw 局部修复并新增行为回归，
+  验证提案是独立副本。中断撤回临时正文、保留输入，刷新和取消均不自动重发。
+- 9月11日生产 HTTPS 读取器实际读取 `https://example.com` 成功（142字），只验证公开传输路径。
+  未调用真实付费模型或 Tavily。9月13日浏览器库存已无遗留测试页。
+- 最终范围检查包含所有跟踪/未跟踪改动，无二进制或未知行数；功能增量在1500行预算内，
+  测试、v5 schema、原始许可及文档另计。`git diff --check` 通过，仅有Git行尾转换提示。
+  未提交、推送、合并、生成新版比赛包或发布。
+
+待外部配置/验收：DeepSeek有效密钥及支持原生工具/深度模式的模型、可选独立Tavily密钥与额度；
+需要另行授权真实付费冒烟。配置提示不代表远端能力已验证。腾讯适配未合并；本机单进程、200会话上限、
+无删除归档；不支持登录/脚本/PDF/重定向网页。旧发布压缩包不包含本次变更。
+
 ## 2026-08-31：聊天正文与工单分析失败隔离
 
 - 先冻结`docs/chat-answer-isolation-contract.md`；10项新增回归先全部失败，证实完整answer会被

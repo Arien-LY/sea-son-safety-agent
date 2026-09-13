@@ -1,5 +1,20 @@
 # 安全质量 Agent 工作清单
 
+## 当前：持久聊天与受控联网（2026-09-13）
+
+契约：`docs/persistent-chat-tools-contract.md` C01–C09；基线 f0aacd3，独立分支 feat/persistent-chat-web-tools。
+
+- [x] 核对 beta.3 基线，482项离线 Python 回归通过。
+- [x] 原子持久会话、刷新/重启恢复、幂等及上下文预算。
+- [x] 核验 Codex 公开源码版本/许可，接入最小原生联网工具与来源。
+- [x] DeepSeek/Tavily独立配置与真实工具状态、桌面/移动隔离界面验收。
+- [x] 505项Python、43项前端及构建通过，客户说明与配置缺口已记录。
+
+仅本地改动；腾讯分支未合并，真实付费模型/搜索待授权验收，未重新打包发布。
+
+- [x] 按项目补齐 search_knowledge/calculate，与联网/网页/时间组成5项原生工具；523项Python与43项前端通过。
+- [x] 已提交并推送功能分支，创建 PR #27：https://github.com/Arien-LY/sea-son-safety-agent/pull/27；基线 fix/unified-chat-regression，未合并。
+
 ## 当前：聊天校验失败隔离与比赛包更新
 
 契约：`docs/chat-answer-isolation-contract.md` I01–I06。

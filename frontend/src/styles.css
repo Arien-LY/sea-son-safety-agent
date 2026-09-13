@@ -351,3 +351,15 @@ input:focus, textarea:focus, select:focus { border-color: #6f9f8b; outline: 3px 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+.chat-history { max-height: 32vh; overflow-y: auto; flex: 0 1 auto; }
+.web-sources { margin-top: 14px; font-size: 14px; }
+.web-sources li { margin: 10px 0; overflow-wrap: anywhere; }
+.web-sources p { color: #656b67; font-size: 12px; }
+.composer-tools .tool-button.active { background: #e7eee9; color: #275d45; }
+@media (max-width: 700px) {
+  .composer-toolbar { flex-wrap: wrap; }
+  .send-controls { margin-left: auto; }
+  .send-controls > span { display: none; }
+  .model-picker select { max-width: 112px; }
+}
