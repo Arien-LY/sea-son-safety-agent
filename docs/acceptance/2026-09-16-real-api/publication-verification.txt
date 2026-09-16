@@ -1,0 +1,145 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-8.4.1, pluggy-1.6.0
+rootdir: E:\中建国际海之子大赛\sea-son-safety-agent
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.14.2
+collected 523 items
+
+tests\test_agent_contract.py ....                                        [  0%]
+tests\test_analysis_categories.py ..............                         [  3%]
+tests\test_analysis_risk_levels.py ...........                           [  5%]
+tests\test_analysis_safety_boundaries.py ........                        [  7%]
+tests\test_api.py ..........                                             [  8%]
+tests\test_basic_dialog.py ...........                                   [ 11%]
+tests\test_chat_persistence.py ....                                      [ 11%]
+tests\test_chat_progress.py .....                                        [ 12%]
+tests\test_chat_regression.py ..................................         [ 19%]
+tests\test_chat_turn_history.py ...................                      [ 22%]
+tests\test_deep_chat.py ..........                                       [ 24%]
+tests\test_frontend_workbench.py ..............                          [ 27%]
+tests\test_issue_analysis_output.py ....................                 [ 31%]
+tests\test_phase1_acceptance_cases.py .......                            [ 32%]
+tests\test_phase1_fake_llm_matrix.py .....                               [ 33%]
+tests\test_phase1_fixed_case_matrix.py .                                 [ 33%]
+tests\test_phase3_api.py .........                                       [ 35%]
+tests\test_phase3_contract.py ....                                       [ 36%]
+tests\test_phase3_workflow.py ...........                                [ 38%]
+tests\test_phase4_api.py .........                                       [ 40%]
+tests\test_phase4_knowledge.py ......................................... [ 47%]
+................                                                         [ 51%]
+tests\test_phase5_api.py .................                               [ 54%]
+tests\test_phase5_images.py ............................................ [ 62%]
+.......                                                                  [ 64%]
+tests\test_phase5_transport.py ....                                      [ 64%]
+tests\test_phase6_evaluation.py .......                                  [ 66%]
+tests\test_phase6_release_materials.py ...                               [ 66%]
+tests\test_product_records.py ..............                             [ 69%]
+tests\test_product_text.py .........................................     [ 77%]
+tests\test_project_tools.py ..................                           [ 80%]
+tests\test_propose_issue_record_tool.py ............                     [ 82%]
+tests\test_text_consultation_input.py .........................          [ 87%]
+tests\test_tool_contract.py ..                                           [ 88%]
+tests\test_tool_errors_and_audit.py .......                              [ 89%]
+tests\test_unified_chat.py ......                                        [ 90%]
+tests\test_validated_analysis_proposal.py ........                       [ 92%]
+tests\test_web_tools.py ...................                              [ 95%]
+tests\test_windows_release.py ......................                     [100%]
+
+============================== warnings summary ===============================
+.venv\Lib\site-packages\pydantic\_internal\_config.py:323
+  E:\中建国际海之子大赛\sea-son-safety-agent\.venv\Lib\site-packages\pydantic\_internal\_config.py:323: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+tests/test_phase6_evaluation.py::test_cli_generates_the_same_report_without_model_or_network
+  E:\中建国际海之子大赛\sea-son-safety-agent\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-266 (_readerthread)
+
+  Traceback (most recent call last):
+    File "C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1075, in _bootstrap_inner
+      self.run()
+    File "C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1012, in run
+      self._target(*self._args, **self._kwargs)
+    File "C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\subprocess.py", line 1599, in _readerthread
+      buffer.append(fh.read())
+                    ^^^^^^^^^
+  UnicodeDecodeError: 'gbk' codec can't decode byte 0xad in position 29: illegal multibyte sequence
+
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 523 passed, 2 warnings in 9.78s =======================
+
+> sea-son-safety-agent-frontend@0.1.0 test
+> node --test tests/*.test.cjs
+
+✔ request timeout covers the response body, not only response headers (71.6607ms)
+✔ caller cancellation propagates and is not mislabeled a timeout (20.0075ms)
+✔ stream decodes split UTF-8 frames and receives progress before final result (29.3554ms)
+✔ stream fails closed on truncated without retry (11.1857ms)
+✔ stream fails closed on malformed without retry (11.7038ms)
+✔ stream fails closed on forged tool without retry (11.5701ms)
+✔ stream fails closed on wrong sequence without retry (9.8479ms)
+✔ stream fails closed on negative time without retry (8.9408ms)
+✔ stream fails closed on unknown stage without retry (7.9556ms)
+✔ stream fails closed on wrong delta index without retry (9.1169ms)
+✔ stream fails closed on oversized delta without retry (8.0266ms)
+✔ safe error event reaches the UI and a proposal also has a bounded stream (10.1333ms)
+✔ deadline aborts stalled stream body and cleans up without retry (7.2628ms)
+✔ successful stream drains to EOF instead of aborting a completed network request (7.0596ms)
+✔ chat has a 190 second body deadline while consult retains 35 seconds (20.206ms)
+✔ maximum Chinese final answer fits the bounded stream decoder (13.7725ms)
+✔ provider-sized deltas over the old 160-event limit are accepted including astral Unicode (21.8823ms)
+✔ renders structured markdown with safe line breaks and code (3.9536ms)
+✔ escapes raw HTML instead of creating executable elements (0.8061ms)
+✔ allows only explicit http https and mailto links with opener protection (1.5288ms)
+✔ never loads markdown images and renders only escaped alt text (0.4699ms)
+✔ escapes hostile link titles and attributes (0.2723ms)
+✔ refresh restores an interrupted initial request without automatic resend (157.097ms)
+✔ restored completed request does not overwrite a newer conversation turn (29.0984ms)
+✔ switching sessions ignores a late restore response (26.6213ms)
+✔ thinking selection uses a per-request snapshot and changes retry identity (24.8316ms)
+✔ partial stream never triggers a ticket and failure clears it without duplicate turns (19.4795ms)
+✔ unavailable analysis keeps one final answer and clears stale analysis without a ticket (26.3007ms)
+✔ LAN HTTP without randomUUID still sends and clears the composer (21.8625ms)
+✔ request-id preparation failure restores input and releases busy state (18.1835ms)
+✔ send shows the user message and clears composer before HTTP completes (19.5553ms)
+✔ unmount aborts waiting and unlocks the parent; a late answer cannot refill it (18.119ms)
+✔ changing intent clears waiting state and ignores the previous reply (21.3806ms)
+✔ manual retry restores the message and reuses the same request id (14.087ms)
+✔ proposal generation keeps its separate navigation guard until completion (15.5051ms)
+✔ elapsed time never invents steps; only server events update the work status (20.3475ms)
+✔ late progress after navigation cannot refill the new conversation (13.0644ms)
+✔ stop waiting restores input and reuses the idempotent request; late callbacks are ignored (14.8694ms)
+✔ expanded input and turn capacity apply only to chat (13.6742ms)
+✔ validated answer deltas are visible before the final response resolves (19.6272ms)
+✔ eligible unified result emits a ticket handoff but never persists automatically (13.3416ms)
+✔ model picker accepts a custom id and sends it with the next turn (11.9942ms)
+✔ AI handoff can generate a proposal after Vue wraps analysis reactively (148.0802ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 43
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 963.9915
+npm notice
+npm notice New minor version of npm available! 11.6.2 -> 11.19.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.19.1
+npm notice To update run: npm install -g npm@11.19.1
+npm notice
+
+> sea-son-safety-agent-frontend@0.1.0 build
+> vue-tsc -b && vite build
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 67 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.52 kB │ gzip:   0.36 kB
+dist/assets/index-E6kO1v2g.css   32.33 kB │ gzip:   7.70 kB
+dist/assets/index-COk7-irj.js   281.66 kB │ gzip: 110.91 kB
+✓ built in 959ms

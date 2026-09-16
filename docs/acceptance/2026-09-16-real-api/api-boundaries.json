@@ -1,0 +1,72 @@
+[
+  {
+    "case": "no-consent",
+    "status": 403,
+    "response": {
+      "detail": {
+        "error_code": "text_consent_required",
+        "message": "请确认本次将问题及本会话用户补充发送至DeepSeek并承担费用。"
+      }
+    }
+  },
+  {
+    "case": "invalid-model",
+    "status": 400,
+    "response": {
+      "detail": {
+        "error_code": "invalid_arguments",
+        "message": "文字请求参数无效。"
+      }
+    }
+  },
+  {
+    "case": "secret-injection",
+    "status": 400,
+    "response": {
+      "detail": {
+        "error_code": "invalid_arguments",
+        "message": "文字请求参数无效。"
+      }
+    }
+  },
+  {
+    "case": "stale-turn",
+    "status": 409,
+    "response": {
+      "detail": {
+        "error_code": "text_turn_conflict",
+        "message": "咨询已更新，请使用最新结果或开始新问题。"
+      }
+    }
+  },
+  {
+    "case": "image-upload-no-consent",
+    "status": 403,
+    "response": {
+      "detail": {
+        "error_code": "upload_consent_required",
+        "message": "请确认图片已脱敏且有权上传。"
+      }
+    }
+  },
+  {
+    "case": "image-analysis-no-consent",
+    "status": 403,
+    "response": {
+      "detail": {
+        "error_code": "external_consent_required",
+        "message": "真实模式须确认将脱敏图片与补充文字发送至DeepSeek并承担费用。"
+      }
+    },
+    "metadata": {
+      "photo_id": "PHOTO-7127C8E323CB4F0EA8D64113",
+      "content_digest": "sha256:99f3685f656a680ec84f11969d94bc223b03772d7c31a62a93f2a5eb06fc12b3",
+      "media_type": "image/jpeg",
+      "byte_size": 11453,
+      "width": 512,
+      "height": 512,
+      "metadata_removed": true,
+      "created_at": "2026-09-13T11:53:26.226299Z"
+    }
+  }
+]

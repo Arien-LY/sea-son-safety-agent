@@ -1,0 +1,361 @@
+{
+  "label": "no-tools-fresh",
+  "request": {
+    "request_id": "acceptance-no-tools-fresh",
+    "intent": "auto",
+    "thinking_mode": "fast",
+    "tools_enabled": false,
+    "model": "deepseek-v4-flash",
+    "input": {
+      "message": "请写一句祝朋友生日快乐的话。"
+    },
+    "allow_external": true,
+    "expected_turn": 0,
+    "consultation_id": null
+  },
+  "status": 200,
+  "events": [
+    {
+      "seconds": 0.297,
+      "data": {
+        "type": "progress",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "stage": "queued",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 0.297,
+      "data": {
+        "type": "progress",
+        "seq": 2,
+        "elapsed_ms": 0,
+        "stage": "preparing",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 0.297,
+      "data": {
+        "type": "progress",
+        "seq": 3,
+        "elapsed_ms": 0,
+        "stage": "model_running",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 1.578,
+      "data": {
+        "type": "progress",
+        "seq": 4,
+        "elapsed_ms": 1264,
+        "stage": "responding",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 1.578,
+      "data": {
+        "type": "content_delta",
+        "index": 1,
+        "text": "祝你"
+      }
+    },
+    {
+      "seconds": 1.578,
+      "data": {
+        "type": "content_delta",
+        "index": 2,
+        "text": "生日快乐"
+      }
+    },
+    {
+      "seconds": 1.578,
+      "data": {
+        "type": "content_delta",
+        "index": 3,
+        "text": "！"
+      }
+    },
+    {
+      "seconds": 1.578,
+      "data": {
+        "type": "content_delta",
+        "index": 4,
+        "text": "愿"
+      }
+    },
+    {
+      "seconds": 1.593,
+      "data": {
+        "type": "content_delta",
+        "index": 5,
+        "text": "新"
+      }
+    },
+    {
+      "seconds": 1.609,
+      "data": {
+        "type": "content_delta",
+        "index": 6,
+        "text": "的一"
+      }
+    },
+    {
+      "seconds": 1.609,
+      "data": {
+        "type": "content_delta",
+        "index": 7,
+        "text": "岁"
+      }
+    },
+    {
+      "seconds": 1.609,
+      "data": {
+        "type": "content_delta",
+        "index": 8,
+        "text": "里"
+      }
+    },
+    {
+      "seconds": 1.625,
+      "data": {
+        "type": "content_delta",
+        "index": 9,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 1.625,
+      "data": {
+        "type": "content_delta",
+        "index": 10,
+        "text": "平安"
+      }
+    },
+    {
+      "seconds": 1.625,
+      "data": {
+        "type": "content_delta",
+        "index": 11,
+        "text": "顺"
+      }
+    },
+    {
+      "seconds": 1.625,
+      "data": {
+        "type": "content_delta",
+        "index": 12,
+        "text": "遂"
+      }
+    },
+    {
+      "seconds": 1.625,
+      "data": {
+        "type": "content_delta",
+        "index": 13,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 1.625,
+      "data": {
+        "type": "content_delta",
+        "index": 14,
+        "text": "所"
+      }
+    },
+    {
+      "seconds": 1.64,
+      "data": {
+        "type": "content_delta",
+        "index": 15,
+        "text": "念"
+      }
+    },
+    {
+      "seconds": 1.656,
+      "data": {
+        "type": "content_delta",
+        "index": 16,
+        "text": "皆"
+      }
+    },
+    {
+      "seconds": 1.672,
+      "data": {
+        "type": "content_delta",
+        "index": 17,
+        "text": "如愿"
+      }
+    },
+    {
+      "seconds": 1.672,
+      "data": {
+        "type": "content_delta",
+        "index": 18,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 1.672,
+      "data": {
+        "type": "content_delta",
+        "index": 19,
+        "text": "所"
+      }
+    },
+    {
+      "seconds": 1.672,
+      "data": {
+        "type": "content_delta",
+        "index": 20,
+        "text": "行"
+      }
+    },
+    {
+      "seconds": 1.687,
+      "data": {
+        "type": "content_delta",
+        "index": 21,
+        "text": "皆"
+      }
+    },
+    {
+      "seconds": 1.687,
+      "data": {
+        "type": "content_delta",
+        "index": 22,
+        "text": "坦"
+      }
+    },
+    {
+      "seconds": 1.687,
+      "data": {
+        "type": "content_delta",
+        "index": 23,
+        "text": "途"
+      }
+    },
+    {
+      "seconds": 1.687,
+      "data": {
+        "type": "content_delta",
+        "index": 24,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 1.687,
+      "data": {
+        "type": "content_delta",
+        "index": 25,
+        "text": "天天"
+      }
+    },
+    {
+      "seconds": 1.687,
+      "data": {
+        "type": "content_delta",
+        "index": 26,
+        "text": "都有"
+      }
+    },
+    {
+      "seconds": 1.703,
+      "data": {
+        "type": "content_delta",
+        "index": 27,
+        "text": "小"
+      }
+    },
+    {
+      "seconds": 1.718,
+      "data": {
+        "type": "content_delta",
+        "index": 28,
+        "text": "确"
+      }
+    },
+    {
+      "seconds": 1.734,
+      "data": {
+        "type": "content_delta",
+        "index": 29,
+        "text": "幸"
+      }
+    },
+    {
+      "seconds": 1.734,
+      "data": {
+        "type": "content_delta",
+        "index": 30,
+        "text": "。"
+      }
+    },
+    {
+      "seconds": 2.203,
+      "data": {
+        "type": "progress",
+        "seq": 5,
+        "elapsed_ms": 1905,
+        "stage": "validating",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 2.218,
+      "data": {
+        "type": "progress",
+        "seq": 6,
+        "elapsed_ms": 1920,
+        "stage": "completed",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 2.218,
+      "data": {
+        "type": "result",
+        "data": {
+          "consultation_id": "TXT-de6da02cfd1b4007a821bd054ff434da",
+          "turn": 1,
+          "mode": "real",
+          "model": "deepseek-v4-flash",
+          "reply": {
+            "answer": "祝你生日快乐！愿新的一岁里，平安顺遂，所念皆如愿，所行皆坦途，天天都有小确幸。",
+            "follow_up_questions": [],
+            "analysis": {
+              "category": "consultation",
+              "issue_type": "祝福语撰写",
+              "summary": "用户请求写一句祝朋友生日快乐的话，属于普通写作咨询，无现场事件要素。",
+              "observed_facts": [
+                "用户要求写一句祝朋友生日快乐的话"
+              ],
+              "uncertainties": [
+                "未说明与朋友的关系亲疏、语气偏好和是否需要署名"
+              ],
+              "missing_fields": [],
+              "risk_level": "low",
+              "immediate_actions": [],
+              "suggested_actions": [],
+              "recommended_route": "direct_answer",
+              "requires_human_review": false,
+              "confidence": 0.95
+            }
+          },
+          "can_propose": false,
+          "risk_retained": false,
+          "remaining_turns": 49,
+          "context_trimmed": false,
+          "analysis_status": "validated",
+          "sources": [],
+          "tool_results": []
+        }
+      }
+    }
+  ],
+  "total_seconds": 2.218
+}

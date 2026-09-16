@@ -1,0 +1,19 @@
+## Console messages
+Showing 1-1 of 1 (Page 1 of 1).
+msgid=2 [error] Failed to load resource: the server responded with a status of 404 (Not Found) (0 args)
+
+## Network requests
+Showing 1-13 of 13 (Page 1 of 1).
+reqid=1 GET http://127.0.0.1:8057/chat?chat=TXT-8e5ec54a098747769a33b8c66038dd63 [200]
+reqid=2 GET http://127.0.0.1:8057/assets/index-COk7-irj.js [200]
+reqid=3 GET http://127.0.0.1:8057/assets/index-E6kO1v2g.css [200]
+reqid=4 GET http://127.0.0.1:8057/api/issue-records?offset=0&limit=6 [200]
+reqid=5 GET http://127.0.0.1:8057/api/chat-sessions [200]
+reqid=6 GET http://127.0.0.1:8057/api/issue-records?offset=0&limit=6 [200]
+reqid=7 GET http://127.0.0.1:8057/api/chat-sessions [200]
+reqid=8 GET http://127.0.0.1:8057/api/text/runtime [200]
+reqid=9 GET http://127.0.0.1:8057/api/runtime [200]
+reqid=10 GET http://127.0.0.1:8057/api/chat-sessions/TXT-8e5ec54a098747769a33b8c66038dd63 [200]
+reqid=11 GET http://127.0.0.1:8057/favicon.ico [404]
+reqid=12 POST http://127.0.0.1:8057/api/text-consultations/stream [200]
+reqid=13 GET http://127.0.0.1:8057/api/chat-sessions [200]

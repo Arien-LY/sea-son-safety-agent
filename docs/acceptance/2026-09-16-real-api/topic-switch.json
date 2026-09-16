@@ -1,0 +1,58 @@
+{
+  "label": "topic-switch",
+  "request": {
+    "request_id": "acceptance-topic-switch",
+    "intent": "auto",
+    "thinking_mode": "fast",
+    "tools_enabled": false,
+    "model": "deepseek-v4-flash",
+    "input": {
+      "message": "换个问题：请写一句祝朋友生日快乐的话，不要提上一个话题。"
+    },
+    "allow_external": true,
+    "expected_turn": 2,
+    "consultation_id": "TXT-88d7c198506e42749b0b4bd7492d4707"
+  },
+  "status": 200,
+  "events": [
+    {
+      "seconds": 0.359,
+      "data": {
+        "type": "progress",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "stage": "queued",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 0.359,
+      "data": {
+        "type": "progress",
+        "seq": 2,
+        "elapsed_ms": 0,
+        "stage": "preparing",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 0.359,
+      "data": {
+        "type": "progress",
+        "seq": 3,
+        "elapsed_ms": 0,
+        "stage": "model_running",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 1.734,
+      "data": {
+        "type": "error",
+        "error_code": "invalid_text_output",
+        "message": "回答为空或超出容量上限。"
+      }
+    }
+  ],
+  "total_seconds": 1.734
+}

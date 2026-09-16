@@ -1,0 +1,195 @@
+{
+  "record": {
+    "schema_version": "phase3-issue-record-v1",
+    "record_id": "ISS-80480F3E6BC6",
+    "analysis": {
+      "category": "logistics",
+      "issue_type": "合成宿舍空调报修",
+      "summary": "验收演示项目A栋203房空调不制冷，仅演示数据，需要后勤跟进。",
+      "observed_facts": [
+        "验收演示项目A栋203房空调不制冷，仅演示数据，需要后勤跟进。"
+      ],
+      "uncertainties": [
+        "具体项目、区域和影响范围仍需用户补充"
+      ],
+      "missing_fields": [
+        "项目",
+        "具体区域",
+        "影响范围"
+      ],
+      "risk_level": "low",
+      "immediate_actions": [],
+      "suggested_actions": [
+        "安排有资格的现场人员核实并确定后续处置"
+      ],
+      "recommended_route": "propose_workflow",
+      "requires_human_review": false,
+      "confidence": 0.8
+    },
+    "review_fields": {
+      "record_title": "合成宿舍空调报修",
+      "record_description": "验收演示项目A栋203房空调不制冷，仅演示数据，需要后勤跟进。",
+      "project": "验收演示项目",
+      "area": "合成A栋203房",
+      "reporter_note": null
+    },
+    "status": "closed",
+    "disposition": "active",
+    "revision": 8,
+    "reporter_id": "reporter-demo",
+    "suggested_responsible_role": "facilities_staff",
+    "assigned_to": "rectifier-acceptance",
+    "assigned_role": "facilities_staff",
+    "assignment_confirmed_by_human": true,
+    "information_request": null,
+    "rectification_note": "合成演示：重新处理完成。",
+    "review_note": "合成演示：复查通过，仅测试流程。",
+    "cancellation_reason": null,
+    "created_at": "2026-09-13T11:55:46.220970Z",
+    "updated_at": "2026-09-13T11:56:25.328162Z",
+    "events": [
+      {
+        "sequence": 1,
+        "occurred_at": "2026-09-13T11:55:46.220970Z",
+        "action": "create_draft",
+        "actor_id": "reporter-demo",
+        "actor_role": "reporter",
+        "from_status": null,
+        "to_status": "draft",
+        "from_disposition": null,
+        "to_disposition": "active",
+        "summary": "报告人已将确认提案保存为草稿。",
+        "note": null
+      },
+      {
+        "sequence": 2,
+        "occurred_at": "2026-09-13T11:56:25.302692Z",
+        "action": "submit",
+        "actor_id": "reporter-demo",
+        "actor_role": "reporter",
+        "from_status": "draft",
+        "to_status": "submitted",
+        "from_disposition": "active",
+        "to_disposition": "active",
+        "summary": "报告人已提交问题记录。",
+        "note": null
+      },
+      {
+        "sequence": 3,
+        "occurred_at": "2026-09-13T11:56:25.308810Z",
+        "action": "assign",
+        "actor_id": "coordinator-acceptance",
+        "actor_role": "coordinator",
+        "from_status": "submitted",
+        "to_status": "assigned",
+        "from_disposition": "active",
+        "to_disposition": "active",
+        "summary": "协调员已人工确认责任角色并完成派工。",
+        "note": null
+      },
+      {
+        "sequence": 4,
+        "occurred_at": "2026-09-13T11:56:25.311606Z",
+        "action": "start_rectification",
+        "actor_id": "rectifier-acceptance",
+        "actor_role": "rectifier",
+        "from_status": "assigned",
+        "to_status": "rectifying",
+        "from_disposition": "active",
+        "to_disposition": "active",
+        "summary": "整改人已开始整改。",
+        "note": null
+      },
+      {
+        "sequence": 5,
+        "occurred_at": "2026-09-13T11:56:25.316428Z",
+        "action": "submit_rectification",
+        "actor_id": "rectifier-acceptance",
+        "actor_role": "rectifier",
+        "from_status": "rectifying",
+        "to_status": "pending_review",
+        "from_disposition": "active",
+        "to_disposition": "active",
+        "summary": "整改人已提交整改说明，等待复查。",
+        "note": "合成演示：维修完成，待复查。"
+      },
+      {
+        "sequence": 6,
+        "occurred_at": "2026-09-13T11:56:25.322377Z",
+        "action": "reject_review",
+        "actor_id": "reviewer-acceptance",
+        "actor_role": "reviewer",
+        "from_status": "pending_review",
+        "to_status": "rectifying",
+        "from_disposition": "active",
+        "to_disposition": "active",
+        "summary": "复查人已驳回并要求重新整改。",
+        "note": "合成演示：复查不通过，返回重新整改。"
+      },
+      {
+        "sequence": 7,
+        "occurred_at": "2026-09-13T11:56:25.324970Z",
+        "action": "submit_rectification",
+        "actor_id": "rectifier-acceptance",
+        "actor_role": "rectifier",
+        "from_status": "rectifying",
+        "to_status": "pending_review",
+        "from_disposition": "active",
+        "to_disposition": "active",
+        "summary": "整改人已提交整改说明，等待复查。",
+        "note": "合成演示：重新处理完成。"
+      },
+      {
+        "sequence": 8,
+        "occurred_at": "2026-09-13T11:56:25.328162Z",
+        "action": "close",
+        "actor_id": "reviewer-acceptance",
+        "actor_role": "reviewer",
+        "from_status": "pending_review",
+        "to_status": "closed",
+        "from_disposition": "active",
+        "to_disposition": "active",
+        "summary": "复查人已确认整改结果并关闭记录。",
+        "note": "合成演示：复查通过，仅测试流程。"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "action": "submit",
+      "status": "submitted",
+      "revision": 2
+    },
+    {
+      "action": "assign",
+      "status": "assigned",
+      "revision": 3
+    },
+    {
+      "action": "start_rectification",
+      "status": "rectifying",
+      "revision": 4
+    },
+    {
+      "action": "submit_rectification",
+      "status": "pending_review",
+      "revision": 5
+    },
+    {
+      "action": "reject_review",
+      "status": "rectifying",
+      "revision": 6
+    },
+    {
+      "action": "submit_rectification",
+      "status": "pending_review",
+      "revision": 7
+    },
+    {
+      "action": "close",
+      "status": "closed",
+      "revision": 8
+    }
+  ],
+  "origin": "manual form after real AI route failed"
+}

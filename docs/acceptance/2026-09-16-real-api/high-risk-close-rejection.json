@@ -1,0 +1,9 @@
+{
+  "status": 409,
+  "response": {
+    "detail": {
+      "error_code": "submitter_cannot_close_high_risk",
+      "message": "高风险问题禁止提交人自行关闭。"
+    }
+  }
+}
