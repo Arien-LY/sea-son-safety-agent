@@ -74,6 +74,10 @@ def apply_boundaries(reply: TextReply, previous: TextReply | None) -> tuple[Text
     if analysis["risk_level"] in {"high", "emergency"}:
         analysis["requires_human_review"] = True
         analysis["recommended_route"] = "human_review"
+    elif (isinstance(reply, ChatReply) and analysis["category"] in WORKFLOW_CATEGORIES
+          and analysis["recommended_route"] == "human_review" and analysis["requires_human_review"]):
+        # Unknown diagnosis may accompany a draft for human review; no state change.
+        pass
     elif analysis["missing_fields"] or analysis["category"] == "unknown":
         analysis["requires_human_review"] = True
         analysis["recommended_route"] = "collect_more_info"
@@ -294,7 +298,7 @@ class TextConsultationService:
                     answers = [response.reply.answer for response in completed]
                     if sum(len(item.model_dump_json()) for item in inputs) + sum(map(len, answers)) > CHAT_SESSION_CHARS:
                         raise TextError("chat_capacity_limit", "本会话内容已达到容量上限，请开始新问题；已有消息未删除。", 409)
-                    selected_inputs, selected_answers, context_trimmed = select_chat_context(inputs, answers)
+                    selected_inputs, selected_answers, context_trimmed = select_chat_context(inputs, answers, structured_answers=True)
                 retained_risk = session.latest is not None and session.latest.reply.analysis.risk_level in {"high", "emergency"}
                 progress("model_running", None)
                 reply = self.assistant_factory(str(runtime["mode"]), selected_model).reply(

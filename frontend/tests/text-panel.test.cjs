@@ -59,9 +59,13 @@ async function mountPanel(cryptoApi = crypto, clock = performance, options = {})
   });
   const mode = vue.ref('chat');
   const sessionId = vue.ref(options.sessionId);
+  const router = options.router;
+  const newChatKey = vue.ref(options.newChatKey);
   let instance;
   const app = renderer.createApp({ render: () => vue.h(component, {
-    mode: mode.value, sessionId: sessionId.value, ref: value => { if (value) instance = value.$; },
+    mode: mode.value, sessionId: router ? String(router.currentRoute.value.query.chat || '') : sessionId.value,
+    newChatKey: router ? String(router.currentRoute.value.query.new || '') : newChatKey.value,
+    onSession: id => { if (router) void router.replace({ path: '/chat', query: { chat: id } }); }, ref: value => { if (value) instance = value.$; },
     onBusy: value => busyEvents.push(value), onAnalysis: value => analyses.push(value),
     onProposal: value => proposalEvents.push(value),
     onProposing: value => proposingEvents.push(value),
@@ -411,5 +415,31 @@ test('model picker accepts a custom id and sends it with the next turn', async (
     assert.equal(panel.requests[0].input.model, 'deepseek-custom-2026');
     panel.requests[0].resolve(result);
     await sent;
+  } finally { panel.app.unmount(); }
+});
+
+
+test('saving a new chat through Vue Router preserves the answer; explicit new clears it', async () => {
+  const { createRouter, createMemoryHistory } = require('vue-router');
+  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/chat', component: {} }] });
+  await router.push('/chat?new=first');
+  const panel = await mountPanel(crypto, performance, { router, getChatSession: async () => {
+    throw new Error('Saving must not reload its own just-completed answer');
+  } });
+  try {
+    panel.state.form.message = '请回复：测试完成。';
+    const sent = panel.state.send();
+    panel.requests[0].resolve(result); await sent;
+    await new Promise(resolve => setImmediate(resolve)); await vue.nextTick();
+    assert.equal(router.currentRoute.value.query.chat, result.consultation_id);
+    assert.equal(panel.state.turns.length, 1);
+    assert.equal(panel.state.latest.reply.answer, 'hello');
+    assert.equal(panel.state.error, '');
+    await router.push('/chat?new=second'); await vue.nextTick();
+    assert.equal(panel.state.turns.length, 0);
+    assert.equal(panel.state.latest, null);
+    panel.state.form.message = '第二条草稿';
+    await router.push('/chat?new=third'); await vue.nextTick();
+    assert.equal(panel.state.form.message, '');
   } finally { panel.app.unmount(); }
 });

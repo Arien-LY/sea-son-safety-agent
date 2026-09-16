@@ -146,7 +146,10 @@ watch(toolsEnabled, () => { if (!busy.value) pending = null; }, { flush: "sync" 
 watch(busy, value => emit("busy", value), { flush: "sync" });
 watch(() => props.mode, () => reset(true));
 watch(() => props.sessionId, () => { void restoreSession(); });
-watch(() => props.newChatKey, () => { ++restoreGeneration; savePending(null); reset(true); restoring.value = false; });
+watch(() => props.newChatKey, key => {
+  if (!key) return; // Saving replaces ?new with ?chat; it is not a new-chat action.
+  ++restoreGeneration; savePending(null); reset(true); restoring.value = false;
+});
 watch([pendingMessage, streamedAnswer, () => turns.value.length], async () => {
   await nextTick();
   messageStage.value?.scrollTo({ top: messageStage.value.scrollHeight });
