@@ -1,0 +1,335 @@
+{
+  "text_requests": 35,
+  "text_models": {
+    "deepseek-v4-flash": 34,
+    "deepseek-v4-pro": 1
+  },
+  "vision_requests": 1,
+  "tavily_requests": 0,
+  "text_responses": 35,
+  "responses_missing_usage": 1,
+  "reported_text_prompt_tokens": 102134,
+  "reported_text_completion_tokens": 13704,
+  "vision_usage": {
+    "prompt_tokens": 1657,
+    "completion_tokens": 231
+  },
+  "all_observed_tool_ids_paired": true,
+  "cost": "not measured",
+  "cases": [
+    {
+      "case": "concept",
+      "first_seconds": 1.703,
+      "total_seconds": 2.609,
+      "deltas": 69,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "invalid-calculate",
+      "first_seconds": 2.312,
+      "total_seconds": 4.156,
+      "deltas": 121,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [
+        {
+          "tool": "calculate",
+          "ok": false,
+          "summary": "仅支持有限长度的十进制四则运算与括号；请检查除零、表达式或数值范围。"
+        }
+      ],
+      "sources": 0
+    },
+    {
+      "case": "knowledge-repeat",
+      "first_seconds": 2.344,
+      "total_seconds": 6.594,
+      "deltas": 322,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [
+        {
+          "tool": "search_knowledge",
+          "ok": true,
+          "summary": "检索到 1 条候选依据，适用性须由专业人员核实。"
+        }
+      ],
+      "sources": 1
+    },
+    {
+      "case": "knowledge",
+      "first_seconds": 1.437,
+      "total_seconds": 7.39,
+      "deltas": 635,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "logistics-complete",
+      "first_seconds": 1.562,
+      "total_seconds": 6.484,
+      "deltas": 486,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "logistics",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "logistics",
+      "first_seconds": 1.5,
+      "total_seconds": 5.843,
+      "deltas": 313,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "logistics",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "long-context",
+      "first_seconds": 1.547,
+      "total_seconds": 2.422,
+      "deltas": 2,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "long-reference",
+      "first_seconds": null,
+      "total_seconds": 1.235,
+      "deltas": 0,
+      "answer_reconstructed": null,
+      "result": false,
+      "analysis_status": null,
+      "category": null,
+      "can_propose": null,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "management",
+      "first_seconds": 1.531,
+      "total_seconds": 7.547,
+      "deltas": 557,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "management",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "no-tools-followup",
+      "first_seconds": null,
+      "total_seconds": 1.375,
+      "deltas": 0,
+      "answer_reconstructed": null,
+      "result": false,
+      "analysis_status": null,
+      "category": null,
+      "can_propose": null,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "no-tools-fresh",
+      "first_seconds": 1.578,
+      "total_seconds": 2.218,
+      "deltas": 30,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "pro-model",
+      "first_seconds": 1.578,
+      "total_seconds": 2.703,
+      "deltas": 17,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "quality",
+      "first_seconds": 1.687,
+      "total_seconds": 7.515,
+      "deltas": 427,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "quality",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "read-failure",
+      "first_seconds": 3.031,
+      "total_seconds": 4.25,
+      "deltas": 76,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [
+        {
+          "tool": "read_webpage",
+          "ok": false,
+          "summary": "工具读取失败或地址不允许；未取得可用资料。"
+        }
+      ],
+      "sources": 0
+    },
+    {
+      "case": "reference",
+      "first_seconds": 1.437,
+      "total_seconds": 2.25,
+      "deltas": 28,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "unavailable",
+      "category": "unknown",
+      "can_propose": false,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "risk-followup",
+      "first_seconds": 7.922,
+      "total_seconds": 7.922,
+      "deltas": 1,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "safety",
+      "can_propose": true,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "safety",
+      "first_seconds": 2.079,
+      "total_seconds": 5.469,
+      "deltas": 224,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "safety",
+      "can_propose": true,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "search-missing",
+      "first_seconds": 2.344,
+      "total_seconds": 5.781,
+      "deltas": 236,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [
+        {
+          "tool": "web_search",
+          "ok": false,
+          "summary": "网络搜索未配置，请在模型设置中填写 Tavily 搜索密钥。"
+        }
+      ],
+      "sources": 0
+    },
+    {
+      "case": "time-calculate",
+      "first_seconds": 3.234,
+      "total_seconds": 6.343,
+      "deltas": 254,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [
+        {
+          "tool": "current_time",
+          "ok": true,
+          "summary": "已读取当前北京时间。"
+        },
+        {
+          "tool": "calculate",
+          "ok": true,
+          "summary": "已完成基础算术计算；单位与工程适用性仍需核对。"
+        }
+      ],
+      "sources": 0
+    },
+    {
+      "case": "topic-switch",
+      "first_seconds": null,
+      "total_seconds": 1.734,
+      "deltas": 0,
+      "answer_reconstructed": null,
+      "result": false,
+      "analysis_status": null,
+      "category": null,
+      "can_propose": null,
+      "tools": [],
+      "sources": 0
+    },
+    {
+      "case": "webpage",
+      "first_seconds": 3.234,
+      "total_seconds": 5.391,
+      "deltas": 182,
+      "answer_reconstructed": true,
+      "result": true,
+      "analysis_status": "validated",
+      "category": "consultation",
+      "can_propose": false,
+      "tools": [
+        {
+          "tool": "read_webpage",
+          "ok": true,
+          "summary": "已读取网页文字；内容仍需核对。"
+        }
+      ],
+      "sources": 1
+    }
+  ]
+}

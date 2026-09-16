@@ -1,0 +1,41 @@
+{
+  "provider": "DeepSeek",
+  "model": "deepseek-v4-flash-vision-exp",
+  "calls": 1,
+  "image": "synthetic-shapes.jpg",
+  "result": {
+    "preliminary_only": true,
+    "requires_human_review": true,
+    "observations": [
+      {
+        "observation_id": "OBS-1",
+        "status": "observed",
+        "description": "左上区域可见一个红色实心正方形。"
+      },
+      {
+        "observation_id": "OBS-2",
+        "status": "observed",
+        "description": "右下区域可见一个蓝色实心圆形。"
+      },
+      {
+        "observation_id": "OBS-3",
+        "status": "not_observed",
+        "description": "未观察到任何人员、设备、材料、施工标识、文字标签或工程场景上下文。"
+      }
+    ],
+    "limitations": [
+      "context_missing"
+    ],
+    "follow_up_questions": [
+      "请提供真实施工现场照片或包含施工环境、部位、人员、设备等上下文的图像。",
+      "若图片来自真实场景，请说明拍摄位置、拍摄方向、施工阶段及主要作业内容。"
+    ],
+    "candidates": []
+  },
+  "seconds": 2.578,
+  "usage": {
+    "prompt_tokens": 1657,
+    "completion_tokens": 231
+  },
+  "cost": "not measured"
+}

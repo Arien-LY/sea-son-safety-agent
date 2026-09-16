@@ -1,0 +1,156 @@
+{
+  "schema_version": "phase3-issue-record-v1",
+  "record_id": "ISS-AA26CC2A0C25",
+  "analysis": {
+    "category": "safety",
+    "issue_type": "带电配电箱冒火花后未处置、非专业人员拟自行关闭",
+    "summary": "用户陈述B区配电箱曾冒火花，目前仍无专业人员到场检查，用户本人认为情况已稳定并询问能否自行关闭。带电设备故障后的表面平静不能替代专业核验，人员自行操作存在触电与电弧伤害的可信严重风险，应为紧急等级并转人工处置。",
+    "observed_facts": [
+      "用户陈述：验收演示项目B区配电箱正在冒火花（前一则消息）",
+      "用户陈述：有工人仍靠近该配电箱",
+      "用户陈述：用户已在远处通知现场安全负责人",
+      "用户陈述：目前没有专业人员对该配电箱进行检查",
+      "用户询问：是否可以自行关闭该配电箱",
+      "本次消息未说明已有人员受伤、明火或浓烟，也未说明是否已设置警戒"
+    ],
+    "uncertainties": [
+      "配电箱当前是否仍在打火、冒烟或发出异常声响",
+      "箱门是否被打开过、是否已有人接触设备",
+      "是否有人员因电弧或触电受伤",
+      "是否已切断上级电源，以及由谁掌握停电权限",
+      "现场是否已设置警戒隔离并有人员值守",
+      "设备的具体回路、容量与故障原因均不明确"
+    ],
+    "missing_fields": [
+      "B区故障配电箱的编号或准确位置",
+      "当前设备状态（是否仍打火、冒烟）",
+      "上级电源状态及停电责任人",
+      "现场警戒与值守情况",
+      "人员受伤与火情情况",
+      "到场专业人员及预计到场时间"
+    ],
+    "risk_level": "emergency",
+    "immediate_actions": [
+      "让靠近人员立即撤离到安全距离以外",
+      "不触碰配电箱、不自行断电或用水扑救",
+      "保持远程警戒，阻止人员靠近",
+      "等待持证电工或现场应急人员按程序处置",
+      "如有人受伤、起火或被困，立即拨打当地急救与消防电话",
+      "保持与配电箱的安全距离，不接近、不开柜、不触碰柜体或相邻金属构件",
+      "明确禁止本人及其他人员自行拉闸、按开关或拆接线",
+      "劝离仍靠近的工人，维持禁区并阻止他人进入",
+      "保持与现场安全负责人的联系，催促持证电工或项目电气负责人到场",
+      "若再次打火、冒烟加剧、出现明火或有人受伤，立即拨打当地急救与消防电话并撤离"
+    ],
+    "suggested_actions": [
+      "由持证电工到场后按规程进行验电、隔离与故障排查，确认无电、无复燃风险后再决定停用或恢复",
+      "在设备故障未排除前，按‘可能带电’对待该配电箱及其邻近区域",
+      "将事件经过、时间点和已采取措施如实记录并向项目管理人员报告，供人工复核",
+      "对临近作业人员进行口头提醒，避免其因好奇或赶工进入该区域"
+    ],
+    "recommended_route": "human_review",
+    "requires_human_review": true,
+    "confidence": 0.93
+  },
+  "review_fields": {
+    "record_title": "带电配电箱冒火花后未处置、非专业人员拟自行关闭",
+    "record_description": "用户陈述B区配电箱曾冒火花，目前仍无专业人员到场检查，用户本人认为情况已稳定并询问能否自行关闭。带电设备故障后的表面平静不能替代专业核验，人员自行操作存在触电与电弧伤害的可信严重风险，应为紧急等级并转人工处置。",
+    "project": "验收演示项目",
+    "area": "合成B区配电箱",
+    "reporter_note": null
+  },
+  "status": "closed",
+  "disposition": "active",
+  "revision": 6,
+  "reporter_id": "reporter-demo",
+  "suggested_responsible_role": "safety_officer",
+  "assigned_to": "rectifier-demo",
+  "assigned_role": "safety_officer",
+  "assignment_confirmed_by_human": true,
+  "information_request": null,
+  "rectification_note": "合成验收：演示专业人员已完成故障处理，等待独立复查；非真实现场事实。",
+  "review_note": "合成验收：独立专业复查角色核验演示整改结果，通过并关闭，仅测试状态机。",
+  "cancellation_reason": null,
+  "created_at": "2026-09-13T11:51:36.563936Z",
+  "updated_at": "2026-09-13T11:54:45.844872Z",
+  "events": [
+    {
+      "sequence": 1,
+      "occurred_at": "2026-09-13T11:51:36.563936Z",
+      "action": "create_draft",
+      "actor_id": "reporter-demo",
+      "actor_role": "reporter",
+      "from_status": null,
+      "to_status": "draft",
+      "from_disposition": null,
+      "to_disposition": "active",
+      "summary": "报告人已将确认提案保存为草稿。",
+      "note": null
+    },
+    {
+      "sequence": 2,
+      "occurred_at": "2026-09-13T11:52:43.606970Z",
+      "action": "submit",
+      "actor_id": "reporter-demo",
+      "actor_role": "reporter",
+      "from_status": "draft",
+      "to_status": "submitted",
+      "from_disposition": "active",
+      "to_disposition": "active",
+      "summary": "报告人已提交问题记录。",
+      "note": null
+    },
+    {
+      "sequence": 3,
+      "occurred_at": "2026-09-13T11:53:21.626562Z",
+      "action": "assign",
+      "actor_id": "coordinator-demo",
+      "actor_role": "coordinator",
+      "from_status": "submitted",
+      "to_status": "assigned",
+      "from_disposition": "active",
+      "to_disposition": "active",
+      "summary": "协调员已人工确认责任角色并完成派工。",
+      "note": null
+    },
+    {
+      "sequence": 4,
+      "occurred_at": "2026-09-13T11:53:47.233444Z",
+      "action": "start_rectification",
+      "actor_id": "rectifier-demo",
+      "actor_role": "rectifier",
+      "from_status": "assigned",
+      "to_status": "rectifying",
+      "from_disposition": "active",
+      "to_disposition": "active",
+      "summary": "整改人已开始整改。",
+      "note": null
+    },
+    {
+      "sequence": 5,
+      "occurred_at": "2026-09-13T11:54:01.881818Z",
+      "action": "submit_rectification",
+      "actor_id": "rectifier-demo",
+      "actor_role": "rectifier",
+      "from_status": "rectifying",
+      "to_status": "pending_review",
+      "from_disposition": "active",
+      "to_disposition": "active",
+      "summary": "整改人已提交整改说明，等待复查。",
+      "note": "合成验收：演示专业人员已完成故障处理，等待独立复查；非真实现场事实。"
+    },
+    {
+      "sequence": 6,
+      "occurred_at": "2026-09-13T11:54:45.844872Z",
+      "action": "close",
+      "actor_id": "professional-reviewer-demo",
+      "actor_role": "professional_reviewer",
+      "from_status": "pending_review",
+      "to_status": "closed",
+      "from_disposition": "active",
+      "to_disposition": "active",
+      "summary": "复查人已确认整改结果并关闭记录。",
+      "note": "合成验收：独立专业复查角色核验演示整改结果，通过并关闭，仅测试状态机。"
+    }
+  ]
+}

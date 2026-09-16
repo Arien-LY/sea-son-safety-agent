@@ -1,0 +1,2760 @@
+{
+  "label": "knowledge-repeat",
+  "request": {
+    "request_id": "acceptance-knowledge-repeat",
+    "intent": "auto",
+    "thinking_mode": "fast",
+    "tools_enabled": true,
+    "model": "deepseek-v4-flash",
+    "input": {
+      "message": "请实际调用 search_knowledge 工具查询：中国大陆施工现场消防通道。只根据本次返回的真实条目给出简短回答，不要自己生成来源编号。"
+    },
+    "allow_external": true,
+    "expected_turn": 0,
+    "consultation_id": null
+  },
+  "status": 200,
+  "events": [
+    {
+      "seconds": 0.532,
+      "data": {
+        "type": "progress",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "stage": "queued",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 0.532,
+      "data": {
+        "type": "progress",
+        "seq": 2,
+        "elapsed_ms": 0,
+        "stage": "preparing",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 0.532,
+      "data": {
+        "type": "progress",
+        "seq": 3,
+        "elapsed_ms": 0,
+        "stage": "model_running",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 1.922,
+      "data": {
+        "type": "progress",
+        "seq": 4,
+        "elapsed_ms": 1389,
+        "stage": "tool_running",
+        "tool": "search_knowledge"
+      }
+    },
+    {
+      "seconds": 1.938,
+      "data": {
+        "type": "progress",
+        "seq": 5,
+        "elapsed_ms": 1405,
+        "stage": "tool_completed",
+        "tool": "search_knowledge"
+      }
+    },
+    {
+      "seconds": 1.938,
+      "data": {
+        "type": "progress",
+        "seq": 6,
+        "elapsed_ms": 1405,
+        "stage": "model_running",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 2.344,
+      "data": {
+        "type": "progress",
+        "seq": 7,
+        "elapsed_ms": 1811,
+        "stage": "responding",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 2.344,
+      "data": {
+        "type": "content_delta",
+        "index": 1,
+        "text": "已"
+      }
+    },
+    {
+      "seconds": 2.344,
+      "data": {
+        "type": "content_delta",
+        "index": 2,
+        "text": "实际"
+      }
+    },
+    {
+      "seconds": 2.36,
+      "data": {
+        "type": "content_delta",
+        "index": 3,
+        "text": "调用"
+      }
+    },
+    {
+      "seconds": 2.36,
+      "data": {
+        "type": "content_delta",
+        "index": 4,
+        "text": "本地"
+      }
+    },
+    {
+      "seconds": 2.36,
+      "data": {
+        "type": "content_delta",
+        "index": 5,
+        "text": "知识"
+      }
+    },
+    {
+      "seconds": 2.36,
+      "data": {
+        "type": "content_delta",
+        "index": 6,
+        "text": "库"
+      }
+    },
+    {
+      "seconds": 2.375,
+      "data": {
+        "type": "content_delta",
+        "index": 7,
+        "text": "检索"
+      }
+    },
+    {
+      "seconds": 2.375,
+      "data": {
+        "type": "content_delta",
+        "index": 8,
+        "text": "（"
+      }
+    },
+    {
+      "seconds": 2.391,
+      "data": {
+        "type": "content_delta",
+        "index": 9,
+        "text": "中国大陆"
+      }
+    },
+    {
+      "seconds": 2.391,
+      "data": {
+        "type": "content_delta",
+        "index": 10,
+        "text": "、"
+      }
+    },
+    {
+      "seconds": 2.407,
+      "data": {
+        "type": "content_delta",
+        "index": 11,
+        "text": "安全"
+      }
+    },
+    {
+      "seconds": 2.422,
+      "data": {
+        "type": "content_delta",
+        "index": 12,
+        "text": "类"
+      }
+    },
+    {
+      "seconds": 2.422,
+      "data": {
+        "type": "content_delta",
+        "index": 13,
+        "text": "），"
+      }
+    },
+    {
+      "seconds": 2.422,
+      "data": {
+        "type": "content_delta",
+        "index": 14,
+        "text": "命中"
+      }
+    },
+    {
+      "seconds": 2.438,
+      "data": {
+        "type": "content_delta",
+        "index": 15,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 2.438,
+      "data": {
+        "type": "content_delta",
+        "index": 16,
+        "text": "1"
+      }
+    },
+    {
+      "seconds": 2.438,
+      "data": {
+        "type": "content_delta",
+        "index": 17,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 2.438,
+      "data": {
+        "type": "content_delta",
+        "index": 18,
+        "text": "条"
+      }
+    },
+    {
+      "seconds": 2.438,
+      "data": {
+        "type": "content_delta",
+        "index": 19,
+        "text": "候选"
+      }
+    },
+    {
+      "seconds": 2.454,
+      "data": {
+        "type": "content_delta",
+        "index": 20,
+        "text": "依据"
+      }
+    },
+    {
+      "seconds": 2.454,
+      "data": {
+        "type": "content_delta",
+        "index": 21,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 2.454,
+      "data": {
+        "type": "content_delta",
+        "index": 22,
+        "text": "编号"
+      }
+    },
+    {
+      "seconds": 2.454,
+      "data": {
+        "type": "content_delta",
+        "index": 23,
+        "text": "为"
+      }
+    },
+    {
+      "seconds": 2.469,
+      "data": {
+        "type": "content_delta",
+        "index": 24,
+        "text": " S"
+      }
+    },
+    {
+      "seconds": 2.469,
+      "data": {
+        "type": "content_delta",
+        "index": 25,
+        "text": "1"
+      }
+    },
+    {
+      "seconds": 2.469,
+      "data": {
+        "type": "content_delta",
+        "index": 26,
+        "text": "（"
+      }
+    },
+    {
+      "seconds": 2.485,
+      "data": {
+        "type": "content_delta",
+        "index": 27,
+        "text": "该"
+      }
+    },
+    {
+      "seconds": 2.485,
+      "data": {
+        "type": "content_delta",
+        "index": 28,
+        "text": "编号"
+      }
+    },
+    {
+      "seconds": 2.485,
+      "data": {
+        "type": "content_delta",
+        "index": 29,
+        "text": "由"
+      }
+    },
+    {
+      "seconds": 2.485,
+      "data": {
+        "type": "content_delta",
+        "index": 30,
+        "text": "工具"
+      }
+    },
+    {
+      "seconds": 2.5,
+      "data": {
+        "type": "content_delta",
+        "index": 31,
+        "text": "返回"
+      }
+    },
+    {
+      "seconds": 2.5,
+      "data": {
+        "type": "content_delta",
+        "index": 32,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 2.5,
+      "data": {
+        "type": "content_delta",
+        "index": 33,
+        "text": "未"
+      }
+    },
+    {
+      "seconds": 2.5,
+      "data": {
+        "type": "content_delta",
+        "index": 34,
+        "text": "由"
+      }
+    },
+    {
+      "seconds": 2.579,
+      "data": {
+        "type": "content_delta",
+        "index": 35,
+        "text": "我"
+      }
+    },
+    {
+      "seconds": 2.579,
+      "data": {
+        "type": "content_delta",
+        "index": 36,
+        "text": "自行"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 37,
+        "text": "编排"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 38,
+        "text": "）："
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 39,
+        "text": "\n"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 40,
+        "text": "\n"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 41,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 42,
+        "text": " S"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 43,
+        "text": "1"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 44,
+        "text": "《"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 45,
+        "text": "建设工程"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 46,
+        "text": "安全生产"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 47,
+        "text": "管理条例"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 48,
+        "text": "》（"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 49,
+        "text": "国务院"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 50,
+        "text": "令"
+      }
+    },
+    {
+      "seconds": 2.594,
+      "data": {
+        "type": "content_delta",
+        "index": 51,
+        "text": "第"
+      }
+    },
+    {
+      "seconds": 2.61,
+      "data": {
+        "type": "content_delta",
+        "index": 52,
+        "text": "393"
+      }
+    },
+    {
+      "seconds": 2.61,
+      "data": {
+        "type": "content_delta",
+        "index": 53,
+        "text": "号"
+      }
+    },
+    {
+      "seconds": 2.61,
+      "data": {
+        "type": "content_delta",
+        "index": 54,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 2.61,
+      "data": {
+        "type": "content_delta",
+        "index": 55,
+        "text": "200"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 56,
+        "text": "3"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 57,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 58,
+        "text": "11"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 59,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 60,
+        "text": "24"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 61,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 62,
+        "text": "公布"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 63,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 64,
+        "text": "200"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 65,
+        "text": "4"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 66,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 67,
+        "text": "02"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 68,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 2.625,
+      "data": {
+        "type": "content_delta",
+        "index": 69,
+        "text": "01"
+      }
+    },
+    {
+      "seconds": 2.641,
+      "data": {
+        "type": "content_delta",
+        "index": 70,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 2.641,
+      "data": {
+        "type": "content_delta",
+        "index": 71,
+        "text": "施行"
+      }
+    },
+    {
+      "seconds": 2.641,
+      "data": {
+        "type": "content_delta",
+        "index": 72,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 2.641,
+      "data": {
+        "type": "content_delta",
+        "index": 73,
+        "text": "公开"
+      }
+    },
+    {
+      "seconds": 2.641,
+      "data": {
+        "type": "content_delta",
+        "index": 74,
+        "text": "法律"
+      }
+    },
+    {
+      "seconds": 2.641,
+      "data": {
+        "type": "content_delta",
+        "index": 75,
+        "text": "文本"
+      }
+    },
+    {
+      "seconds": 2.641,
+      "data": {
+        "type": "content_delta",
+        "index": 76,
+        "text": "），"
+      }
+    },
+    {
+      "seconds": 2.641,
+      "data": {
+        "type": "content_delta",
+        "index": 77,
+        "text": "对应"
+      }
+    },
+    {
+      "seconds": 2.657,
+      "data": {
+        "type": "content_delta",
+        "index": 78,
+        "text": "条目"
+      }
+    },
+    {
+      "seconds": 2.657,
+      "data": {
+        "type": "content_delta",
+        "index": 79,
+        "text": " KB"
+      }
+    },
+    {
+      "seconds": 2.672,
+      "data": {
+        "type": "content_delta",
+        "index": 80,
+        "text": "-S"
+      }
+    },
+    {
+      "seconds": 2.672,
+      "data": {
+        "type": "content_delta",
+        "index": 81,
+        "text": "AF"
+      }
+    },
+    {
+      "seconds": 2.688,
+      "data": {
+        "type": "content_delta",
+        "index": 82,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 2.688,
+      "data": {
+        "type": "content_delta",
+        "index": 83,
+        "text": "031"
+      }
+    },
+    {
+      "seconds": 2.688,
+      "data": {
+        "type": "content_delta",
+        "index": 84,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 2.688,
+      "data": {
+        "type": "content_delta",
+        "index": 85,
+        "text": "定位"
+      }
+    },
+    {
+      "seconds": 2.704,
+      "data": {
+        "type": "content_delta",
+        "index": 86,
+        "text": "“"
+      }
+    },
+    {
+      "seconds": 2.704,
+      "data": {
+        "type": "content_delta",
+        "index": 87,
+        "text": "第三"
+      }
+    },
+    {
+      "seconds": 2.719,
+      "data": {
+        "type": "content_delta",
+        "index": 88,
+        "text": "十一条"
+      }
+    },
+    {
+      "seconds": 2.719,
+      "data": {
+        "type": "content_delta",
+        "index": 89,
+        "text": "”，"
+      }
+    },
+    {
+      "seconds": 2.719,
+      "data": {
+        "type": "content_delta",
+        "index": 90,
+        "text": "内容"
+      }
+    },
+    {
+      "seconds": 2.719,
+      "data": {
+        "type": "content_delta",
+        "index": 91,
+        "text": "为"
+      }
+    },
+    {
+      "seconds": 2.735,
+      "data": {
+        "type": "content_delta",
+        "index": 92,
+        "text": "**"
+      }
+    },
+    {
+      "seconds": 2.735,
+      "data": {
+        "type": "content_delta",
+        "index": 93,
+        "text": "释义"
+      }
+    },
+    {
+      "seconds": 2.735,
+      "data": {
+        "type": "content_delta",
+        "index": 94,
+        "text": "（"
+      }
+    },
+    {
+      "seconds": 2.75,
+      "data": {
+        "type": "content_delta",
+        "index": 95,
+        "text": "非"
+      }
+    },
+    {
+      "seconds": 2.75,
+      "data": {
+        "type": "content_delta",
+        "index": 96,
+        "text": "原文"
+      }
+    },
+    {
+      "seconds": 2.75,
+      "data": {
+        "type": "content_delta",
+        "index": 97,
+        "text": "照"
+      }
+    },
+    {
+      "seconds": 2.766,
+      "data": {
+        "type": "content_delta",
+        "index": 98,
+        "text": "录"
+      }
+    },
+    {
+      "seconds": 2.766,
+      "data": {
+        "type": "content_delta",
+        "index": 99,
+        "text": "）"
+      }
+    },
+    {
+      "seconds": 2.766,
+      "data": {
+        "type": "content_delta",
+        "index": 100,
+        "text": "**"
+      }
+    },
+    {
+      "seconds": 2.766,
+      "data": {
+        "type": "content_delta",
+        "index": 101,
+        "text": "："
+      }
+    },
+    {
+      "seconds": 2.782,
+      "data": {
+        "type": "content_delta",
+        "index": 102,
+        "text": "现场"
+      }
+    },
+    {
+      "seconds": 2.782,
+      "data": {
+        "type": "content_delta",
+        "index": 103,
+        "text": "应"
+      }
+    },
+    {
+      "seconds": 2.782,
+      "data": {
+        "type": "content_delta",
+        "index": 104,
+        "text": "落实"
+      }
+    },
+    {
+      "seconds": 2.782,
+      "data": {
+        "type": "content_delta",
+        "index": 105,
+        "text": "消防"
+      }
+    },
+    {
+      "seconds": 2.797,
+      "data": {
+        "type": "content_delta",
+        "index": 106,
+        "text": "责任"
+      }
+    },
+    {
+      "seconds": 2.797,
+      "data": {
+        "type": "content_delta",
+        "index": 107,
+        "text": "和"
+      }
+    },
+    {
+      "seconds": 2.797,
+      "data": {
+        "type": "content_delta",
+        "index": 108,
+        "text": "用"
+      }
+    },
+    {
+      "seconds": 2.813,
+      "data": {
+        "type": "content_delta",
+        "index": 109,
+        "text": "火"
+      }
+    },
+    {
+      "seconds": 2.813,
+      "data": {
+        "type": "content_delta",
+        "index": 110,
+        "text": "用电"
+      }
+    },
+    {
+      "seconds": 2.813,
+      "data": {
+        "type": "content_delta",
+        "index": 111,
+        "text": "等"
+      }
+    },
+    {
+      "seconds": 2.813,
+      "data": {
+        "type": "content_delta",
+        "index": 112,
+        "text": "制度"
+      }
+    },
+    {
+      "seconds": 2.813,
+      "data": {
+        "type": "content_delta",
+        "index": 113,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 2.813,
+      "data": {
+        "type": "content_delta",
+        "index": 114,
+        "text": "设置"
+      }
+    },
+    {
+      "seconds": 2.813,
+      "data": {
+        "type": "content_delta",
+        "index": 115,
+        "text": "消防"
+      }
+    },
+    {
+      "seconds": 2.829,
+      "data": {
+        "type": "content_delta",
+        "index": 116,
+        "text": "通道"
+      }
+    },
+    {
+      "seconds": 2.829,
+      "data": {
+        "type": "content_delta",
+        "index": 117,
+        "text": "、"
+      }
+    },
+    {
+      "seconds": 2.829,
+      "data": {
+        "type": "content_delta",
+        "index": 118,
+        "text": "消防"
+      }
+    },
+    {
+      "seconds": 2.829,
+      "data": {
+        "type": "content_delta",
+        "index": 119,
+        "text": "水源"
+      }
+    },
+    {
+      "seconds": 2.829,
+      "data": {
+        "type": "content_delta",
+        "index": 120,
+        "text": "及"
+      }
+    },
+    {
+      "seconds": 2.829,
+      "data": {
+        "type": "content_delta",
+        "index": 121,
+        "text": "相应"
+      }
+    },
+    {
+      "seconds": 2.844,
+      "data": {
+        "type": "content_delta",
+        "index": 122,
+        "text": "设施"
+      }
+    },
+    {
+      "seconds": 2.844,
+      "data": {
+        "type": "content_delta",
+        "index": 123,
+        "text": "器材"
+      }
+    },
+    {
+      "seconds": 2.844,
+      "data": {
+        "type": "content_delta",
+        "index": 124,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 2.844,
+      "data": {
+        "type": "content_delta",
+        "index": 125,
+        "text": "并在"
+      }
+    },
+    {
+      "seconds": 2.86,
+      "data": {
+        "type": "content_delta",
+        "index": 126,
+        "text": "入口"
+      }
+    },
+    {
+      "seconds": 2.86,
+      "data": {
+        "type": "content_delta",
+        "index": 127,
+        "text": "作"
+      }
+    },
+    {
+      "seconds": 2.86,
+      "data": {
+        "type": "content_delta",
+        "index": 128,
+        "text": "明显"
+      }
+    },
+    {
+      "seconds": 2.875,
+      "data": {
+        "type": "content_delta",
+        "index": 129,
+        "text": "标识"
+      }
+    },
+    {
+      "seconds": 2.875,
+      "data": {
+        "type": "content_delta",
+        "index": 130,
+        "text": "。"
+      }
+    },
+    {
+      "seconds": 2.875,
+      "data": {
+        "type": "content_delta",
+        "index": 131,
+        "text": "\n"
+      }
+    },
+    {
+      "seconds": 2.875,
+      "data": {
+        "type": "content_delta",
+        "index": 132,
+        "text": "\n"
+      }
+    },
+    {
+      "seconds": 2.875,
+      "data": {
+        "type": "content_delta",
+        "index": 133,
+        "text": "需要"
+      }
+    },
+    {
+      "seconds": 2.891,
+      "data": {
+        "type": "content_delta",
+        "index": 134,
+        "text": "说明"
+      }
+    },
+    {
+      "seconds": 2.891,
+      "data": {
+        "type": "content_delta",
+        "index": 135,
+        "text": "的"
+      }
+    },
+    {
+      "seconds": 2.907,
+      "data": {
+        "type": "content_delta",
+        "index": 136,
+        "text": "边界"
+      }
+    },
+    {
+      "seconds": 2.922,
+      "data": {
+        "type": "content_delta",
+        "index": 137,
+        "text": "："
+      }
+    },
+    {
+      "seconds": 2.922,
+      "data": {
+        "type": "content_delta",
+        "index": 138,
+        "text": "\n"
+      }
+    },
+    {
+      "seconds": 2.922,
+      "data": {
+        "type": "content_delta",
+        "index": 139,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 2.938,
+      "data": {
+        "type": "content_delta",
+        "index": 140,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 2.938,
+      "data": {
+        "type": "content_delta",
+        "index": 141,
+        "text": "该"
+      }
+    },
+    {
+      "seconds": 2.954,
+      "data": {
+        "type": "content_delta",
+        "index": 142,
+        "text": "条目"
+      }
+    },
+    {
+      "seconds": 2.954,
+      "data": {
+        "type": "content_delta",
+        "index": 143,
+        "text": " scope"
+      }
+    },
+    {
+      "seconds": 2.954,
+      "data": {
+        "type": "content_delta",
+        "index": 144,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 2.954,
+      "data": {
+        "type": "content_delta",
+        "index": 145,
+        "text": "明确"
+      }
+    },
+    {
+      "seconds": 2.969,
+      "data": {
+        "type": "content_delta",
+        "index": 146,
+        "text": "为"
+      }
+    },
+    {
+      "seconds": 2.969,
+      "data": {
+        "type": "content_delta",
+        "index": 147,
+        "text": "“"
+      }
+    },
+    {
+      "seconds": 2.969,
+      "data": {
+        "type": "content_delta",
+        "index": 148,
+        "text": "中国"
+      }
+    },
+    {
+      "seconds": 2.985,
+      "data": {
+        "type": "content_delta",
+        "index": 149,
+        "text": "内地"
+      }
+    },
+    {
+      "seconds": 2.985,
+      "data": {
+        "type": "content_delta",
+        "index": 150,
+        "text": "建设工程"
+      }
+    },
+    {
+      "seconds": 3.0,
+      "data": {
+        "type": "content_delta",
+        "index": 151,
+        "text": "施工现场"
+      }
+    },
+    {
+      "seconds": 3.0,
+      "data": {
+        "type": "content_delta",
+        "index": 152,
+        "text": "消防"
+      }
+    },
+    {
+      "seconds": 3.016,
+      "data": {
+        "type": "content_delta",
+        "index": 153,
+        "text": "管理"
+      }
+    },
+    {
+      "seconds": 3.016,
+      "data": {
+        "type": "content_delta",
+        "index": 154,
+        "text": "”，"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 155,
+        "text": "并"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 156,
+        "text": "说明"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 157,
+        "text": "**"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 158,
+        "text": "不"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 159,
+        "text": "提供"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 160,
+        "text": "具体"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 161,
+        "text": "通道"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 162,
+        "text": "宽度"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 163,
+        "text": "或"
+      }
+    },
+    {
+      "seconds": 3.032,
+      "data": {
+        "type": "content_delta",
+        "index": 164,
+        "text": "处罚"
+      }
+    },
+    {
+      "seconds": 3.047,
+      "data": {
+        "type": "content_delta",
+        "index": 165,
+        "text": "结论"
+      }
+    },
+    {
+      "seconds": 3.047,
+      "data": {
+        "type": "content_delta",
+        "index": 166,
+        "text": "**"
+      }
+    },
+    {
+      "seconds": 3.047,
+      "data": {
+        "type": "content_delta",
+        "index": 167,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 3.047,
+      "data": {
+        "type": "content_delta",
+        "index": 168,
+        "text": "所以"
+      }
+    },
+    {
+      "seconds": 3.063,
+      "data": {
+        "type": "content_delta",
+        "index": 169,
+        "text": "关于"
+      }
+    },
+    {
+      "seconds": 3.079,
+      "data": {
+        "type": "content_delta",
+        "index": 170,
+        "text": "宽度"
+      }
+    },
+    {
+      "seconds": 3.079,
+      "data": {
+        "type": "content_delta",
+        "index": 171,
+        "text": "、"
+      }
+    },
+    {
+      "seconds": 3.094,
+      "data": {
+        "type": "content_delta",
+        "index": 172,
+        "text": "转弯"
+      }
+    },
+    {
+      "seconds": 3.094,
+      "data": {
+        "type": "content_delta",
+        "index": 173,
+        "text": "半径"
+      }
+    },
+    {
+      "seconds": 3.094,
+      "data": {
+        "type": "content_delta",
+        "index": 174,
+        "text": "、"
+      }
+    },
+    {
+      "seconds": 3.094,
+      "data": {
+        "type": "content_delta",
+        "index": 175,
+        "text": "净"
+      }
+    },
+    {
+      "seconds": 3.11,
+      "data": {
+        "type": "content_delta",
+        "index": 176,
+        "text": "空"
+      }
+    },
+    {
+      "seconds": 3.141,
+      "data": {
+        "type": "content_delta",
+        "index": 177,
+        "text": "等"
+      }
+    },
+    {
+      "seconds": 3.141,
+      "data": {
+        "type": "content_delta",
+        "index": 178,
+        "text": "量化"
+      }
+    },
+    {
+      "seconds": 3.141,
+      "data": {
+        "type": "content_delta",
+        "index": 179,
+        "text": "要求"
+      }
+    },
+    {
+      "seconds": 3.141,
+      "data": {
+        "type": "content_delta",
+        "index": 180,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 3.141,
+      "data": {
+        "type": "content_delta",
+        "index": 181,
+        "text": "本次"
+      }
+    },
+    {
+      "seconds": 3.157,
+      "data": {
+        "type": "content_delta",
+        "index": 182,
+        "text": "检索"
+      }
+    },
+    {
+      "seconds": 3.157,
+      "data": {
+        "type": "content_delta",
+        "index": 183,
+        "text": "没有"
+      }
+    },
+    {
+      "seconds": 3.172,
+      "data": {
+        "type": "content_delta",
+        "index": 184,
+        "text": "返回"
+      }
+    },
+    {
+      "seconds": 3.188,
+      "data": {
+        "type": "content_delta",
+        "index": 185,
+        "text": "依据"
+      }
+    },
+    {
+      "seconds": 3.204,
+      "data": {
+        "type": "content_delta",
+        "index": 186,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 3.204,
+      "data": {
+        "type": "content_delta",
+        "index": 187,
+        "text": "不宜"
+      }
+    },
+    {
+      "seconds": 3.204,
+      "data": {
+        "type": "content_delta",
+        "index": 188,
+        "text": "凭"
+      }
+    },
+    {
+      "seconds": 3.204,
+      "data": {
+        "type": "content_delta",
+        "index": 189,
+        "text": "它"
+      }
+    },
+    {
+      "seconds": 3.204,
+      "data": {
+        "type": "content_delta",
+        "index": 190,
+        "text": "下"
+      }
+    },
+    {
+      "seconds": 3.219,
+      "data": {
+        "type": "content_delta",
+        "index": 191,
+        "text": "结论"
+      }
+    },
+    {
+      "seconds": 3.219,
+      "data": {
+        "type": "content_delta",
+        "index": 192,
+        "text": "。"
+      }
+    },
+    {
+      "seconds": 3.235,
+      "data": {
+        "type": "content_delta",
+        "index": 193,
+        "text": "\n"
+      }
+    },
+    {
+      "seconds": 3.235,
+      "data": {
+        "type": "content_delta",
+        "index": 194,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 3.235,
+      "data": {
+        "type": "content_delta",
+        "index": 195,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 3.235,
+      "data": {
+        "type": "content_delta",
+        "index": 196,
+        "text": "本次"
+      }
+    },
+    {
+      "seconds": 3.235,
+      "data": {
+        "type": "content_delta",
+        "index": 197,
+        "text": "仅"
+      }
+    },
+    {
+      "seconds": 3.266,
+      "data": {
+        "type": "content_delta",
+        "index": 198,
+        "text": "命中"
+      }
+    },
+    {
+      "seconds": 3.266,
+      "data": {
+        "type": "content_delta",
+        "index": 199,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 3.282,
+      "data": {
+        "type": "content_delta",
+        "index": 200,
+        "text": "1"
+      }
+    },
+    {
+      "seconds": 3.282,
+      "data": {
+        "type": "content_delta",
+        "index": 201,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 3.282,
+      "data": {
+        "type": "content_delta",
+        "index": 202,
+        "text": "条"
+      }
+    },
+    {
+      "seconds": 3.282,
+      "data": {
+        "type": "content_delta",
+        "index": 203,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 3.282,
+      "data": {
+        "type": "content_delta",
+        "index": 204,
+        "text": "另有"
+      }
+    },
+    {
+      "seconds": 3.297,
+      "data": {
+        "type": "content_delta",
+        "index": 205,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 3.297,
+      "data": {
+        "type": "content_delta",
+        "index": 206,
+        "text": "3"
+      }
+    },
+    {
+      "seconds": 3.297,
+      "data": {
+        "type": "content_delta",
+        "index": 207,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 3.297,
+      "data": {
+        "type": "content_delta",
+        "index": 208,
+        "text": "条"
+      }
+    },
+    {
+      "seconds": 3.297,
+      "data": {
+        "type": "content_delta",
+        "index": 209,
+        "text": "被"
+      }
+    },
+    {
+      "seconds": 3.297,
+      "data": {
+        "type": "content_delta",
+        "index": 210,
+        "text": "排除"
+      }
+    },
+    {
+      "seconds": 3.297,
+      "data": {
+        "type": "content_delta",
+        "index": 211,
+        "text": "；“"
+      }
+    },
+    {
+      "seconds": 3.313,
+      "data": {
+        "type": "content_delta",
+        "index": 212,
+        "text": "检索"
+      }
+    },
+    {
+      "seconds": 3.313,
+      "data": {
+        "type": "content_delta",
+        "index": 213,
+        "text": "为空"
+      }
+    },
+    {
+      "seconds": 3.344,
+      "data": {
+        "type": "content_delta",
+        "index": 214,
+        "text": "/"
+      }
+    },
+    {
+      "seconds": 3.36,
+      "data": {
+        "type": "content_delta",
+        "index": 215,
+        "text": "命中"
+      }
+    },
+    {
+      "seconds": 3.375,
+      "data": {
+        "type": "content_delta",
+        "index": 216,
+        "text": "少"
+      }
+    },
+    {
+      "seconds": 3.391,
+      "data": {
+        "type": "content_delta",
+        "index": 217,
+        "text": "”"
+      }
+    },
+    {
+      "seconds": 3.391,
+      "data": {
+        "type": "content_delta",
+        "index": 218,
+        "text": "不等于"
+      }
+    },
+    {
+      "seconds": 3.391,
+      "data": {
+        "type": "content_delta",
+        "index": 219,
+        "text": "不存在"
+      }
+    },
+    {
+      "seconds": 3.407,
+      "data": {
+        "type": "content_delta",
+        "index": 220,
+        "text": "相关"
+      }
+    },
+    {
+      "seconds": 3.407,
+      "data": {
+        "type": "content_delta",
+        "index": 221,
+        "text": "法规"
+      }
+    },
+    {
+      "seconds": 3.407,
+      "data": {
+        "type": "content_delta",
+        "index": 222,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 3.422,
+      "data": {
+        "type": "content_delta",
+        "index": 223,
+        "text": "只是"
+      }
+    },
+    {
+      "seconds": 3.438,
+      "data": {
+        "type": "content_delta",
+        "index": 224,
+        "text": "本地"
+      }
+    },
+    {
+      "seconds": 3.438,
+      "data": {
+        "type": "content_delta",
+        "index": 225,
+        "text": "已"
+      }
+    },
+    {
+      "seconds": 3.485,
+      "data": {
+        "type": "content_delta",
+        "index": 226,
+        "text": "核"
+      }
+    },
+    {
+      "seconds": 3.516,
+      "data": {
+        "type": "content_delta",
+        "index": 227,
+        "text": "验"
+      }
+    },
+    {
+      "seconds": 3.516,
+      "data": {
+        "type": "content_delta",
+        "index": 228,
+        "text": "目录"
+      }
+    },
+    {
+      "seconds": 3.516,
+      "data": {
+        "type": "content_delta",
+        "index": 229,
+        "text": "中"
+      }
+    },
+    {
+      "seconds": 3.516,
+      "data": {
+        "type": "content_delta",
+        "index": 230,
+        "text": "本次"
+      }
+    },
+    {
+      "seconds": 3.516,
+      "data": {
+        "type": "content_delta",
+        "index": 231,
+        "text": "未"
+      }
+    },
+    {
+      "seconds": 3.516,
+      "data": {
+        "type": "content_delta",
+        "index": 232,
+        "text": "匹配"
+      }
+    },
+    {
+      "seconds": 3.516,
+      "data": {
+        "type": "content_delta",
+        "index": 233,
+        "text": "到"
+      }
+    },
+    {
+      "seconds": 3.547,
+      "data": {
+        "type": "content_delta",
+        "index": 234,
+        "text": "。"
+      }
+    },
+    {
+      "seconds": 3.547,
+      "data": {
+        "type": "content_delta",
+        "index": 235,
+        "text": "\n"
+      }
+    },
+    {
+      "seconds": 3.547,
+      "data": {
+        "type": "content_delta",
+        "index": 236,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 3.547,
+      "data": {
+        "type": "content_delta",
+        "index": 237,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 3.547,
+      "data": {
+        "type": "content_delta",
+        "index": 238,
+        "text": "本地"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 239,
+        "text": "知识"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 240,
+        "text": "检索"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 241,
+        "text": "不是"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 242,
+        "text": "实时"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 243,
+        "text": "网络"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 244,
+        "text": "核"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 245,
+        "text": "验"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 246,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 247,
+        "text": "条目"
+      }
+    },
+    {
+      "seconds": 3.563,
+      "data": {
+        "type": "content_delta",
+        "index": 248,
+        "text": "评审"
+      }
+    },
+    {
+      "seconds": 3.579,
+      "data": {
+        "type": "content_delta",
+        "index": 249,
+        "text": "日期"
+      }
+    },
+    {
+      "seconds": 3.579,
+      "data": {
+        "type": "content_delta",
+        "index": 250,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 3.579,
+      "data": {
+        "type": "content_delta",
+        "index": 251,
+        "text": "202"
+      }
+    },
+    {
+      "seconds": 3.579,
+      "data": {
+        "type": "content_delta",
+        "index": 252,
+        "text": "6"
+      }
+    },
+    {
+      "seconds": 3.579,
+      "data": {
+        "type": "content_delta",
+        "index": 253,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 3.579,
+      "data": {
+        "type": "content_delta",
+        "index": 254,
+        "text": "08"
+      }
+    },
+    {
+      "seconds": 3.579,
+      "data": {
+        "type": "content_delta",
+        "index": 255,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 3.594,
+      "data": {
+        "type": "content_delta",
+        "index": 256,
+        "text": "30"
+      }
+    },
+    {
+      "seconds": 3.594,
+      "data": {
+        "type": "content_delta",
+        "index": 257,
+        "text": "、"
+      }
+    },
+    {
+      "seconds": 3.594,
+      "data": {
+        "type": "content_delta",
+        "index": 258,
+        "text": "复审"
+      }
+    },
+    {
+      "seconds": 3.61,
+      "data": {
+        "type": "content_delta",
+        "index": 259,
+        "text": "到期"
+      }
+    },
+    {
+      "seconds": 3.61,
+      "data": {
+        "type": "content_delta",
+        "index": 260,
+        "text": " "
+      }
+    },
+    {
+      "seconds": 3.61,
+      "data": {
+        "type": "content_delta",
+        "index": 261,
+        "text": "202"
+      }
+    },
+    {
+      "seconds": 3.61,
+      "data": {
+        "type": "content_delta",
+        "index": 262,
+        "text": "6"
+      }
+    },
+    {
+      "seconds": 3.61,
+      "data": {
+        "type": "content_delta",
+        "index": 263,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 3.61,
+      "data": {
+        "type": "content_delta",
+        "index": 264,
+        "text": "11"
+      }
+    },
+    {
+      "seconds": 3.625,
+      "data": {
+        "type": "content_delta",
+        "index": 265,
+        "text": "-"
+      }
+    },
+    {
+      "seconds": 3.625,
+      "data": {
+        "type": "content_delta",
+        "index": 266,
+        "text": "30"
+      }
+    },
+    {
+      "seconds": 3.625,
+      "data": {
+        "type": "content_delta",
+        "index": 267,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 3.625,
+      "data": {
+        "type": "content_delta",
+        "index": 268,
+        "text": "实际"
+      }
+    },
+    {
+      "seconds": 3.625,
+      "data": {
+        "type": "content_delta",
+        "index": 269,
+        "text": "适用"
+      }
+    },
+    {
+      "seconds": 3.641,
+      "data": {
+        "type": "content_delta",
+        "index": 270,
+        "text": "性"
+      }
+    },
+    {
+      "seconds": 3.657,
+      "data": {
+        "type": "content_delta",
+        "index": 271,
+        "text": "仍需"
+      }
+    },
+    {
+      "seconds": 3.657,
+      "data": {
+        "type": "content_delta",
+        "index": 272,
+        "text": "专业人员"
+      }
+    },
+    {
+      "seconds": 3.672,
+      "data": {
+        "type": "content_delta",
+        "index": 273,
+        "text": "结合"
+      }
+    },
+    {
+      "seconds": 3.672,
+      "data": {
+        "type": "content_delta",
+        "index": 274,
+        "text": "项目"
+      }
+    },
+    {
+      "seconds": 3.688,
+      "data": {
+        "type": "content_delta",
+        "index": 275,
+        "text": "情况"
+      }
+    },
+    {
+      "seconds": 3.704,
+      "data": {
+        "type": "content_delta",
+        "index": 276,
+        "text": "核实"
+      }
+    },
+    {
+      "seconds": 3.704,
+      "data": {
+        "type": "content_delta",
+        "index": 277,
+        "text": "。"
+      }
+    },
+    {
+      "seconds": 3.704,
+      "data": {
+        "type": "content_delta",
+        "index": 278,
+        "text": "\n"
+      }
+    },
+    {
+      "seconds": 3.704,
+      "data": {
+        "type": "content_delta",
+        "index": 279,
+        "text": "\n"
+      }
+    },
+    {
+      "seconds": 3.704,
+      "data": {
+        "type": "content_delta",
+        "index": 280,
+        "text": "如果你"
+      }
+    },
+    {
+      "seconds": 3.719,
+      "data": {
+        "type": "content_delta",
+        "index": 281,
+        "text": "需要"
+      }
+    },
+    {
+      "seconds": 3.719,
+      "data": {
+        "type": "content_delta",
+        "index": 282,
+        "text": "的是"
+      }
+    },
+    {
+      "seconds": 3.719,
+      "data": {
+        "type": "content_delta",
+        "index": 283,
+        "text": "宽度"
+      }
+    },
+    {
+      "seconds": 3.735,
+      "data": {
+        "type": "content_delta",
+        "index": 284,
+        "text": "、"
+      }
+    },
+    {
+      "seconds": 3.75,
+      "data": {
+        "type": "content_delta",
+        "index": 285,
+        "text": "净"
+      }
+    },
+    {
+      "seconds": 3.75,
+      "data": {
+        "type": "content_delta",
+        "index": 286,
+        "text": "空"
+      }
+    },
+    {
+      "seconds": 3.766,
+      "data": {
+        "type": "content_delta",
+        "index": 287,
+        "text": "、"
+      }
+    },
+    {
+      "seconds": 3.766,
+      "data": {
+        "type": "content_delta",
+        "index": 288,
+        "text": "与其他"
+      }
+    },
+    {
+      "seconds": 3.782,
+      "data": {
+        "type": "content_delta",
+        "index": 289,
+        "text": "设施"
+      }
+    },
+    {
+      "seconds": 3.782,
+      "data": {
+        "type": "content_delta",
+        "index": 290,
+        "text": "间距"
+      }
+    },
+    {
+      "seconds": 3.813,
+      "data": {
+        "type": "content_delta",
+        "index": 291,
+        "text": "等"
+      }
+    },
+    {
+      "seconds": 3.813,
+      "data": {
+        "type": "content_delta",
+        "index": 292,
+        "text": "具体"
+      }
+    },
+    {
+      "seconds": 3.813,
+      "data": {
+        "type": "content_delta",
+        "index": 293,
+        "text": "数值"
+      }
+    },
+    {
+      "seconds": 3.813,
+      "data": {
+        "type": "content_delta",
+        "index": 294,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 3.829,
+      "data": {
+        "type": "content_delta",
+        "index": 295,
+        "text": "请"
+      }
+    },
+    {
+      "seconds": 3.829,
+      "data": {
+        "type": "content_delta",
+        "index": 296,
+        "text": "补充"
+      }
+    },
+    {
+      "seconds": 3.829,
+      "data": {
+        "type": "content_delta",
+        "index": 297,
+        "text": "省份"
+      }
+    },
+    {
+      "seconds": 3.829,
+      "data": {
+        "type": "content_delta",
+        "index": 298,
+        "text": "/"
+      }
+    },
+    {
+      "seconds": 3.844,
+      "data": {
+        "type": "content_delta",
+        "index": 299,
+        "text": "地区"
+      }
+    },
+    {
+      "seconds": 3.844,
+      "data": {
+        "type": "content_delta",
+        "index": 300,
+        "text": "、"
+      }
+    },
+    {
+      "seconds": 3.844,
+      "data": {
+        "type": "content_delta",
+        "index": 301,
+        "text": "工程"
+      }
+    },
+    {
+      "seconds": 3.86,
+      "data": {
+        "type": "content_delta",
+        "index": 302,
+        "text": "类型"
+      }
+    },
+    {
+      "seconds": 3.86,
+      "data": {
+        "type": "content_delta",
+        "index": 303,
+        "text": "和"
+      }
+    },
+    {
+      "seconds": 3.875,
+      "data": {
+        "type": "content_delta",
+        "index": 304,
+        "text": "用途"
+      }
+    },
+    {
+      "seconds": 3.891,
+      "data": {
+        "type": "content_delta",
+        "index": 305,
+        "text": "场景"
+      }
+    },
+    {
+      "seconds": 3.891,
+      "data": {
+        "type": "content_delta",
+        "index": 306,
+        "text": "，"
+      }
+    },
+    {
+      "seconds": 3.907,
+      "data": {
+        "type": "content_delta",
+        "index": 307,
+        "text": "我可以"
+      }
+    },
+    {
+      "seconds": 3.907,
+      "data": {
+        "type": "content_delta",
+        "index": 308,
+        "text": "再"
+      }
+    },
+    {
+      "seconds": 3.922,
+      "data": {
+        "type": "content_delta",
+        "index": 309,
+        "text": "检索"
+      }
+    },
+    {
+      "seconds": 3.938,
+      "data": {
+        "type": "content_delta",
+        "index": 310,
+        "text": "一次"
+      }
+    },
+    {
+      "seconds": 3.954,
+      "data": {
+        "type": "content_delta",
+        "index": 311,
+        "text": "；"
+      }
+    },
+    {
+      "seconds": 3.954,
+      "data": {
+        "type": "content_delta",
+        "index": 312,
+        "text": "也可以"
+      }
+    },
+    {
+      "seconds": 3.969,
+      "data": {
+        "type": "content_delta",
+        "index": 313,
+        "text": "帮你"
+      }
+    },
+    {
+      "seconds": 3.985,
+      "data": {
+        "type": "content_delta",
+        "index": 314,
+        "text": "梳理"
+      }
+    },
+    {
+      "seconds": 4.0,
+      "data": {
+        "type": "content_delta",
+        "index": 315,
+        "text": "现场"
+      }
+    },
+    {
+      "seconds": 4.016,
+      "data": {
+        "type": "content_delta",
+        "index": 316,
+        "text": "消防"
+      }
+    },
+    {
+      "seconds": 4.016,
+      "data": {
+        "type": "content_delta",
+        "index": 317,
+        "text": "通道"
+      }
+    },
+    {
+      "seconds": 4.016,
+      "data": {
+        "type": "content_delta",
+        "index": 318,
+        "text": "自查"
+      }
+    },
+    {
+      "seconds": 4.047,
+      "data": {
+        "type": "content_delta",
+        "index": 319,
+        "text": "的关注"
+      }
+    },
+    {
+      "seconds": 4.047,
+      "data": {
+        "type": "content_delta",
+        "index": 320,
+        "text": "点"
+      }
+    },
+    {
+      "seconds": 4.047,
+      "data": {
+        "type": "content_delta",
+        "index": 321,
+        "text": "清单"
+      }
+    },
+    {
+      "seconds": 4.047,
+      "data": {
+        "type": "content_delta",
+        "index": 322,
+        "text": "。"
+      }
+    },
+    {
+      "seconds": 6.579,
+      "data": {
+        "type": "progress",
+        "seq": 8,
+        "elapsed_ms": 6046,
+        "stage": "validating",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 6.594,
+      "data": {
+        "type": "progress",
+        "seq": 9,
+        "elapsed_ms": 6061,
+        "stage": "completed",
+        "tool": null
+      }
+    },
+    {
+      "seconds": 6.594,
+      "data": {
+        "type": "result",
+        "data": {
+          "consultation_id": "TXT-821fbe940c064351a9deed6af22d9c2b",
+          "turn": 1,
+          "mode": "real",
+          "model": "deepseek-v4-flash",
+          "reply": {
+            "answer": "已实际调用本地知识库检索（中国大陆、安全类），命中 1 条候选依据，编号为 S1（该编号由工具返回，未由我自行编排）：\n\n- S1《建设工程安全生产管理条例》（国务院令第393号，2003-11-24 公布，2004-02-01 施行，公开法律文本），对应条目 KB-SAF-031，定位“第三十一条”，内容为**释义（非原文照录）**：现场应落实消防责任和用火用电等制度，设置消防通道、消防水源及相应设施器材，并在入口作明显标识。\n\n需要说明的边界：\n- 该条目 scope 明确为“中国内地建设工程施工现场消防管理”，并说明**不提供具体通道宽度或处罚结论**，所以关于宽度、转弯半径、净空等量化要求，本次检索没有返回依据，不宜凭它下结论。\n- 本次仅命中 1 条，另有 3 条被排除；“检索为空/命中少”不等于不存在相关法规，只是本地已核验目录中本次未匹配到。\n- 本地知识检索不是实时网络核验，条目评审日期 2026-08-30、复审到期 2026-11-30，实际适用性仍需专业人员结合项目情况核实。\n\n如果你需要的是宽度、净空、与其他设施间距等具体数值，请补充省份/地区、工程类型和用途场景，我可以再检索一次；也可以帮你梳理现场消防通道自查的关注点清单。",
+            "follow_up_questions": [
+              "你所在的省份/直辖市和工程类型是什么（房建、市政、临时设施等）？",
+              "你关注的是消防通道的宽度、净空、转弯半径，还是占用堵塞等现场管理问题？",
+              "通道现状是已设置待验收，还是存在被占用、堆料等实际情形？"
+            ],
+            "analysis": {
+              "category": "consultation",
+              "issue_type": "施工现场消防通道法规依据查询",
+              "summary": "用户要求实际调用本地知识库检索中国大陆施工现场消防通道相关条目，并按返回的真实条目作简短回答。检索命中1条候选依据，属于一般性法规咨询，未涉及具体现场事件。",
+              "observed_facts": [
+                "用户明确要求检索范围为中国大陆施工现场消防通道，并指定使用search_knowledge工具",
+                "工具返回状态为matched，命中1条候选依据（KB-SAF-031，来源SRC-SAFETY-393）",
+                "该条目为释义型内容，指向《建设工程安全生产管理条例》第三十一条，涉及设置消防通道、消防水源及设施器材并在入口作明显标识",
+                "条目scope声明不提供具体通道宽度或处罚结论",
+                "另有3条被排除，本地知识检索非实时网络核验"
+              ],
+              "uncertainties": [
+                "用户具体项目所在省份/地区未知，无法判断地方性规定适用性",
+                "用户关注的是量化指标（宽度、净空等）还是管理性问题不明确",
+                "条例文本为2003年公布、2004年施行版本，是否已被后续修订或地方文件细化为现行有效版本，需专业人员核实",
+                "条目为释义而非原文照录，不宜作为条文原文引用"
+              ],
+              "missing_fields": [
+                "项目所在省级行政区",
+                "工程类型（房建/市政/临时设施等）",
+                "关注的具体指标或现场情形",
+                "如需判定现场是否合规，需现场实际情况描述"
+              ],
+              "risk_level": "undetermined",
+              "immediate_actions": [],
+              "suggested_actions": [
+                "如需量化要求，补充地区与工程类型后再次检索本地目录",
+                "由项目安全管理人员对照现行有效法规和项目所在地要求核实",
+                "如现场已有通道被占用等实际情形，另行按现场事件描述以便分类研判"
+              ],
+              "recommended_route": "collect_more_info",
+              "requires_human_review": true,
+              "confidence": 0.72
+            }
+          },
+          "can_propose": false,
+          "risk_retained": false,
+          "remaining_turns": 49,
+          "context_trimmed": false,
+          "analysis_status": "validated",
+          "sources": [
+            {
+              "id": "S1",
+              "url": "https://hbj.nea.gov.cn/xxgk/fdzdgknr/hbjgfl/flwj/202311/t20231105_196004.html",
+              "title": "建设工程安全生产管理条例",
+              "excerpt": "第三十一条（释义，非原文） 现场应落实消防责任和用火用电等制度，设置消防通道、消防水源及相应设施器材，并在入口作明显标识。；适用范围：中国内地建设工程施工现场消防管理，不提供具体通道宽度或处罚结论。；复核日期：2026-08-30"
+            }
+          ],
+          "tool_results": [
+            {
+              "tool": "search_knowledge",
+              "ok": true,
+              "summary": "检索到 1 条候选依据，适用性须由专业人员核实。"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "total_seconds": 6.594
+}

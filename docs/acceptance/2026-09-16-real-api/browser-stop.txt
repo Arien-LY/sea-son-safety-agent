@@ -1,0 +1,4 @@
+Script ran on page and returned:
+```json
+{"pending":{"request_id":"1a63b7ae-ffa4-42ea-8e51-fc66a96c85be","intent":"auto","input":{"message":"合成验收停止测试：请用约600字解释版本控制中的分支、提交和合并。","project":null,"area":null,"requester_role":null},"thinking_mode":"deep","tools_enabled":true,"model":"deepseek-v4-flash","consultation_id":null,"expected_turn":0,"allow_external":true},"stopClicked":true,"main":"AI 对话\n\n新建聊天\n\n可以日常交流，也可以描述现场问题；AI 判断需要跟进时会打开对应工单申请，保存前仍需人工确认。\n\nAI 已配置\n你好，今天想聊点什么？\n\n回答仅供参考；涉及现场问题时请说明位置、状态和影响，提交及专业结论仍由人工确认。\n\n日常问答\n日期、常识，随时聊聊\n帮我写作\n整理表达与文字草稿\n解释概念\n把复杂知识说清楚\n\n已停止等待，服务端可能仍在处理或计费；原请求已保留，可稍后手动重试 未自动重试，输入已保留。\n\n工具\n＋ 图片\n⌁ 背景\n回复方式\n快速回复\n深度思考\n模型\nDeepSeek V4 Flash\nDeepSeek V4 Pro\n自定义…\n33/16000\n↑\nDeepSeek · Enter 发送\n新建聊天\n联网搜索未配置 · 规范检索、计算与网页工具"}
+```
