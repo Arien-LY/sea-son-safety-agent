@@ -53,7 +53,7 @@ tests\test_windows_release.py ......................                     [100%]
 
 tests/test_phase6_evaluation.py::test_cli_generates_the_same_report_without_model_or_network
   E:\中建国际海之子大赛\sea-son-safety-agent\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-266 (_readerthread)
-  
+
   Traceback (most recent call last):
     File "C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1075, in _bootstrap_inner
       self.run()
@@ -63,7 +63,7 @@ tests/test_phase6_evaluation.py::test_cli_generates_the_same_report_without_mode
       buffer.append(fh.read())
                     ^^^^^^^^^
   UnicodeDecodeError: 'gbk' codec can't decode byte 0xad in position 29: illegal multibyte sequence
-  
+
   Enable tracemalloc to get traceback where the object was allocated.
   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
     warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
