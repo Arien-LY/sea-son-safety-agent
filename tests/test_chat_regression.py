@@ -73,7 +73,7 @@ def test_auto_has_paired_history_and_independent_latest_message(transport):
         assert [m["role"] for m in messages] == ["system"] + ["user", "assistant"] * (n - 1) + ["user"]
         assert json.loads(messages[-1]["content"])["message"] == question
         assert "user_statements" not in messages[-1]["content"]
-        assert [m["content"] for m in messages if m["role"] == "assistant"] == [f"第{i}轮合成回答" for i in range(1, n)]
+        assert [json.loads(m["content"])["answer"] for m in messages if m["role"] == "assistant"] == [f"第{i}轮合成回答" for i in range(1, n)]
         assert "不要重新回答历史问题" in messages[0]["content"]
 
 
@@ -171,7 +171,7 @@ def test_invalid_analysis_keeps_answer_without_ticket_or_extra_call(transport, c
     transport.payload = reply_payload()
     next_result = app.send(request(2, result))
     assert next_result.analysis_status == "validated"
-    assert transport.calls[-1]["messages"][-2]["content"] == "完整可用的回答"
+    assert json.loads(transport.calls[-1]["messages"][-2]["content"]) == {"answer": "完整可用的回答"}
 
 
 @pytest.mark.parametrize("risk", ["low", "high"])
