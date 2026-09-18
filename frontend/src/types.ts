@@ -15,9 +15,12 @@ export interface TextTurnRequest {
   consultation_id: string | null;
   expected_turn: number;
   allow_external: boolean;
+  photo_id?: string | null;
+  allow_image_external?: boolean;
 }
 
 export interface TextTurnResponse {
+  photo_id?: string | null;
   consultation_id: string;
   turn: number;
   mode: "mock" | "real";
@@ -93,6 +96,8 @@ export interface VisionRuntime {
   external_provider: string | null;
   available_models?: string[];
   custom_model_allowed?: boolean;
+  image_configured?: boolean;
+  image_model?: string;
   web_tools?: { search_configured: boolean; search_provider: string; read_webpage: boolean; current_time: boolean };
 }
 

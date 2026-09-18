@@ -77,12 +77,13 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(create_photo_router(photo_service or PhotoService(
+    photo_boundary = photo_service or PhotoService(
         PhotoStore(Path(os.getenv("PHOTO_STORE_PATH", "uploads"))),
         proposal_boundary, workflow_boundary,
-    )))
+    )
+    app.include_router(create_photo_router(photo_boundary))
     app.include_router(create_product_router(text_service or TextConsultationService(
-        proposal_boundary, store_path=Path(os.getenv("CHAT_STORE_PATH", str(workflow_boundary.store.path.parent / "chat-sessions.sqlite3")))), workflow_boundary))
+        proposal_boundary, photo_store=photo_boundary.store, store_path=Path(os.getenv("CHAT_STORE_PATH", str(workflow_boundary.store.path.parent / "chat-sessions.sqlite3")))), workflow_boundary))
 
     @app.get("/health")
     def health() -> dict[str, str]:

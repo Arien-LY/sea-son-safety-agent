@@ -37,7 +37,6 @@ function rememberChat(id: string) {
   window.dispatchEvent(new Event('sea-son-chat-saved'));
   if (isConversation.value) void router.replace({ path: '/chat', query: id ? { chat: id } : { new: String(Date.now()) } });
 }
-const showImages = ref(false);
 const loadingRecord = ref(false);
 const recordError = ref("");
 const textAnalysis = ref<IssueAnalysis | null>(null);
@@ -129,7 +128,6 @@ watch(() => route.fullPath, () => {
   const keepTransferred = isSubmit.value && transferredAnalysis.value !== null;
   proposal.value = null; confirmed.value = null; editedFields.value = null;
   if (!keepTransferred) { textAnalysis.value = null; transferredAnalysis.value = null; }
-  showImages.value = false;
   void loadRecord();
 }, { immediate: true });
 watch(editedFields, () => { confirmed.value = null; saveKey = ""; }, { deep: true });
@@ -317,7 +315,7 @@ function displayValue(value: string | null): string {
   </section>
 
   <fieldset class="workspace-fields" :class="{ 'conversation-fields': isConversation }" :disabled="routeBlocking || loadingRecord" aria-label="咨询和工单操作区">
-  <TextPanel v-if="isConversation" mode="auto" :session-id="typeof route.query.chat === 'string' ? route.query.chat : undefined" :new-chat-key="String(route.query.new || '')" @session="rememberChat" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @ticket="openTicketFromAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" @attachment="showImages = true" />
+  <TextPanel v-if="isConversation" mode="auto" :session-id="typeof route.query.chat === 'string' ? route.query.chat : undefined" :new-chat-key="String(route.query.new || '')" @session="rememberChat" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @ticket="openTicketFromAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" :disabled="routeBlocking || loadingRecord" />
   <fieldset class="business-fields" :disabled="working || loadingRecord" aria-label="工单和附件操作区">
   <div v-if="isDetail" class="record-toolbar"><RouterLink to="/records" class="secondary-button">← 返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新详情</button></div>
   <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在读取工单详情</strong><small>正在获取处理记录…</small></p></div>
@@ -562,10 +560,6 @@ function displayValue(value: string | null): string {
     </div>
   </section>
 
-  <section v-if="isConversation && showImages" class="attachment-surface">
-    <div class="attachment-head"><div><p class="eyebrow">图片附件</p><h2>添加单张现场图片</h2></div><button type="button" class="secondary-button" @click="showImages = false">收起</button></div>
-    <ImagePanel :record="record" @proposal="usePhotoProposal" @busy="imageBusy = $event" />
-  </section>
   <ImagePanel v-if="isDetail" :record="record" evidence-only @proposal="usePhotoProposal" @busy="imageBusy = $event" />
   <KnowledgePanel v-if="activeAnalysis && (isDetail || isSubmit)" :analysis="activeAnalysis" :record="record" />
   </fieldset>
@@ -581,9 +575,6 @@ function displayValue(value: string | null): string {
 .workspace-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
 .business-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
 .record-toolbar { display: flex; gap: 10px; margin-bottom: 18px; }
-.attachment-surface { margin-top: 24px; }
-.attachment-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.attachment-head h2 { margin: 4px 0 0; }
 .direct-submit { margin-top: 18px; }
 .record-description { white-space: pre-wrap; line-height: 1.7; }
 .analysis-detail { padding: 16px; background: #f5f8fc; border-radius: 12px; overflow-wrap: anywhere; }

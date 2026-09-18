@@ -5,16 +5,24 @@ import { categoryNames, riskNames } from "../customerLabels";
 import { renderAssistantMarkdown } from "../markdown";
 import type { IssueAnalysis, IssueProposalPreviewData, TextTurnRequest, TextTurnResponse, VisionRuntime, TextProgress, TextContentDelta } from "../types";
 
-const props = defineProps<{ mode: "chat" | "consult" | "auto"; sessionId?: string; newChatKey?: string }>();
+const props = defineProps<{ mode: "chat" | "consult" | "auto"; sessionId?: string; newChatKey?: string; disabled?: boolean }>();
 const emit = defineEmits<{
   proposal: [data: IssueProposalPreviewData];
   analysis: [data: IssueAnalysis | null];
   busy: [value: boolean];
   proposing: [value: boolean];
-  attachment: [];
   ticket: [analysis: IssueAnalysis];
   session: [id: string];
 }>();
+const attachmentInput = ref<HTMLInputElement | null>(null);
+const attachment = ref<File | null>(null);
+const attachmentUrl = ref("");
+const attachmentError = ref("");
+const attachmentPhotoId = ref<string | null>(null);
+const imageConsent = ref(false);
+const hasAttachment = computed(() => Boolean(attachment.value || attachmentPhotoId.value));
+const attachmentPreview = computed(() => attachmentUrl.value || (attachmentPhotoId.value ? api.photoContentUrl(attachmentPhotoId.value) : ""));
+const attachmentLocked = computed(() => busy.value || restoring.value || props.disabled);
 const runtime = ref<VisionRuntime | null>(null);
 const form = reactive({ message: "", project: "", area: "", requester_role: "" });
 const busy = ref(false);
@@ -68,6 +76,8 @@ async function restoreSession(force = false) {
         thinkingMode.value = saved.thinking_mode || 'fast';
         if (saved.model) modelChoice.value = saved.model;
         toolsEnabled.value = saved.tools_enabled ?? false;
+        attachmentPhotoId.value = saved.photo_id || null;
+        imageConsent.value = false;
         pending = saved.expected_turn === (latest.value?.turn || 0) ? saved : null;
         error.value = pending ? '上次请求尚未确认完成；可手动重试，服务端会复用已保存结果。' : '会话已更新；原输入已恢复，请核对最新回复后发送。';
       }
@@ -119,9 +129,10 @@ const maxInput = computed(() => props.mode === "consult" ? 1000 : 16_000);
 const maxTurns = computed(() => props.mode === "consult" ? 6 : 50);
 const selectedModel = computed(() => modelChoice.value === "__custom__" ? customModel.value.trim() : modelChoice.value);
 const modelReady = computed(() => runtime.value?.mode === "mock" || /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/.test(selectedModel.value));
-const canSend = computed(() => !restoring.value && !busy.value && !proposed.value && runtime.value?.configured && Boolean(form.message.trim())
+const canSend = computed(() => !props.disabled && !restoring.value && !busy.value && !proposed.value && runtime.value?.configured && Boolean(form.message.trim() || hasAttachment.value)
+  && (!hasAttachment.value || (imageConsent.value && runtime.value?.image_configured))
   && modelReady.value && form.message.length <= maxInput.value && (latest.value?.remaining_turns ?? maxTurns.value) > 0);
-const dirty = computed(() => Boolean(form.message.trim()));
+const dirty = computed(() => Boolean(form.message.trim() || hasAttachment.value));
 const canCreateProposal = computed(() => props.mode === "consult" && latest.value?.can_propose && !proposed.value);
 function modelLabel(model: string) {
   if (!model) return "模型检查中";
@@ -154,7 +165,7 @@ watch([pendingMessage, streamedAnswer, () => turns.value.length], async () => {
   await nextTick();
   messageStage.value?.scrollTo({ top: messageStage.value.scrollHeight });
 });
-onBeforeUnmount(() => { ++restoreGeneration; cancelActiveRequest(); });
+onBeforeUnmount(() => { ++restoreGeneration; cancelActiveRequest(); clearAttachment(); });
 
 function cancelActiveRequest() {
   stopProgress();
@@ -165,6 +176,7 @@ function cancelActiveRequest() {
 }
 
 function stopWaiting() {
+  imageConsent.value = false;
   const savedRequest = pending;
   const message = pendingMessage.value;
   cancelActiveRequest();
@@ -179,6 +191,7 @@ function reset(force = false) {
   if (busy.value && !force) return;
   if (force) cancelActiveRequest();
   busy.value = false;
+  clearAttachment();
   latest.value = null; turns.value = []; proposed.value = false; error.value = "";
   form.message = ""; pending = null; pendingMessage.value = ""; contextOpen.value = false; emit("analysis", null);
   steps.value = []; streamedAnswer.value = ""; elapsedSeconds.value = 0;
@@ -190,7 +203,7 @@ function newConversation() {
 async function send() {
   if (!canSend.value) return;
   busy.value = true; error.value = "";
-  const input = { message: form.message.trim(), project: form.project.trim() || null,
+  const input = { message: form.message.trim() || "请描述这张图片中的可见内容；不确定的地方请说明。", project: form.project.trim() || null,
     area: form.area.trim() || null, requester_role: form.requester_role.trim() || null };
   pendingMessage.value = input.message;
   form.message = "";
@@ -198,12 +211,18 @@ async function send() {
   activeRequest = requestController;
   try {
     beginProgress();
+    if (attachment.value && !attachmentPhotoId.value) {
+      const uploaded = await api.uploadPhoto(attachment.value, requestController.signal);
+      if (requestController.signal.aborted) return;
+      attachmentPhotoId.value = uploaded.photo_id;
+    }
     pending ||= { request_id: requestId(), intent: "auto", input,
       thinking_mode: thinkingMode.value,
       tools_enabled: toolsEnabled.value,
-      model: selectedModel.value || null,
+      model: hasAttachment.value && runtime.value?.mode === "real" ? runtime.value.image_model || null : selectedModel.value || null,
       consultation_id: latest.value?.consultation_id || null, expected_turn: latest.value?.turn || 0,
-      allow_external: runtime.value?.mode === "real" };
+      allow_external: runtime.value?.mode === "real",
+      ...(attachmentPhotoId.value ? { photo_id: attachmentPhotoId.value, allow_image_external: imageConsent.value && runtime.value?.mode === "real" } : {}) };
     savePending(pending);
     activeThinking.value = pending.thinking_mode || "fast";
     const receiveProgress = (step: TextProgress) => {
@@ -218,6 +237,7 @@ async function send() {
     stopProgress();
     if (!turns.value.some(turn => turn.result.turn === result.turn)) turns.value.push({ message: input.message, result, seconds: elapsedSeconds.value, steps: [...steps.value], thinking: activeThinking.value });
     savePending(null);
+    clearAttachment();
     pendingMessage.value = ""; streamedAnswer.value = ""; pending = null;
     emit('session', result.consultation_id);
     const analysisAvailable = !result.analysis_status || result.analysis_status === "validated";
@@ -225,7 +245,7 @@ async function send() {
     if (analysisAvailable && result.can_propose) emit("ticket", result.reply.analysis);
   } catch (cause) {
     if (requestController.signal.aborted) return;
-    error.value = !pending ? "发送准备失败，请刷新页面或更换浏览器后重试。" : cause instanceof Error ? cause.message : String(cause);
+    error.value = cause instanceof Error ? cause.message : String(cause);
     form.message = pendingMessage.value;
     pendingMessage.value = "";
     streamedAnswer.value = "";
@@ -234,8 +254,51 @@ async function send() {
       stopProgress();
       activeRequest = null;
       busy.value = false;
+      imageConsent.value = false;
     }
   }
+}
+
+function clearAttachment() {
+  if (attachmentUrl.value) URL.revokeObjectURL(attachmentUrl.value);
+  attachment.value = null;
+  attachmentPhotoId.value = null;
+  imageConsent.value = false;
+  attachmentUrl.value = "";
+  attachmentError.value = "";
+  if (attachmentInput.value) attachmentInput.value.value = "";
+}
+function removeAttachment() {
+  if (!attachmentLocked.value) { clearAttachment(); pending = null; savePending(null); }
+}
+function selectAttachment(files: FileList | File[]) {
+  if (attachmentLocked.value || !files.length) return;
+  if (files.length !== 1 || !["image/jpeg", "image/png"].includes(files[0].type) || files[0].size > 5 * 1024 * 1024) {
+    attachmentError.value = "请选择一张不超过5MiB的JPEG/PNG图片。";
+    return;
+  }
+  clearAttachment();
+  pending = null; savePending(null);
+  attachment.value = files[0];
+  attachmentUrl.value = URL.createObjectURL(files[0]);
+}
+function onAttachmentChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files) selectAttachment(input.files);
+  input.value = "";
+}
+function openAttachment() {
+  if (!attachmentLocked.value) attachmentInput.value?.click();
+}
+function onFileDragover(event: DragEvent) {
+  if (!event.dataTransfer?.types.includes('Files')) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = attachmentLocked.value ? 'none' : 'copy';
+}
+function onFileDrop(event: DragEvent) {
+  if (!event.dataTransfer?.types.includes('Files')) return;
+  event.preventDefault();
+  selectAttachment(event.dataTransfer.files);
 }
 
 function onComposerKeydown(event: KeyboardEvent) {
@@ -260,7 +323,7 @@ async function propose() {
 </script>
 
 <template>
-  <section class="conversation-workspace" aria-labelledby="chat-title">
+  <section class="conversation-workspace" aria-labelledby="chat-title" @dragover="onFileDragover" @drop="onFileDrop">
     <header class="conversation-header">
       <div class="conversation-header-inner">
         <div>
@@ -287,7 +350,7 @@ async function propose() {
 
       <ol v-else class="conversation" aria-label="当前会话消息" aria-live="polite">
         <li v-for="turn in turns" :key="turn.result.turn">
-          <div class="message-row user-row" aria-label="你的消息" role="group"><div class="message-body user-message"><p>{{ turn.message }}</p></div></div>
+          <div class="message-row user-row" aria-label="你的消息" role="group"><div class="message-body user-message"><div v-if="turn.result.photo_id" class="sent-attachment"><img :src="api.photoContentUrl(turn.result.photo_id)" alt="本轮图片" /><small>本轮包含图片</small></div><p>{{ turn.message }}</p></div></div>
           <div class="message-row assistant-row" aria-label="助手回复" role="group">
             <div class="message-body assistant-message">
               <div class="markdown-body" v-html="renderAssistantMarkdown(turn.result.mode === 'mock' ? 'AI 服务尚未启用。请在软件的模型设置中填写自己的密钥并启用 AI；也可以直接通过左侧“提交工单”填写问题。' : turn.result.reply.answer)"></div>
@@ -313,7 +376,7 @@ async function propose() {
           </div>
         </li>
         <li v-if="pendingMessage" class="pending-turn">
-          <div class="message-row user-row" aria-label="你的消息" role="group"><div class="message-body user-message"><p>{{ pendingMessage }}</p></div></div>
+          <div class="message-row user-row" aria-label="你的消息" role="group"><div class="message-body user-message"><div v-if="hasAttachment" class="sent-attachment"><img :src="attachmentPreview" alt="本轮待发送图片" /><small>本轮包含图片</small></div><p>{{ pendingMessage }}</p></div></div>
           <div v-if="streamedAnswer && runtime?.mode === 'real'" class="message-row assistant-row" aria-label="助手正在回复" role="group"><div class="message-body assistant-message streaming-answer"><div class="markdown-body" v-html="renderAssistantMarkdown(streamedAnswer)"></div><span class="stream-caret" aria-hidden="true"></span></div></div>
         </li>
       </ol>
@@ -336,11 +399,19 @@ async function propose() {
         <button type="button" class="primary-button" :disabled="busy || dirty" @click="propose">生成待确认提案</button>
       </div>
       <div class="composer">
+        <input ref="attachmentInput" type="file" accept="image/jpeg,image/png" hidden :disabled="attachmentLocked" @change="onAttachmentChange" />
+        <div v-if="hasAttachment" class="composer-attachment">
+          <img :src="attachmentPreview" :alt="attachment?.name || '待发送图片'" />
+          <button type="button" class="attachment-remove" :disabled="attachmentLocked" aria-label="移除图片" title="移除图片" @click="removeAttachment">×</button>
+        </div>
+        <label v-if="hasAttachment" class="image-consent"><input v-model="imageConsent" type="checkbox" :disabled="attachmentLocked" />{{ runtime?.mode === 'real' ? '图片已打码且有权上传；本次允许将图片与文字发送至 DeepSeek 并承担费用' : '图片已打码且有权上传（AI 服务未启用，不识图也不外发）' }}</label>
+        <p v-if="hasAttachment" class="attachment-note">{{ runtime?.mode === 'mock' ? 'AI 服务未启用，图片仅在本机校验和保存，不会被理解或外发' : runtime?.image_configured ? '本轮图片使用 ' + runtime.image_model : '图片服务未配置，请配置图片服务或移除附件' }}</p>
+        <p v-if="attachmentError" class="attachment-error" role="alert">{{ attachmentError }}</p>
         <textarea v-model="form.message" :maxlength="maxInput" rows="1" :disabled="busy || proposed" :placeholder="mode !== 'consult' ? '输入你的问题，或继续追问…' : latest ? '补充同一问题…' : '描述现场情况…'" aria-label="会话输入" @keydown="onComposerKeydown"></textarea>
         <div class="composer-toolbar">
           <div class="composer-tools">
             <button type="button" class="tool-button" :class="{ active: toolsEnabled }" :disabled="busy" @click="toolsEnabled = !toolsEnabled" :aria-pressed="toolsEnabled" title="允许按需检索规范、计算、读取公开网页、搜索和时间">工具</button>
-            <button type="button" class="tool-button" :disabled="busy" title="添加图片" @click="emit('attachment')">＋ <span>图片</span></button>
+            <button type="button" class="tool-button" :disabled="attachmentLocked" title="选择或拖入一张JPEG/PNG图片" @click="openAttachment">＋ <span>图片</span></button>
             <button type="button" class="tool-button" :class="{ active: contextOpen }" :disabled="busy" @click="contextOpen = !contextOpen">⌁ <span>背景</span></button>
           </div>
           <div class="send-controls">
@@ -365,3 +436,16 @@ async function propose() {
 
   </section>
 </template>
+
+<style scoped>
+.composer-attachment { position: relative; width: 80px; height: 80px; margin: 8px 12px; }
+.composer-attachment img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+.attachment-remove { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; padding: 0; border: 1px solid #d6d8da; border-radius: 50%; background: white; color: #202124; cursor: pointer; }
+.attachment-remove:disabled { cursor: default; opacity: .5; }
+.image-consent { display: flex; align-items: center; gap: 6px; margin: 8px 12px; font-size: 12px; }
+.image-consent input { width: auto; }
+.attachment-note { margin: 4px 12px; font-size: 12px; color: #666; }
+.sent-attachment img { display: block; max-width: 200px; max-height: 160px; border-radius: 10px; object-fit: contain; }
+.sent-attachment small { display: block; }
+.attachment-error { margin: 8px 12px; color: #b42318; font-size: 13px; }
+</style>

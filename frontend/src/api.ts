@@ -138,9 +138,9 @@ export const api = {
   },
   listRecords(query: URLSearchParams) { return request<RecordPage>(`/api/issue-records?${query}`); },
   getVisionRuntime() { return request<VisionRuntime>("/api/vision/runtime"); },
-  uploadPhoto(file: File) {
+  uploadPhoto(file: File, signal?: AbortSignal) {
     return request<PhotoMetadata>("/api/photos", {
-      method: "POST", headers: { "Content-Type": file.type, "X-Upload-Authorized": "true" }, body: file,
+      method: "POST", headers: { "Content-Type": file.type, "X-Upload-Authorized": "true" }, body: file, signal,
     });
   },
   photoContentUrl(photoId: string) { return `${API_BASE}/api/photos/${encodeURIComponent(photoId)}/content`; },

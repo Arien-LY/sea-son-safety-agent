@@ -124,7 +124,9 @@ def test_model_picker_is_server_described_and_supports_a_custom_model_id() -> No
     assert 'value="__custom__"' in panel
     assert 'aria-label="自定义模型标识"' in panel
     assert "available_models" in panel
-    assert "model: selectedModel.value" in panel
+    # Text and Mock turns use the picker; only a real image turn switches to the image model.
+    assert 'model: hasAttachment.value && runtime.value?.mode === "real" ? runtime.value.image_model || null : selectedModel.value || null' in panel
+    assert "AI 服务未启用，图片仅在本机校验和保存" in panel
     assert "model: str | None" in request
 
 

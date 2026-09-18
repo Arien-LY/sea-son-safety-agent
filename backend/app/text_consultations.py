@@ -23,6 +23,9 @@ from backend.app.proposals import Phase2ProposalService, ProposalPreviewRequest
 from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse
 from backend.app.text_progress import ProgressSink, ignore_progress
 from backend.app.chat_store import ChatStore
+from backend.app.photo_store import PhotoStore, PhotoError
+from backend.app.photos import runtime_vision_info
+from agents.text_assistant import CHAT_VISION_MODEL
 from agents.tools.web_tools import WebTools, web_runtime
 
 WORKFLOW_CATEGORIES = {"safety", "quality", "management", "logistics"}
@@ -45,6 +48,7 @@ def text_runtime() -> dict[str, object]:
     if mode == "mock":
         return {"mode": "mock", "model": "mock-no-text-understanding", "configured": True,
                 "external_provider": None, "available_models": ["mock-no-text-understanding"],
+                "image_configured": True, "image_model": CHAT_VISION_MODEL,
                 "custom_model_allowed": False, "web_tools": web_runtime()}
     config = text_config()
     try:
@@ -55,6 +59,7 @@ def text_runtime() -> dict[str, object]:
     return {"mode": "real", "model": config.model if configured else "not-configured",
             "configured": configured, "external_provider": "DeepSeek",
             "available_models": text_model_options() if configured else [],
+            "image_configured": configured and runtime_vision_info()["configured"], "image_model": CHAT_VISION_MODEL,
             "custom_model_allowed": configured, "web_tools": web_runtime()}
 
 
@@ -137,13 +142,14 @@ class TextConsultationService:
                  assistant_factory: Callable[[str, str], TextAssistant] = default_text_assistant,
                  clock: Callable[[], float] = time.monotonic,
                  today: Callable[[], date] = date.today,
-                 store_path: Path | None = None,
+                 store_path: Path | None = None, photo_store: PhotoStore | None = None,
                  quick_answerer: Callable[[str, str, list[TextConsultationInput], date, list[str]], str] = default_quick_answerer) -> None:
         self.proposals, self.assistant_factory = proposals, assistant_factory
         self.clock, self.today, self.quick_answerer = clock, today, quick_answerer
         self._sessions: dict[str, _Session] = {}
         self._lock = RLock()
         self.audit = ToolAuditLog()
+        self.photo_store = photo_store
         self.store = ChatStore(store_path) if store_path else None
         self._store_error: TextError | None = None
         if self.store:
@@ -240,7 +246,9 @@ class TextConsultationService:
             summary=f"文字请求{'完成' if ok else '失败'}；耗时{round(time.monotonic() - started, 2)}秒；分析状态{analysis_status or '未完成'}；无业务状态变化。"))
 
     def _send(self, request: TextRequest, progress: ProgressSink, on_text=None) -> TextResponse:
-        digest = hashlib.sha256(request.model_dump_json().encode()).hexdigest()
+        # Keep legacy text-only idempotency hashes stable after adding optional fields.
+        excluded = {"photo_id", "allow_image_external"} if not request.photo_id and not request.allow_image_external else set()
+        digest = hashlib.sha256(request.model_dump_json(exclude=excluded).encode()).hexdigest()
         with self._operation(progress):
             self._expire()
             for session in self._sessions.values():
@@ -258,6 +266,20 @@ class TextConsultationService:
             if runtime["mode"] == "real" and request.model:
                 text_config(request.model).validate()
                 selected_model = request.model
+            image = None
+            if request.photo_id:
+                if runtime["mode"] == "real" and not request.allow_image_external:
+                    raise TextError("image_consent_required", "请确认本次允许外发脱敏图片及文字并承担费用。", 403)
+                if not runtime["image_configured"]:
+                    raise TextError("vision_configuration_error", "图片外发服务未配置，请先配置图片服务或移除附件。", 503)
+                if self.photo_store is None:
+                    raise TextError("photo_storage_error", "图片存储不可用。", 503)
+                try:
+                    _, image = self.photo_store.read(request.photo_id)
+                except PhotoError as exc:
+                    raise TextError(exc.code, exc.message, exc.status) from exc
+                if runtime["mode"] == "real":
+                    selected_model = CHAT_VISION_MODEL
             if request.consultation_id:
                 session = self._session(request.consultation_id, request.expected_turn)
                 if session.intent != request.intent:
@@ -274,10 +296,13 @@ class TextConsultationService:
                 session = _Session(updated=self.clock(), intent=request.intent)
                 consultation_id = "TXT-" + uuid4().hex
             inputs = [*session.inputs, request.input]
+            inputs = [item.model_copy(update={"message": item.message + "\n[该历史轮次含图片，本次未重新发送图片；仅可参考历史描述。]"})
+                      if i < len(session.requests) and session.requests[i].get("photo_id") else item
+                      for i, item in enumerate(inputs)]
             context_trimmed = False
             tools = WebTools(progress=progress) if request.intent == "auto" and request.tools_enabled and runtime["mode"] == "real" else None
             analysis_status = "not_requested" if request.intent == "chat" else "validated"
-            if request.intent == "chat":
+            if request.intent == "chat" and not request.photo_id:
                 # Reuse committed responses: failures and idempotent replays add no history.
                 completed = sorted((response for _, response in session.responses.values()), key=lambda response: response.turn)
                 answers = [response.reply.answer for response in completed]
@@ -293,7 +318,7 @@ class TextConsultationService:
             else:
                 selected_inputs = inputs
                 selected_answers = None
-                if request.intent == "auto":
+                if request.intent in {"auto", "chat"}:
                     completed = sorted((response for _, response in session.responses.values()), key=lambda response: response.turn)
                     answers = [response.reply.answer for response in completed]
                     if sum(len(item.model_dump_json()) for item in inputs) + sum(map(len, answers)) > CHAT_SESSION_CHARS:
@@ -303,22 +328,29 @@ class TextConsultationService:
                 progress("model_running", None)
                 reply = self.assistant_factory(str(runtime["mode"]), selected_model).reply(
                     selected_inputs, previous_questions=session.latest.reply.follow_up_questions if session.latest else None,
-                    unified=request.intent == "auto", previous_answers=selected_answers,
+                    unified=request.intent in {"auto", "chat"}, previous_answers=selected_answers,
                     thinking_mode=request.thinking_mode, on_text=None if retained_risk else on_text,
-                    current=self.today(), model=selected_model, **({"tools": tools} if tools else {}))
+                    current=self.today(), model=selected_model, **({"image": image} if image else {}),
+                    **({"tools": tools} if tools else {}))
                 progress("validating", None)
                 if isinstance(reply, ChatReply) and reply.analysis_unavailable:
                     analysis_status = "unavailable"
                 reply, retained = apply_boundaries(reply, session.latest.reply if session.latest else None)
+                if (request.photo_id or any(item.get("photo_id") for item in session.requests)) and reply.analysis.category in WORKFLOW_CATEGORIES:
+                    payload = reply.model_dump(mode="json")
+                    payload["analysis"]["requires_human_review"] = True
+                    payload["analysis"]["recommended_route"] = "human_review"
+                    payload["analysis"]["uncertainties"] = ["单张图片不能作为最终工程判断，需现场专业复核。", *payload["analysis"]["uncertainties"]][:20]
+                    reply = type(reply).model_validate_json(json.dumps(payload, ensure_ascii=False))
                 response_model = selected_model
             response = TextResponse(consultation_id=consultation_id, turn=len(inputs), mode=runtime["mode"],
-                                    model=response_model, reply=reply,
+                                    model=response_model, reply=reply, photo_id=request.photo_id,
                                     can_propose=analysis_status == "validated" and can_propose(reply),
                                     risk_retained=retained, remaining_turns=(CHAT_MAX_TURNS if request.intent in {"chat", "auto"} else 6) - len(inputs),
                                     context_trimmed=context_trimmed, analysis_status=analysis_status,
                                     sources=tools.sources if tools else [], tool_results=tools.results if tools else [])
             session = copy.deepcopy(session)
-            session.inputs, session.latest, session.updated = inputs, response, self.clock()
+            session.inputs, session.latest, session.updated = [*session.inputs, request.input], response, self.clock()
             session.requests.append(request.model_dump(mode="json"))
             session.responses[request.request_id] = (digest, response)
             self._save(consultation_id, session)
