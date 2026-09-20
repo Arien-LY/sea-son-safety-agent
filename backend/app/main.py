@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
@@ -40,6 +40,12 @@ from backend.app.workflow_store import (
     RecordNotFoundError,
     RevisionConflictError,
     StoreError,
+)
+from backend.app.word_export import (
+    DOCX_MEDIA_TYPE,
+    build_issue_record_docx,
+    export_filename,
+    export_headers,
 )
 
 
@@ -224,6 +230,44 @@ def create_app(
                 "问题记录暂时无法读取。",
                 exc,
             )
+
+    @app.delete("/api/issue-records/{record_id}")
+    def delete_issue_record(record_id: str) -> dict[str, object]:
+        try:
+            deleted = workflow_boundary.delete(record_id)
+        except RecordNotFoundError as exc:
+            raise _workflow_http_error(
+                404,
+                "record_not_found",
+                "问题记录不存在。",
+                exc,
+            )
+        except StoreError as exc:
+            raise _workflow_http_error(
+                500,
+                "store_error",
+                "问题记录暂时无法删除。",
+                exc,
+            )
+        return {"deleted": True, "record_id": deleted.record_id}
+
+    @app.get("/api/issue-records/{record_id}/export.docx")
+    def export_issue_record(record_id: str) -> Response:
+        try:
+            record = workflow_boundary.get(record_id)
+        except RecordNotFoundError as exc:
+            raise _workflow_http_error(404, "record_not_found", "问题记录不存在。", exc)
+        except StoreError as exc:
+            raise _workflow_http_error(500, "store_error", "问题记录暂时无法读取。", exc)
+        try:
+            linked = photo_boundary.linked(record_id)
+        except Exception:  # 图片只是可选证据；导出不能因附件存储失败而中断。
+            linked = []
+        return Response(
+            content=build_issue_record_docx(record, linked),
+            media_type=DOCX_MEDIA_TYPE,
+            headers=export_headers(record_id, export_filename(record_id)),
+        )
 
     @app.post(
         "/api/issue-records/{record_id}/actions",

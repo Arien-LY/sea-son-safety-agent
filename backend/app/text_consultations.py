@@ -15,12 +15,12 @@ from threading import RLock
 from uuid import uuid4
 from pathlib import Path
 
-from agents.schemas import IssueAnalysis, TextConsultationInput
+from agents.schemas import IssueAnalysis, TextConsultationInput, TicketStatus
 from agents.text_assistant import DeepSeekTextBackend, MockTextBackend, TextAssistant, TextConfig, TextError, TextReply, ChatReply, select_chat_context
 from agents.chat_settings import CHAT_MAX_TURNS, CHAT_SESSION_CHARS
 from agents.tools import ToolAuditLog, ToolResult
 from backend.app.proposals import Phase2ProposalService, ProposalPreviewRequest
-from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse
+from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse, TicketRejudgeRequest
 from backend.app.text_progress import ProgressSink, ignore_progress
 from backend.app.chat_store import ChatStore
 from backend.app.photo_store import PhotoStore, PhotoError
@@ -76,12 +76,19 @@ def apply_boundaries(reply: TextReply, previous: TextReply | None) -> tuple[Text
         analysis["risk_level"] = "emergency" if "emergency" in {old.risk_level, analysis["risk_level"]} else "high"
         analysis["immediate_actions"] = list(dict.fromkeys([*old.immediate_actions, *analysis["immediate_actions"]]))[:10]
         payload["answer"] = "同一问题此前已触发高风险提示，补充描述不能视为风险解除。请继续遵循避险要求，由现场专业人员复核；系统不会自动认定安全或关闭问题。"
+        # 保留的高风险不能被后续补充降级成"不需工单"。
+        decision = payload.get("ticket_decision")
+        if (isinstance(reply, ChatReply) and isinstance(decision, dict)
+                and analysis["category"] in WORKFLOW_CATEGORIES):
+            decision["status"] = "create_ticket"
+            decision["risk_level"] = analysis["risk_level"]
+            decision["requires_human_review"] = True
+            decision["summary"] = decision.get("summary") or analysis["summary"]
     if analysis["risk_level"] in {"high", "emergency"}:
         analysis["requires_human_review"] = True
         analysis["recommended_route"] = "human_review"
-    elif (isinstance(reply, ChatReply) and analysis["category"] in WORKFLOW_CATEGORIES
-          and analysis["recommended_route"] == "human_review" and analysis["requires_human_review"]):
-        # Unknown diagnosis may accompany a draft for human review; no state change.
+    elif isinstance(reply, ChatReply) and reply.ticket_decision is not None:
+        # TicketDecision 已由服务端确定性推导；不再按缺失字段改写路由。
         pass
     elif analysis["missing_fields"] or analysis["category"] == "unknown":
         analysis["requires_human_review"] = True
@@ -93,7 +100,14 @@ def apply_boundaries(reply: TextReply, previous: TextReply | None) -> tuple[Text
     return reply_model.model_validate_json(bounded.model_dump_json(), strict=True), retained
 
 
-def can_propose(reply: TextReply) -> bool:
+def can_propose(reply: TextReply | ChatReply) -> bool:
+    if isinstance(reply, ChatReply) and reply.ticket_decision is not None:
+        if (reply.ticket_decision.status is TicketStatus.CREATE_TICKET
+                and reply.analysis.category in WORKFLOW_CATEGORIES):
+            return True
+        # 服务端保留的高风险仍然可以生成工单，即使后续回答想降级。
+        return (reply.analysis.risk_level in {"high", "emergency"}
+                and reply.analysis.category in WORKFLOW_CATEGORIES)
     return (reply.analysis.category in WORKFLOW_CATEGORIES
             and reply.analysis.recommended_route in {"propose_workflow", "human_review"})
 
@@ -130,6 +144,8 @@ def default_quick_answerer(mode: str, model: str, inputs: list[TextConsultationI
 class _Session:
     updated: float
     intent: str = "consult"
+    pinned: bool = False
+    saved_at: float = field(default_factory=time.time)
     inputs: list[TextConsultationInput] = field(default_factory=list)
     responses: dict[str, tuple[str, TextResponse]] = field(default_factory=dict)
     latest: TextResponse | None = None
@@ -156,6 +172,8 @@ class TextConsultationService:
             try:
                 for key, raw in sorted(self.store.load().items(), key=lambda pair: json.loads(pair[1])["updated"]):
                     data = json.loads(raw)
+                    if type(data.get("pinned", False)) is not bool:
+                        raise ValueError("Invalid pinned state")
                     responses = {request_id: (digest, TextResponse.model_validate_json(json.dumps(response)))
                                  for request_id, (digest, response) in data["responses"].items()}
                     inputs = [TextRequest.model_validate_json(json.dumps(item)).input for item in data["requests"]]
@@ -163,6 +181,7 @@ class TextConsultationService:
                     if len(inputs) != len(ordered) or any(r.consultation_id != key or r.turn != i for i, r in enumerate(ordered, 1)):
                         raise ValueError("Broken conversation pairs")
                     self._sessions[key] = _Session(updated=data["updated"], intent=data["intent"], inputs=inputs,
+                        pinned=data.get("pinned", False), saved_at=data["updated"],
                         responses=responses, latest=ordered[-1],
                         proposal=ToolResult.model_validate_json(json.dumps(data["proposal"])) if data["proposal"] else None,
                         requests=data["requests"])
@@ -174,18 +193,43 @@ class TextConsultationService:
         if self._store_error:
             raise self._store_error
 
-    def _save(self, key: str, session: _Session):
+    def _save(self, key: str, session: _Session, *, preserve_order: bool = False):
+        saved_at = session.saved_at if preserve_order else time.time()
         if self.store:
-            self.store.save(key, json.dumps({"updated": time.time(), "intent": session.intent,
+            self.store.save(key, json.dumps({"updated": saved_at, "intent": session.intent, "pinned": session.pinned,
                 "requests": session.requests,
                 "responses": {rid: [digest, response.model_dump(mode="json")] for rid, (digest, response) in session.responses.items()},
                 "proposal": session.proposal.model_dump(mode="json") if session.proposal else None}, ensure_ascii=False))
 
+        session.saved_at = saved_at
+
     def list_sessions(self) -> list[dict]:
         self._check_store()
+        # Read committed snapshots without waiting for an in-flight model call.
+        recent = reversed(list(self._sessions.items()))
         return [{"consultation_id": key, "title": session.inputs[0].message[:60],
-                 "turns": len(session.inputs), "intent": session.intent}
-                for key, session in reversed(list(self._sessions.items())) if session.inputs]
+                 "turns": len(session.inputs), "intent": session.intent, "pinned": session.pinned}
+                for key, session in sorted(recent, key=lambda item: not item[1].pinned) if session.inputs]
+
+    def set_pinned(self, key: str, pinned: bool) -> dict:
+        with self._operation(ignore_progress):
+            session = self._sessions.get(key)
+            if session is None:
+                raise TextError("consultation_expired", "未找到该聊天，请刷新列表。", 404)
+            updated = copy.deepcopy(session)
+            updated.pinned = pinned
+            self._save(key, updated, preserve_order=True)
+            self._sessions[key] = updated
+            return {"consultation_id": key, "pinned": pinned}
+
+    def delete_session(self, key: str) -> dict:
+        with self._operation(ignore_progress):
+            if key not in self._sessions:
+                raise TextError("consultation_expired", "未找到该聊天，请刷新列表。", 404)
+            if self.store:
+                self.store.delete(key)
+            del self._sessions[key]
+            return {"deleted": True}
 
     def get_session(self, key: str) -> dict:
         self._check_store()
@@ -348,6 +392,8 @@ class TextConsultationService:
                                     can_propose=analysis_status == "validated" and can_propose(reply),
                                     risk_retained=retained, remaining_turns=(CHAT_MAX_TURNS if request.intent in {"chat", "auto"} else 6) - len(inputs),
                                     context_trimmed=context_trimmed, analysis_status=analysis_status,
+                                    ticket_decision=reply.ticket_decision if isinstance(reply, ChatReply) else None,
+                                    rejudge_available=(analysis_status == "unavailable" and request.intent in {"chat", "auto"}),
                                     sources=tools.sources if tools else [], tool_results=tools.results if tools else [])
             session = copy.deepcopy(session)
             session.inputs, session.latest, session.updated = [*session.inputs, request.input], response, self.clock()
@@ -379,3 +425,67 @@ class TextConsultationService:
             self._sessions[consultation_id] = session
             progress("completed", None)
             return result.model_copy(deep=True)
+
+    def rejudge(self, consultation_id: str, request: TicketRejudgeRequest,
+                *, progress: ProgressSink = ignore_progress) -> TextResponse:
+        """人工触发一轮工单重新判断；复用已保存输入，不新增用户消息，不自动重试。"""
+        with self._operation(progress):
+            self._expire()
+            session = self._session(consultation_id, request.expected_turn)
+            latest = session.latest
+            if latest is None:
+                raise TextError("text_rejudge_unavailable", "尚未生成可重新判断的回复。", 409)
+            if session.intent not in {"chat", "auto"}:
+                raise TextError("text_rejudge_unsupported", "仅统一聊天支持重新判断工单。", 409)
+            if latest.analysis_status != "unavailable":
+                raise TextError("text_rejudge_not_needed", "本次工单判断已经可用，无需重新判断。", 409)
+            if latest.analysis_retry_used:
+                raise TextError("text_rejudge_used", "本轮已重新判断过一次；请补充信息后重新发送。", 409)
+            runtime = text_runtime()
+            stored = session.requests[-1] if session.requests else {}
+            if runtime["mode"] == "real" and not stored.get("allow_external"):
+                raise TextError("text_consent_required", "请确认本次将问题及本会话补充发送至DeepSeek并承担费用。", 403)
+            if not runtime["configured"]:
+                raise TextError("text_configuration_error", "文字模型未正确配置，请核对本地配置。", 503)
+            model = str(runtime["model"])
+            responses = sorted((value for _, value in session.responses.values()), key=lambda item: item.turn)
+            selected_inputs, selected_answers, _ = select_chat_context(
+                session.inputs, [item.reply.answer for item in responses[:-1]], structured_answers=True)
+            progress("model_running", None)
+            # 重新判断不重发图片：原回答已包含图片可见内容，也避免重复外发。
+            fresh = self.assistant_factory(str(runtime["mode"]), model).reply(
+                selected_inputs, previous_questions=latest.reply.follow_up_questions, unified=True,
+                previous_answers=selected_answers, thinking_mode=stored.get("thinking_mode", "fast"),
+                current=self.today(), model=model)
+            progress("validating", None)
+            if not isinstance(fresh, ChatReply) or fresh.ticket_decision is None:
+                updated = latest.model_copy(update={
+                    "analysis_retry_used": True, "rejudge_available": False,
+                    "analysis_status": "unavailable", "can_propose": False})
+            else:
+                bounded, retained = apply_boundaries(fresh, latest.reply)
+                payload = bounded.model_dump(mode="json")
+                # 保留用户已经看到的回答，只更新后台工单判断。
+                payload["answer"] = latest.reply.answer
+                if (any(item.get("photo_id") for item in session.requests)
+                        and payload["analysis"]["category"] in WORKFLOW_CATEGORIES):
+                    payload["analysis"]["requires_human_review"] = True
+                    payload["analysis"]["recommended_route"] = "human_review"
+                    payload["analysis"]["uncertainties"] = [
+                        "单张图片不能作为最终工程判断，需现场专业复核。",
+                        *payload["analysis"]["uncertainties"]][:20]
+                rebuilt = ChatReply.model_validate_json(json.dumps(payload, ensure_ascii=False))
+                updated = latest.model_copy(update={
+                    "reply": rebuilt, "ticket_decision": rebuilt.ticket_decision,
+                    "can_propose": can_propose(rebuilt), "analysis_status": "validated",
+                    "risk_retained": latest.risk_retained or retained,
+                    "rejudge_available": False, "analysis_retry_used": True})
+            request_id = next(rid for rid, (_, value) in session.responses.items() if value.turn == latest.turn)
+            digest = session.responses[request_id][0]
+            session = copy.deepcopy(session)
+            session.responses[request_id] = (digest, updated)
+            session.latest, session.updated = updated, self.clock()
+            self._save(consultation_id, session)
+            self._sessions[consultation_id] = session
+            progress("completed", None)
+            return updated.model_copy(deep=True)

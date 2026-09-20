@@ -103,6 +103,11 @@ class IssueWorkflowService:
     def get(self, record_id: str) -> IssueRecord:
         return self.store.get(record_id)
 
+    def delete(self, record_id: str) -> IssueRecord:
+        """本地删除一条已保存工单，与“取消工单”是相互独立的操作。"""
+
+        return self.store.delete(record_id)
+
     def transition(
         self,
         record_id: str,

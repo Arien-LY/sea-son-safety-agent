@@ -8,7 +8,7 @@ from agents.tools.web_tools import WebTools, public_url, fetch_public, PageText
 from backend.app.text_consultations import TextConsultationService, text_runtime
 from backend.app.proposals import Phase2ProposalService
 from backend.app.text_models import TextRequest
-from test_product_text import reply_payload
+from test_product_text import decision_payload
 
 
 @pytest.mark.parametrize('url', ['http://example.com', 'https://127.0.0.1', 'https://10.1.2.3',
@@ -86,7 +86,7 @@ def native_transport(monkeypatch):
                         tool_calls=[NS(index=0, id='call-' + str(len(state.calls)), function=NS(name=state.tool, arguments=state.arguments))]))])
                     yield NS(choices=[NS(index=0, finish_reason='tool_calls', delta=NS(content=None, reasoning_content=None, tool_calls=None))])
                 else:
-                    raw = json.dumps({**reply_payload(), 'answer': state.answer}, ensure_ascii=False)
+                    raw = json.dumps({**decision_payload(), 'answer': state.answer}, ensure_ascii=False)
                     for part in [raw[:22], raw[22:]]:
                         yield NS(choices=[NS(index=0, finish_reason=None, delta=NS(content=part, tool_calls=None, reasoning_content=None))])
                     if state.fail: raise TimeoutError('fixture timeout')

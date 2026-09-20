@@ -156,6 +156,33 @@ class JsonIssueRecordStore:
 
         return self._mutate(mutation)
 
+    def delete(self, record_id: str) -> IssueRecord:
+        """Permanently remove one local record and its idempotency index.
+
+        This is a local deletion for the desktop product, not a workflow
+        cancellation: the record simply stops existing.
+        """
+
+        def mutation(
+            document: IssueRecordStoreDocument,
+        ) -> tuple[IssueRecord, bool]:
+            current = document.records.get(record_id)
+            if current is None:
+                raise RecordNotFoundError(record_id)
+            deleted = current.model_copy(deep=True)
+            del document.records[record_id]
+            # The store validator requires idempotency keys to reference existing
+            # records, so the deleted record's keys must be removed with it.
+            for key in [
+                key
+                for key, entry in document.idempotency_keys.items()
+                if entry.record_id == record_id
+            ]:
+                del document.idempotency_keys[key]
+            return deleted, True
+
+        return self._mutate(mutation)
+
     def snapshot(self) -> tuple[IssueRecord, ...]:
         with self._lock:
             document = self._load()

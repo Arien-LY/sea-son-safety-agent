@@ -11,7 +11,6 @@ const emit = defineEmits<{
   analysis: [data: IssueAnalysis | null];
   busy: [value: boolean];
   proposing: [value: boolean];
-  ticket: [analysis: IssueAnalysis];
   session: [id: string];
 }>();
 const attachmentInput = ref<HTMLInputElement | null>(null);
@@ -19,7 +18,6 @@ const attachment = ref<File | null>(null);
 const attachmentUrl = ref("");
 const attachmentError = ref("");
 const attachmentPhotoId = ref<string | null>(null);
-const imageConsent = ref(false);
 const hasAttachment = computed(() => Boolean(attachment.value || attachmentPhotoId.value));
 const attachmentPreview = computed(() => attachmentUrl.value || (attachmentPhotoId.value ? api.photoContentUrl(attachmentPhotoId.value) : ""));
 const attachmentLocked = computed(() => busy.value || restoring.value || props.disabled);
@@ -77,7 +75,6 @@ async function restoreSession(force = false) {
         if (saved.model) modelChoice.value = saved.model;
         toolsEnabled.value = saved.tools_enabled ?? false;
         attachmentPhotoId.value = saved.photo_id || null;
-        imageConsent.value = false;
         pending = saved.expected_turn === (latest.value?.turn || 0) ? saved : null;
         error.value = pending ? '上次请求尚未确认完成；可手动重试，服务端会复用已保存结果。' : '会话已更新；原输入已恢复，请核对最新回复后发送。';
       }
@@ -97,7 +94,7 @@ let ticker: ReturnType<typeof setInterval> | null = null;
 const stageLabels: Record<TextProgress["stage"], string> = {
   queued: "已收到，等待处理", preparing: "正在整理你的问题",
   model_running: "等待模型回复", validating: "正在检查回答",
-  tool_running: "正在生成待确认提案", tool_completed: "工具已返回", responding: "正在回复", completed: "处理完成",
+  tool_running: "正在生成工单草稿", tool_completed: "工具已返回", responding: "正在回复", completed: "处理完成",
 };
 const toolLabels: Record<string, string> = { propose_issue_record: "工单申请", web_search: "搜索网页", read_webpage: "读取网页", current_time: "读取日期时间", search_knowledge: "检索规范知识", calculate: "基础计算" };
 function stageLabel(step: TextProgress) {
@@ -130,10 +127,28 @@ const maxTurns = computed(() => props.mode === "consult" ? 6 : 50);
 const selectedModel = computed(() => modelChoice.value === "__custom__" ? customModel.value.trim() : modelChoice.value);
 const modelReady = computed(() => runtime.value?.mode === "mock" || /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/.test(selectedModel.value));
 const canSend = computed(() => !props.disabled && !restoring.value && !busy.value && !proposed.value && runtime.value?.configured && Boolean(form.message.trim() || hasAttachment.value)
-  && (!hasAttachment.value || (imageConsent.value && runtime.value?.image_configured))
+  && (!hasAttachment.value || runtime.value?.image_configured)
   && modelReady.value && form.message.length <= maxInput.value && (latest.value?.remaining_turns ?? maxTurns.value) > 0);
 const dirty = computed(() => Boolean(form.message.trim() || hasAttachment.value));
 const canCreateProposal = computed(() => props.mode === "consult" && latest.value?.can_propose && !proposed.value);
+const ticketReady = computed(() => Boolean(latest.value?.can_propose && latest.value.analysis_status !== "unavailable" && !proposed.value));
+const canRejudge = computed(() => Boolean(latest.value?.rejudge_available && !busy.value && !proposed.value));
+async function rejudge() {
+  const current = latest.value;
+  if (!current?.rejudge_available || busy.value || proposed.value) return;
+  busy.value = true; error.value = "";
+  try {
+    beginProgress();
+    const result = await api.rejudgeText(current.consultation_id, current.turn, step => steps.value.push(step));
+    const entry = turns.value.find(turn => turn.result.turn === result.turn);
+    if (entry) entry.result = result;
+    latest.value = result;
+    const available = !result.analysis_status || result.analysis_status === "validated";
+    emit("analysis", available ? result.reply.analysis : null);
+    if (!available) error.value = "本次工单判断仍未成功；请补充现场信息后重新发送。";
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : String(cause); }
+  finally { stopProgress(); busy.value = false; }
+}
 function modelLabel(model: string) {
   if (!model) return "模型检查中";
   if (model === "deepseek-v4-flash") return "DeepSeek V4 Flash";
@@ -176,7 +191,6 @@ function cancelActiveRequest() {
 }
 
 function stopWaiting() {
-  imageConsent.value = false;
   const savedRequest = pending;
   const message = pendingMessage.value;
   cancelActiveRequest();
@@ -222,7 +236,7 @@ async function send() {
       model: hasAttachment.value && runtime.value?.mode === "real" ? runtime.value.image_model || null : selectedModel.value || null,
       consultation_id: latest.value?.consultation_id || null, expected_turn: latest.value?.turn || 0,
       allow_external: runtime.value?.mode === "real",
-      ...(attachmentPhotoId.value ? { photo_id: attachmentPhotoId.value, allow_image_external: imageConsent.value && runtime.value?.mode === "real" } : {}) };
+      ...(attachmentPhotoId.value ? { photo_id: attachmentPhotoId.value, allow_image_external: runtime.value?.mode === "real" } : {}) };
     savePending(pending);
     activeThinking.value = pending.thinking_mode || "fast";
     const receiveProgress = (step: TextProgress) => {
@@ -242,7 +256,6 @@ async function send() {
     emit('session', result.consultation_id);
     const analysisAvailable = !result.analysis_status || result.analysis_status === "validated";
     emit("analysis", analysisAvailable ? result.reply.analysis : null);
-    if (analysisAvailable && result.can_propose) emit("ticket", result.reply.analysis);
   } catch (cause) {
     if (requestController.signal.aborted) return;
     error.value = cause instanceof Error ? cause.message : String(cause);
@@ -254,7 +267,6 @@ async function send() {
       stopProgress();
       activeRequest = null;
       busy.value = false;
-      imageConsent.value = false;
     }
   }
 }
@@ -263,7 +275,6 @@ function clearAttachment() {
   if (attachmentUrl.value) URL.revokeObjectURL(attachmentUrl.value);
   attachment.value = null;
   attachmentPhotoId.value = null;
-  imageConsent.value = false;
   attachmentUrl.value = "";
   attachmentError.value = "";
   if (attachmentInput.value) attachmentInput.value.value = "";
@@ -309,7 +320,7 @@ function onComposerKeydown(event: KeyboardEvent) {
 }
 
 async function propose() {
-  if (!canCreateProposal.value || dirty.value || busy.value || !latest.value) return;
+  if (!ticketReady.value || dirty.value || busy.value || !latest.value) return;
   busy.value = true; error.value = "";
   emit("proposing", true);
   try {
@@ -355,7 +366,7 @@ async function propose() {
             <div class="message-body assistant-message">
               <div class="markdown-body" v-html="renderAssistantMarkdown(turn.result.mode === 'mock' ? 'AI 服务尚未启用。请在软件的模型设置中填写自己的密钥并启用 AI；也可以直接通过左侧“提交工单”填写问题。' : turn.result.reply.answer)"></div>
               <details class="execution-history">
-                <summary>{{ turn.seconds ? `用时 ${turn.seconds} 秒` : '已保存的回复' }} · {{ turn.thinking === 'deep' ? '深度思考' : '快速回复' }} · {{ turn.result.model }}</summary>
+                <summary>{{ turn.seconds ? `用时 ${turn.seconds} 秒` : '已保存的回复' }} · {{ turn.thinking === 'deep' ? '深度思考' : '快速回复' }}</summary>
                 <div class="execution-detail">
                   <p v-if="turn.result.mode === 'mock'">AI 服务未启用，本次未进行智能分析。</p>
                   <p v-if="!turn.steps.some(step => step.tool) && !turn.result.tool_results?.length">未调用工具。</p>
@@ -369,8 +380,11 @@ async function propose() {
               </div>
               <div v-for="action in turn.result.reply.analysis.immediate_actions" :key="action" class="urgent-callout">{{ action }}</div>
               <div v-if="mode === 'consult' && turn.result.reply.follow_up_questions.length" class="follow-up-box"><strong>还需要确认</strong><ul><li v-for="question in turn.result.reply.follow_up_questions" :key="question">{{ question }}</li></ul></div>
-              <p v-if="turn.result.analysis_status === 'unavailable'" class="section-note" role="status">回答已保留，本次未能判断工单类型。需要上报时可从左侧“提交工单”填写；如有现场危险，请先远离危险并联系现场专业人员。</p>
-              <button v-if="turn.result.turn === latest?.turn && turn.result.can_propose && turn.result.analysis_status !== 'unavailable'" type="button" class="tool-button" :disabled="busy" @click="emit('ticket', turn.result.reply.analysis)">继续工单申请</button>
+              <p v-if="turn.result.turn === latest?.turn && turn.result.analysis_status === 'unavailable'" class="section-note" role="status">本次工单判断失败，可重新判断。回答已保留；如有现场危险，请先远离危险并联系现场专业人员。</p>
+              <div v-if="turn.result.turn === latest?.turn && !proposed && (ticketReady || canRejudge)" class="ticket-actions">
+                <button v-if="ticketReady" type="button" class="primary-button" :disabled="busy" @click="propose">生成工单</button>
+                <button v-if="canRejudge" type="button" class="tool-button" :disabled="busy" @click="rejudge">重新判断工单</button>
+              </div>
               <details v-if="mode === 'consult' && turn.result.analysis_status !== 'unavailable'"><summary>查看已校验分析</summary><p>{{ turn.result.reply.analysis.summary }}</p><p>已述事实：{{ turn.result.reply.analysis.observed_facts.join("；") || "未确认" }}</p><p>不确定性：{{ turn.result.reply.analysis.uncertainties.join("；") || "仍需现场核验" }}</p><p>缺失信息：{{ turn.result.reply.analysis.missing_fields.join("；") || "无额外追问" }}</p></details>
             </div>
           </div>
@@ -386,7 +400,7 @@ async function propose() {
         <button v-if="pendingMessage" type="button" class="tool-button" @click="stopWaiting">停止等待</button>
         <details><summary>查看执行步骤</summary><p>{{ mode === 'consult' ? '最多约 35 秒' : '最多约 190 秒' }}</p><ol v-if="steps.length"><li v-for="step in steps" :key="step.seq">{{ (step.elapsed_ms / 1000).toFixed(1) }} 秒 · {{ stageLabel(step) }}</li></ol></details>
       </div>
-      <p v-else-if="proposed" class="execution-finished">工单申请已准备好 · 用时 {{ elapsedSeconds }} 秒 · 尚未保存工单</p>
+      <p v-else-if="proposed" class="execution-finished">工单草稿已准备好 · 用时 {{ elapsedSeconds }} 秒 · 尚未保存工单</p>
     </div>
 
     <div class="composer-dock">
@@ -395,8 +409,8 @@ async function propose() {
       <p v-if="latest?.context_trimmed" class="section-note">本轮仅参考最近的部分对话；早期内容仍显示在页面，但未全部发送给模型。需要时请重新补充。</p>
       <p v-if="latest?.risk_retained" class="risk-retained">此前高风险已由服务端保留，补充文字不能自行降级或宣告解除。</p>
       <div v-if="canCreateProposal" class="proposal-ready">
-        <div><strong>最新分析已满足受控工单条件</strong><span>仍需生成提案、核对字段并人工确认后才能保存。</span></div>
-        <button type="button" class="primary-button" :disabled="busy || dirty" @click="propose">生成待确认提案</button>
+        <div><strong>最新分析已满足受控工单条件</strong><span>仍需生成工单草稿、核对字段并人工确认后才能保存。</span></div>
+        <button type="button" class="primary-button" :disabled="busy || dirty" @click="propose">生成工单</button>
       </div>
       <div class="composer">
         <input ref="attachmentInput" type="file" accept="image/jpeg,image/png" hidden :disabled="attachmentLocked" @change="onAttachmentChange" />
@@ -404,8 +418,7 @@ async function propose() {
           <img :src="attachmentPreview" :alt="attachment?.name || '待发送图片'" />
           <button type="button" class="attachment-remove" :disabled="attachmentLocked" aria-label="移除图片" title="移除图片" @click="removeAttachment">×</button>
         </div>
-        <label v-if="hasAttachment" class="image-consent"><input v-model="imageConsent" type="checkbox" :disabled="attachmentLocked" />{{ runtime?.mode === 'real' ? '图片已打码且有权上传；本次允许将图片与文字发送至 DeepSeek 并承担费用' : '图片已打码且有权上传（AI 服务未启用，不识图也不外发）' }}</label>
-        <p v-if="hasAttachment" class="attachment-note">{{ runtime?.mode === 'mock' ? 'AI 服务未启用，图片仅在本机校验和保存，不会被理解或外发' : runtime?.image_configured ? '本轮图片使用 ' + runtime.image_model : '图片服务未配置，请配置图片服务或移除附件' }}</p>
+        <p v-if="hasAttachment && runtime?.mode === 'real' && !runtime?.image_configured" class="attachment-note">图片服务未配置，请移除附件后再发送。</p>
         <p v-if="attachmentError" class="attachment-error" role="alert">{{ attachmentError }}</p>
         <textarea v-model="form.message" :maxlength="maxInput" rows="1" :disabled="busy || proposed" :placeholder="mode !== 'consult' ? '输入你的问题，或继续追问…' : latest ? '补充同一问题…' : '描述现场情况…'" aria-label="会话输入" @keydown="onComposerKeydown"></textarea>
         <div class="composer-toolbar">
@@ -427,10 +440,9 @@ async function propose() {
         <label>区域标签（可选）<input v-model="form.area" maxlength="200" /></label>
         <label>自报角色（非权限）<input v-model="form.requester_role" maxlength="50" /></label>
       </div>
-      <div class="composer-foot"><span>{{ runtime?.external_provider || '本地演示' }} · Enter 发送</span><button type="button" @click="newConversation">新建聊天</button></div>
-      <details v-if="toolsEnabled" class="section-note"><summary>{{ runtime?.web_tools?.search_configured ? '联网搜索已配置' : '联网搜索未配置' }} · 规范检索、计算与网页工具</summary><p>发送会将消息及必要上下文发给 {{ runtime?.external_provider || '已配置模型服务' }}；工具按需执行。本地规范检索和基础计算无需搜索密钥；规范目录可能不完整或已过期，计算不替代工程校核。搜索关键词发送至 Tavily，可能收费。请在软件“模型设置”填写搜索密钥；未配置时会明确提示，网页读取只支持公开 HTTPS。</p></details>
+      <div class="composer-foot"><span>Enter 发送</span><button type="button" @click="newConversation">新建聊天</button></div>
       <p v-if="dirty && canCreateProposal" class="section-note">还有未发送的补充，请先发送，避免使用旧分析生成提案。</p>
-      <p v-if="proposed" class="success-callout">待确认提案已生成。会话已冻结，尚未创建正式工单。</p>
+      <p v-if="proposed" class="success-callout">工单草稿已生成。会话已冻结，尚未创建正式工单。</p>
       <p v-if="latest && !latest.remaining_turns" class="info-callout">本会话已达 {{ maxTurns }} 轮上限，请开始新问题。</p>
     </div>
 
@@ -442,8 +454,6 @@ async function propose() {
 .composer-attachment img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
 .attachment-remove { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; padding: 0; border: 1px solid #d6d8da; border-radius: 50%; background: white; color: #202124; cursor: pointer; }
 .attachment-remove:disabled { cursor: default; opacity: .5; }
-.image-consent { display: flex; align-items: center; gap: 6px; margin: 8px 12px; font-size: 12px; }
-.image-consent input { width: auto; }
 .attachment-note { margin: 4px 12px; font-size: 12px; color: #666; }
 .sent-attachment img { display: block; max-width: 200px; max-height: 160px; border-radius: 10px; object-fit: contain; }
 .sent-attachment small { display: block; }

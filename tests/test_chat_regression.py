@@ -11,7 +11,7 @@ import pytest
 from backend.app.proposals import Phase2ProposalService
 from backend.app.text_consultations import TextConsultationService
 from backend.app.text_models import TextRequest
-from test_product_text import reply_payload
+from test_product_text import decision_payload
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def transport(monkeypatch):
     for key, value in {"AGENT_MODE": "real", "LLM_MODEL": "deepseek-v4-flash",
                        "LLM_API_KEY": "FAKE-OFFLINE", "LLM_BASE_URL": "https://api.deepseek.com"}.items():
         monkeypatch.setenv(key, value)
-    state = SimpleNamespace(calls=[], payload=reply_payload(), parts=None, exhausted=False, closed=False, before_finish=lambda: None)
+    state = SimpleNamespace(calls=[], payload=decision_payload(), parts=None, exhausted=False, closed=False, before_finish=lambda: None)
 
     class Delta:
         tool_calls = None
@@ -147,14 +147,14 @@ def test_invalid_or_duplicate_json_never_commits_partial_answer(transport, suffi
 
 
 @pytest.mark.parametrize("change", [
-    lambda p: p.pop("analysis"),
-    lambda p: p.update(analysis=None),
-    lambda p: p.update(analysis=[]),
-    lambda p: p.update(analysis={}),
-    lambda p: p["analysis"].update(category="not-a-category"),
-    lambda p: p["analysis"].update(confidence="certain"),
+    lambda p: p.pop("ticket_decision"),
+    lambda p: p.update(ticket_decision=None),
+    lambda p: p.update(ticket_decision=[]),
+    lambda p: p.update(ticket_decision={}),
+    lambda p: p["ticket_decision"].update(category="not-a-category"),
+    lambda p: p["ticket_decision"].update(status="not-a-status"),
+    lambda p: p["ticket_decision"].update(status="create_ticket", category="consultation"),
     lambda p: p.update(follow_up_questions="bad-type"),
-    lambda p: p.update(analysis_status="validated"),
 ])
 def test_invalid_analysis_keeps_answer_without_ticket_or_extra_call(transport, change):
     app = service()
@@ -168,7 +168,7 @@ def test_invalid_analysis_keeps_answer_without_ticket_or_extra_call(transport, c
     assert result.reply.analysis.risk_level == "undetermined"
     assert len(transport.calls) == 1
     assert app.send(request()) == result and len(transport.calls) == 1
-    transport.payload = reply_payload()
+    transport.payload = decision_payload()
     next_result = app.send(request(2, result))
     assert next_result.analysis_status == "validated"
     assert json.loads(transport.calls[-1]["messages"][-2]["content"]) == {"answer": "完整可用的回答"}
@@ -179,10 +179,10 @@ def test_analysis_failure_revokes_old_proposal_eligibility(transport, risk):
     from agents.text_assistant import TextError
     from backend.app.text_models import TextProposalRequest
     app = service()
-    transport.payload = reply_payload("safety", risk)
+    transport.payload = decision_payload("safety", risk)
     first = app.send(request())
     assert first.can_propose
-    transport.payload = {"answer": "正常回答", "analysis": {}}
+    transport.payload = {"answer": "正常回答", "ticket_decision": {}}
     seen = []
     second = app.send(request(2, first), on_text=seen.append)
     assert not second.can_propose and second.analysis_status == "unavailable"
@@ -200,7 +200,7 @@ def test_analysis_failure_revokes_old_proposal_eligibility(transport, risk):
 def test_invalid_body_cannot_be_rescued_by_analysis_fallback(transport, answer):
     from agents.text_assistant import TextError
     app = service()
-    transport.payload = {"answer": answer, "analysis": {}}
+    transport.payload = {"answer": answer, "ticket_decision": {}}
     with pytest.raises(TextError):
         app.send(request())
     assert not app._sessions
@@ -208,9 +208,9 @@ def test_invalid_body_cannot_be_rescued_by_analysis_fallback(transport, answer):
 
 def test_retained_high_risk_does_not_stream_overwritten_model_answer(transport):
     app = service()
-    transport.payload = reply_payload("safety", "high")
+    transport.payload = decision_payload("safety", "high")
     previous = app.send(request())
-    transport.payload = reply_payload()
+    transport.payload = decision_payload()
     transport.payload["answer"] = "不应提前展示的降级回答"
     deltas = []
     result = app.send(request(2, previous), on_text=deltas.append)
@@ -256,7 +256,7 @@ def test_incremental_json_escapes_and_unicode_are_preserved(width):
 
 def test_different_json_field_order_waits_for_full_validated_result(transport):
     payload = transport.payload
-    transport.parts = [json.dumps({"analysis": payload["analysis"], "follow_up_questions": [], "answer": "你好"}, ensure_ascii=False)]
+    transport.parts = [json.dumps({"ticket_decision": payload["ticket_decision"], "follow_up_questions": [], "answer": "你好"}, ensure_ascii=False)]
     seen = []
     result = service().send(request(), on_text=seen.append)
     assert not seen and result.reply.answer == "你好"

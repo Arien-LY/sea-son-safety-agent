@@ -4,7 +4,7 @@ from agents.text_assistant import TextAssistant, TextError
 from backend.app.proposals import Phase2ProposalService
 from backend.app.text_consultations import TextConsultationService
 from backend.app.text_models import TextRequest
-from test_product_text import FakeTextBackend, reply_payload
+from test_product_text import FakeTextBackend, decision_payload
 
 
 def service(path, backend=None):
@@ -21,7 +21,7 @@ def request(previous=None, n=1):
 def test_restart_restores_pairs_risk_and_idempotent_result(tmp_path, monkeypatch):
     monkeypatch.setenv('AGENT_MODE', 'mock')
     path = tmp_path / 'chat.sqlite3'
-    first = service(path, FakeTextBackend([reply_payload('safety', 'high')]))
+    first = service(path, FakeTextBackend([decision_payload('safety', 'high')]))
     result = first.send(request())
     restarted = service(path)
     assert restarted.send(request()).model_dump() == result.model_dump()

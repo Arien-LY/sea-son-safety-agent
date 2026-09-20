@@ -32,6 +32,11 @@ async function mountPanel(cryptoApi = crypto, clock = performance, options = {})
       requests.push({ ...response, onProgress });
       return response.promise;
     },
+    rejudgeText: (_id, _turn, onProgress) => {
+      const response = deferred();
+      requests.push({ ...response, onProgress });
+      return response.promise;
+    },
   };
   const filename = path.join(__dirname, '../src/components/TextPanel.vue');
   const { descriptor } = parse(fs.readFileSync(filename, 'utf8'));
@@ -394,7 +399,7 @@ test('validated answer deltas are visible before the final response resolves', a
   } finally { panel.app.unmount(); }
 });
 
-test('eligible unified result emits a ticket handoff but never persists automatically', async () => {
+test('eligible result shows 生成工单 and only builds the draft after the click', async () => {
   const panel = await mountPanel();
   try {
     panel.state.form.message = '宿舍空调坏了，帮我上报';
@@ -403,8 +408,39 @@ test('eligible unified result emits a ticket handoff but never persists automati
       reply: { answer: '已识别为后勤问题。', analysis: { category: 'logistics', risk_level: 'medium' } } };
     panel.requests[0].resolve(logistics);
     await sent;
-    assert.deepEqual(panel.ticketEvents, [logistics.reply.analysis]);
-    assert.equal(panel.proposalEvents.length, 0);
+    assert.equal(panel.ticketEvents.length, 0);
+    assert.equal(panel.state.ticketReady, true);
+    assert.equal(panel.proposalEvents.length, 0);   // 点击之前没有工单草稿
+    const draft = panel.state.propose();
+    assert.equal(panel.proposingEvents.at(-1), true);
+    panel.requests.at(-1).resolve({ ok: true, data: {
+      proposal: { analysis: logistics.reply.analysis, review_fields: {} }, proposal_token: 'fixture' } });
+    await draft;
+    assert.equal(panel.proposalEvents.length, 1);   // 点击之后才有草稿
+    assert.equal(panel.state.proposed, true);
+  } finally { panel.app.unmount(); }
+});
+
+test('failed decision offers one manual rejudge and keeps the original answer', async () => {
+  const panel = await mountPanel();
+  try {
+    panel.state.form.message = '二层楼梯口护栏缺失';
+    const sent = panel.state.send();
+    panel.requests[0].resolve({ ...result, analysis_status: 'unavailable', can_propose: false,
+      rejudge_available: true, reply: { ...result.reply, answer: '回答已保留' } });
+    await sent;
+    assert.equal(panel.state.ticketReady, false);
+    assert.equal(panel.state.canRejudge, true);
+    const retry = panel.state.rejudge();
+    const call = panel.requests.at(-1);
+    call.resolve({ ...result, analysis_status: 'validated', can_propose: true, turn: 1,
+      reply: { ...result.reply, answer: '回答已保留',
+        analysis: { category: 'safety', risk_level: 'medium' } } });
+    await retry;
+    assert.equal(panel.state.turns.length, 1);
+    assert.equal(panel.state.turns[0].result.reply.answer, '回答已保留');
+    assert.equal(panel.state.latest.can_propose, true);
+    assert.equal(panel.state.canRejudge, false);
   } finally { panel.app.unmount(); }
 });
 
@@ -487,12 +523,11 @@ test('composer rejects unsupported, multiple and oversize files while retaining 
     p.state.onFileDrop({ dataTransfer: { types: ['text/plain'] }, preventDefault() { assert.fail('text drag intercepted'); } });
   } finally { p.app.unmount(); }
 });
-test('authorized image and text share a request; busy prevents changes and success clears attachment', async () => {
+test('image and text share one request with no authorization checkbox; busy prevents changes', async () => {
   const p = await mountPanel();
   try {
     p.state.selectAttachment([imageFile]); p.state.form.message = '文字测试';
-    assert.equal(p.state.canSend, false); await p.state.send(); assert.equal(p.uploads.length, 0);
-    p.state.imageConsent = true;
+    assert.equal(p.state.canSend, true);
     const sent = p.state.send();
     await vue.nextTick();
     assert.equal(p.uploads.length, 1);
@@ -507,11 +542,11 @@ test('authorized image and text share a request; busy prevents changes and succe
     p.state.onFileDragover(drop); assert.equal(drop.dataTransfer.dropEffect, 'none');
     p.state.onFileDrop(drop); assert.equal(p.state.attachment.name, 'site.png');
     p.requests[0].resolve(result); await sent;
-    assert.equal(p.state.attachment, null); assert.equal(p.state.imageConsent, false);
+    assert.equal(p.state.attachment, null);
     p.state.newConversation(); assert.equal(p.state.attachment, null);
   } finally { p.app.unmount(); }
 });
-test('attachment markup lives inside composer and HomeView never mounts ImagePanel in chat', () => {
+test('attachment markup lives inside the composer and no evidence module is mounted', () => {
   const text = fs.readFileSync(path.join(__dirname, '../src/components/TextPanel.vue'), 'utf8');
   const home = fs.readFileSync(path.join(__dirname, '../src/views/HomeView.vue'), 'utf8');
   const composer = text.slice(text.indexOf('<div class="composer">'), text.indexOf('<div class="composer-toolbar">'));
@@ -519,23 +554,31 @@ test('attachment markup lives inside composer and HomeView never mounts ImagePan
   assert.match(composer, /@click="removeAttachment"/);
   assert.match(composer, /:src="attachmentPreview"/);
   assert.ok(!text.includes('ImagePanel'));
-  assert.equal((home.match(/<ImagePanel /g) || []).length, 1);
-  assert.match(home, /<ImagePanel v-if="isDetail"/);
+  assert.ok(!home.includes('ImagePanel'));
+  assert.ok(!home.includes('KnowledgePanel'));
+  assert.ok(!home.includes('参考资料'));
+  assert.ok(!home.includes('图片证据'));
   assert.ok(!home.includes('#attachments'));
 });
 
+test('image sending needs no authorization checkbox and hides implementation terms', () => {
+  const text = fs.readFileSync(path.join(__dirname, '../src/components/TextPanel.vue'), 'utf8');
+  for (const forbidden of ['image-consent', '图片已打码', '本轮图片使用', '承担费用', 'Tavily', 'deepseek-flash', '外部模型服务']) {
+    assert.ok(!text.includes(forbidden), forbidden);
+  }
+});
 
-test('image-only sends after authorization and retries reuse uploaded photo and request id', async () => {
+
+test('image-only sends and retries reuse the uploaded photo and request id', async () => {
   const p = await mountPanel();
   try {
-    p.state.selectAttachment([imageFile]); p.state.imageConsent = true;
+    p.state.selectAttachment([imageFile]);
     assert.equal(p.state.canSend, true);
     const first = p.state.send(); await vue.nextTick();
     assert.match(p.requests[0].input.input.message, /图片/);
     const id = p.requests[0].input.request_id;
     p.requests[0].reject(new Error('offline')); await first;
-    assert.equal(p.state.imageConsent, false); assert.equal(p.state.canSend, false);
-    p.state.imageConsent = true;
+    assert.equal(p.state.canSend, true);
     const retry = p.state.send(); await vue.nextTick();
     assert.equal(p.uploads.length, 1); assert.equal(p.requests[1].input.request_id, id);
     const photo_id = p.requests[1].input.photo_id;
@@ -547,7 +590,7 @@ test('upload failure leaves draft and preview; abort during upload cannot send a
   const upload = deferred();
   const p = await mountPanel(crypto, performance, { uploadPhoto: () => upload.promise });
   try {
-    p.state.selectAttachment([imageFile]); p.state.imageConsent = true; p.state.form.message = '看图';
+    p.state.selectAttachment([imageFile]); p.state.form.message = '看图';
     const sent = p.state.send();
     p.state.stopWaiting(); assert.equal(p.uploads[0].signal.aborted, true);
     upload.resolve({ photo_id: 'PHOTO-' + 'B'.repeat(24) }); await sent;
@@ -556,20 +599,20 @@ test('upload failure leaves draft and preview; abort during upload cannot send a
   } finally { p.app.unmount(); }
   const failed = await mountPanel(crypto, performance, { uploadPhoto: async () => { throw new Error('图片无法安全解码'); } });
   try {
-    failed.state.selectAttachment([imageFile]); failed.state.imageConsent = true;
+    failed.state.selectAttachment([imageFile]);
     await failed.state.send();
     assert.match(failed.state.error, /无法安全解码/); assert.equal(failed.state.hasAttachment, true);
     assert.equal(failed.requests.length, 0);
   } finally { failed.app.unmount(); }
 });
-test('refresh restores photo reference but requires new consent; removing it returns to pure text', async () => {
+test('refresh restores the photo reference and can send without a consent checkbox', async () => {
   const saved = { request_id: 'image-retry-1', consultation_id: null, expected_turn: 0,
     input: { message: '图片问题' }, photo_id: 'PHOTO-' + 'A'.repeat(24), allow_image_external: true };
   const draft = browserDraft(saved);
   const p = await mountPanel(crypto, performance, draft);
   try {
-    assert.equal(p.state.hasAttachment, true); assert.equal(p.state.imageConsent, false);
-    assert.equal(p.state.canSend, false); assert.equal(p.requests.length, 0);
+    assert.equal(p.state.hasAttachment, true);
+    assert.equal(p.state.canSend, true); assert.equal(p.requests.length, 0);
     p.state.removeAttachment();
     const sent = p.state.send();
     assert.equal(p.requests[0].input.photo_id, undefined); assert.equal(p.uploads.length, 0);
@@ -580,7 +623,7 @@ test('mock runtime keeps the local model and never claims a vision model or exte
   const p = await mountPanel(crypto, performance, { runtime: { configured: true, mode: 'mock', model: 'mock-no-text-understanding',
     image_configured: true, image_model: 'deepseek-flash', available_models: ['mock-no-text-understanding'], custom_model_allowed: false } });
   try {
-    p.state.selectAttachment([imageFile]); p.state.imageConsent = true; p.state.form.message = '看这张图';
+    p.state.selectAttachment([imageFile]); p.state.form.message = '看这张图';
     assert.equal(p.state.canSend, true);
     const sent = p.state.send();
     await vue.nextTick();
@@ -598,7 +641,7 @@ test('switching to a new chat during upload never attaches the late photo to it'
   const upload = deferred();
   const p = await mountPanel(crypto, performance, { router, uploadPhoto: () => upload.promise });
   try {
-    p.state.selectAttachment([imageFile]); p.state.imageConsent = true; p.state.form.message = '看图';
+    p.state.selectAttachment([imageFile]); p.state.form.message = '看图';
     const sent = p.state.send();
     await router.push('/chat?new=second'); await vue.nextTick();
     upload.resolve({ photo_id: 'PHOTO-' + 'B'.repeat(24) }); await sent;

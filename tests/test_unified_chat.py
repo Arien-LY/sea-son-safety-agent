@@ -8,7 +8,7 @@ from backend.app.text_consultations import TextConsultationService, text_runtime
 from backend.app.text_models import TextRequest
 from backend.app.proposals import Phase2ProposalService
 from agents.text_assistant import DeepSeekTextBackend, TextAssistant, TextConfig
-from test_product_text import FakeTextBackend, reply_payload
+from test_product_text import FakeTextBackend, decision_payload
 
 
 @pytest.fixture(autouse=True)
@@ -43,7 +43,7 @@ def test_unified_request_has_long_chat_capacity_and_strict_model_id():
 
 
 def test_unified_ai_decision_routes_logistics_without_creating_a_record():
-    fake = FakeTextBackend([reply_payload("logistics", "medium")])
+    fake = FakeTextBackend([decision_payload("logistics", "medium")])
     seen = []
     service = TextConsultationService(
         Phase2ProposalService(integrity_key=b"u" * 32),
@@ -59,7 +59,7 @@ def test_unified_ai_decision_routes_logistics_without_creating_a_record():
 
 def test_unified_transport_keeps_deep_chat_budget_and_strict_json(monkeypatch):
     captured = {}
-    message = SimpleNamespace(content=json.dumps(reply_payload("logistics", "medium"), ensure_ascii=False), tool_calls=None)
+    message = SimpleNamespace(content=json.dumps(decision_payload("logistics", "medium"), ensure_ascii=False), tool_calls=None)
 
     def create(**kwargs):
         captured.update(kwargs)
@@ -76,7 +76,7 @@ def test_unified_transport_keeps_deep_chat_budget_and_strict_json(monkeypatch):
     backend = DeepSeekTextBackend(TextConfig(
         api_key="FAKE", model="deepseek-custom-2026", base_url="https://api.deepseek.com"))
     raw = backend.invoke([{"role": "user", "content": "structured"}], unified=True)
-    assert json.loads(raw)["analysis"]["category"] == "logistics"
+    assert json.loads(raw)["ticket_decision"]["category"] == "logistics"
     assert captured["settings"]["timeout"] == 180 and captured["settings"]["max_retries"] == 0
     assert captured["max_tokens"] == 32768
     assert captured["response_format"] == {"type": "json_object"}
@@ -99,7 +99,7 @@ def test_runtime_exposes_model_choices_without_secrets(monkeypatch):
 def test_answer_stream_contains_validated_deltas_before_the_final_result(tmp_path):
     from test_product_text import text_client
 
-    client, *_ = text_client(tmp_path, [reply_payload("logistics", "medium")])
+    client, *_ = text_client(tmp_path, [decision_payload("logistics", "medium")])
     response = client.post("/api/text-consultations/stream", json=payload())
     assert response.status_code == 200
     events = [json.loads(line) for line in response.text.splitlines()]

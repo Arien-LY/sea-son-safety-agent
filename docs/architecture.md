@@ -125,3 +125,13 @@ Vue 3 SPA
 - 图片关联遵循“先工作流锁、后照片锁”的固定顺序，仅保证单进程一致性，不是跨主机事务。
 - 聊天图片必须逐次外发授权，且只有已配置的视觉模型可达；图片及图内文字是未核实的用户资料，不是系统指令或工具权限。
 - 含图片的工程分析强制人工复核，单张图片不构成安全、质量或责任认定；图片不改变工单状态。
+
+
+## 最近聊天菜单（2026-09-18）
+
+- SQLite 仍使用 sessions(id, body)，会话 JSON 新增 pinned:boolean（旧数据缺省 false）。置顶与取消置顶不更新原 updated 时间；列表先按 pinned 分组，组内保持原最近保存顺序。后续聊天保存保留 pinned。
+- GET /api/chat-sessions 每项新增 pinned。PATCH /api/chat-sessions/{id} 请求 {"pinned":true|false}，返回 {"consultation_id":id,"pinned":boolean}。
+- DELETE /api/chat-sessions/{id} 要求 {"confirmed":true}，返回 {"deleted":true}；缺确认或错误字段/类型拒绝。两个写接口与聊天保存共用进程内锁；忙碌429、未知会话404、存储错误503，沿用 detail.error_code/message。
+- 删除先提交 SQLite DELETE，再删除内存快照，失败不会只删除前端或内存。删除清除聊天请求、回复、会话提案缓存和置顶元数据，不级联删除工单或可能被工单引用的图片；SQLite 删除不是安全擦盘。
+- AppShell 的菜单按钮与 RouterLink 为兄弟节点，按钮/菜单阻止点击冒泡。原生确认框确认后才删除。删除当前会话先导航新建聊天取消旧页面等待；导航被保护规则拒绝则不删除。成功清理该会话浏览器待重试草稿、刷新列表；过期列表响应不回填。
+- 只保证现有单进程服务一致性，不引入多进程缓存同步或新工具/工单权限。

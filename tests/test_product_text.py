@@ -36,6 +36,33 @@ def reply_payload(category="consultation", risk="low", missing=False):
     return {"answer": "Fake预设回答：请核对现场情况。", "follow_up_questions": ["请在安全位置补充位置和人员情况。"] if analysis["missing_fields"] else [], "analysis": analysis}
 
 
+def decision_payload(category="consultation", risk="low", missing=False, status=None,
+                   review=None, immediate=None):
+    """统一聊天 auto 路径的模型输出：answer + 最小 TicketDecision。"""
+
+    workflow = category in {"safety", "quality", "management", "logistics"}
+    if status is None:
+        status = ("create_ticket" if workflow
+                  else "need_more_info" if (missing or category == "unknown") else "no_ticket")
+    if review is None:
+        review = bool(missing) or risk in {"high", "emergency"}
+    template = analysis_payload(category, risk)
+    return {
+        "answer": "Fake预设回答：请核对现场情况。",
+        "follow_up_questions": ["请在安全位置补充位置和人员情况。"] if (missing or status == "need_more_info") else [],
+        "ticket_decision": {
+            "status": status,
+            "category": category,
+            "issue_type": template["issue_type"],
+            "summary": template["summary"],
+            "risk_level": risk,
+            "requires_human_review": review,
+            "missing_information": ["具体位置和人员暴露情况"] if missing else [],
+            "immediate_action": immediate,
+        },
+    }
+
+
 class FakeTextBackend:
     def __init__(self, responses=None):
         self.responses = responses or [reply_payload()]
@@ -341,8 +368,7 @@ def test_sdk_errors_are_redacted(monkeypatch, failure, code):
 
 def test_frozen_product_schemas():
     root = Path(__file__).resolve().parents[1]
-    for name, model in [("text_request", TextRequest), ("text_response", TextResponse)]:
-        version = "v6"
+    for name, version, model in [("text_request", "v6", TextRequest), ("text_response", "v7", TextResponse)]:
         assert json.loads((root / f"contracts/product_{name}.{version}.schema.json").read_text(encoding="utf-8")) == model.model_json_schema()
     assert "thinking_mode" not in json.loads((root / "contracts/product_text_request.v3.schema.json").read_text(encoding="utf-8"))["properties"]
     v2 = json.loads((root / "contracts/product_text_request.v2.schema.json").read_text(encoding="utf-8"))

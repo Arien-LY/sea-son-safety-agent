@@ -34,10 +34,15 @@ def test_unified_chat_routes_eligible_analysis_to_a_human_controlled_ticket_form
     panel = source("frontend/src/components/TextPanel.vue")
     home = source("frontend/src/views/HomeView.vue")
     assert 'intent: "auto"' in panel
-    assert 'emit("ticket", result.reply.analysis)' in panel
-    assert "openTicketFromAnalysis" in home
-    assert 'router.push({ name: "submit", query: { source: "ai" } })' in home
-    assert "createIssueRecord" in home and "确认提案" in home
+    # 点击“生成工单”后原地生成草稿；点击之前不出现“核对工单草稿”。
+    assert '@click="propose"' in panel and "生成工单" in panel
+    assert "重新判断工单" in panel
+    assert 'emit("proposal", result.data)' in panel
+    assert 'v-if="isSubmit && !proposal"' in home
+    assert "createIssueRecord" in home and "确认工单内容" in home
+    assert 'api.issueRecordWordUrl(record.record_id)' in home
+    assert "deleteIssueRecord" in home
+    assert "确定删除此工单吗？删除后本地记录将无法恢复。" in home
 
 
 def test_text_composer_optimistically_moves_message_and_has_no_confirmation_modal() -> None:
@@ -88,11 +93,24 @@ def test_conversation_breaks_out_of_the_form_width_limit() -> None:
 
 def test_direct_submission_keeps_preview_confirm_and_save_steps() -> None:
     home = source("frontend/src/views/HomeView.vue")
-    assert "生成待确认提案" in home
+    assert "生成工单" in home
     assert "confirmIssueProposal" in home
     assert "信息已确认，尚未保存" in home
     assert "createIssueRecord" in home
-    assert "保存为正式草稿" in home
+    assert "保存为正式工单" in home
+    # 草稿出现后第一步自动收起，第 1 步与第 2 步不会同时显示。
+    assert 'v-if="isSubmit && !proposal"' in home
+
+
+def test_customer_pages_hide_knowledge_and_evidence_modules() -> None:
+    home = source("frontend/src/views/HomeView.vue")
+    panel = source("frontend/src/components/TextPanel.vue")
+    assert "KnowledgePanel" not in home and "ImagePanel" not in home
+    assert "参考资料" not in home and "图片证据" not in home
+    # 聊天仍保留图片发送，但不再需要授权 checkbox 或模型术语。
+    assert 'accept="image/jpeg,image/png"' in panel and "openAttachment" in panel
+    for forbidden in ("image-consent", "图片已打码", "本轮图片使用", "承担费用", "deepseek-flash"):
+        assert forbidden not in panel, forbidden
 
 
 def test_frozen_contract_names_required_browser_scenarios() -> None:
@@ -126,7 +144,8 @@ def test_model_picker_is_server_described_and_supports_a_custom_model_id() -> No
     assert "available_models" in panel
     # Text and Mock turns use the picker; only a real image turn switches to the image model.
     assert 'model: hasAttachment.value && runtime.value?.mode === "real" ? runtime.value.image_model || null : selectedModel.value || null' in panel
-    assert "AI 服务未启用，图片仅在本机校验和保存" in panel
+    # 图片发送不再要求授权 checkbox，也不再显示模型术语。
+    assert "image-consent" not in panel and "本轮图片使用" not in panel
     assert "model: str | None" in request
 
 

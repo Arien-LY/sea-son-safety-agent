@@ -8,11 +8,21 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from agents.text_assistant import TextError
 from backend.app.text_consultations import TextConsultationService, text_runtime
-from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse
+from backend.app.text_models import TextProposalRequest, TextRequest, TextResponse, TicketRejudgeRequest
 from backend.app.text_progress import stream_operation
 from backend.app.workflow import IssueWorkflowService
 from backend.app.workflow_models import RecordDisposition, WorkflowStatus
 from backend.app.workflow_store import StoreError
+
+
+class ChatPinRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    pinned: bool
+
+
+class ChatDeleteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    confirmed: bool
 
 
 class RecordQuery(BaseModel):
@@ -74,6 +84,16 @@ def create_product_router(texts: TextConsultationService, workflow: IssueWorkflo
     def session(consultation_id: str):
         return call(texts.get_session, consultation_id)
 
+    @router.patch("/api/chat-sessions/{consultation_id}")
+    def pin_session(consultation_id: str, payload: dict):
+        return call(texts.set_pinned, consultation_id, parse(ChatPinRequest, payload).pinned)
+
+    @router.delete("/api/chat-sessions/{consultation_id}")
+    def delete_session(consultation_id: str, payload: dict):
+        if not parse(ChatDeleteRequest, payload).confirmed:
+            raise HTTPException(400, detail={"error_code": "confirmation_required", "message": "请确认删除聊天。"})
+        return call(texts.delete_session, consultation_id)
+
     @router.post("/api/text-consultations", response_model=TextResponse)
     def send(payload: dict):
         return call(texts.send, parse(TextRequest, payload))
@@ -89,6 +109,14 @@ def create_product_router(texts: TextConsultationService, workflow: IssueWorkflo
     @router.post("/api/text-consultations/{consultation_id}/proposal")
     def propose(consultation_id: str, payload: dict):
         return call(texts.propose, consultation_id, parse(TextProposalRequest, payload))
+
+    @router.post("/api/text-consultations/{consultation_id}/ticket-decision")
+    def rejudge(consultation_id: str, payload: dict):
+        return call(texts.rejudge, consultation_id, parse(TicketRejudgeRequest, payload))
+
+    @router.post("/api/text-consultations/{consultation_id}/ticket-decision/stream")
+    def rejudge_stream(consultation_id: str, payload: dict):
+        return stream_operation(texts.rejudge, consultation_id, parse(TicketRejudgeRequest, payload))
 
     @router.get("/api/issue-records")
     def records(request: Request):

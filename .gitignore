@@ -13,6 +13,7 @@ frontend/.vite/
 .env
 data/*.json
 data/*.sqlite3*
+data/field-case-images/
 uploads/
 *.log
 release-output/

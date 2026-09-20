@@ -122,11 +122,13 @@ def test_legacy_text_digest_is_unchanged(photo_chat):
 
 def test_visual_workflow_analysis_requires_human_review(photo_chat):
     from agents.text_assistant import TextAssistant
-    from test_product_text import FakeTextBackend, reply_payload
+    from test_product_text import FakeTextBackend, decision_payload
     service, _, photo, _ = photo_chat
-    payload = reply_payload(category='safety', risk='low')
+    payload = decision_payload(category='safety', risk='low')
     service.assistant_factory = lambda *_: TextAssistant(FakeTextBackend([payload]))
     result = service.send(request(photo, tools_enabled=False))
+    assert result.ticket_decision.status == 'create_ticket'
+    assert result.can_propose
     assert result.reply.analysis.requires_human_review
     assert result.reply.analysis.recommended_route == 'human_review'
     assert any('图片' in v for v in result.reply.analysis.uncertainties)

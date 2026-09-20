@@ -8,3 +8,5 @@ hello-agents==0.2.9
 huggingface-hub==0.36.2
 # Phase 5: decode/re-encode untrusted single images and discard metadata.
 Pillow==12.3.0
+# 正式工单 Word 导出（.docx）。
+python-docx==1.2.0

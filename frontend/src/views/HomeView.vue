@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch, toRaw } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { api } from "../api";
 import { categoryNames, riskNames, routeNames, actorNames, actionNames } from "../customerLabels";
-import KnowledgePanel from "../components/KnowledgePanel.vue";
-import ImagePanel from "../components/ImagePanel.vue";
 import TextPanel from "../components/TextPanel.vue";
 import type {
   ActorRole,
@@ -39,9 +37,6 @@ function rememberChat(id: string) {
 }
 const loadingRecord = ref(false);
 const recordError = ref("");
-const textAnalysis = ref<IssueAnalysis | null>(null);
-const transferredAnalysis = ref<IssueAnalysis | null>(null);
-const activeAnalysis = computed(() => record.value?.analysis || proposal.value?.analysis || textAnalysis.value);
 let loadGeneration = 0;
 let saveKey = "";
 const runtimeError = ref("");
@@ -50,6 +45,7 @@ const previewing = ref(false);
 const confirming = ref(false);
 const saving = ref(false);
 const advancing = ref(false);
+const deleting = ref(false);
 const textBusy = ref(false);
 const imageBusy = ref(false);
 const textProposalBusy = ref(false);
@@ -93,7 +89,6 @@ const roleLabels: Record<ResponsibleRole, string> = {
   site_manager: "现场管理人员",
   facilities_staff: "后勤维修人员",
 };
-const categoryLabels = { safety: "安全", quality: "质量", management: "管理", logistics: "后勤" } as const;
 
 const liveChanges = computed<ProposalFieldChange[]>(() => {
   if (!proposal.value || !editedFields.value) return [];
@@ -125,27 +120,10 @@ async function loadRecord() {
   finally { if (current === loadGeneration) loadingRecord.value = false; }
 }
 watch(() => route.fullPath, () => {
-  const keepTransferred = isSubmit.value && transferredAnalysis.value !== null;
   proposal.value = null; confirmed.value = null; editedFields.value = null;
-  if (!keepTransferred) { textAnalysis.value = null; transferredAnalysis.value = null; }
   void loadRecord();
 }, { immediate: true });
 watch(editedFields, () => { confirmed.value = null; saveKey = ""; }, { deep: true });
-
-function useTextAnalysis(analysis: IssueAnalysis | null) {
-  textAnalysis.value = analysis; proposal.value = null; confirmed.value = null; editedFields.value = null;
-}
-
-async function openTicketFromAnalysis(analysis: IssueAnalysis) {
-  if (!["safety", "quality", "management", "logistics"].includes(analysis.category)) return;
-  transferredAnalysis.value = structuredClone(toRaw(analysis));
-  textAnalysis.value = transferredAnalysis.value;
-  analysisForm.category = analysis.category as typeof analysisForm.category;
-  analysisForm.issueType = analysis.issue_type;
-  analysisForm.summary = analysis.summary;
-  analysisForm.riskLevel = analysis.risk_level;
-  await router.push({ name: "submit", query: { source: "ai" } });
-}
 
 onMounted(async () => {
   try {
@@ -156,9 +134,6 @@ onMounted(async () => {
 });
 
 function buildAnalysis(): IssueAnalysis {
-  if (transferredAnalysis.value) {
-    return structuredClone(toRaw(transferredAnalysis.value));
-  }
   const highRisk = ["high", "emergency"].includes(analysisForm.riskLevel);
   return {
     category: analysisForm.category,
@@ -225,6 +200,22 @@ async function confirmProposal() {
     actionError.value = error instanceof Error ? error.message : "无法确认提案";
   } finally {
     confirming.value = false;
+  }
+}
+
+async function deleteRecord() {
+  if (!record.value || deleting.value) return;
+  if (!window.confirm("确定删除此工单吗？删除后本地记录将无法恢复。")) return;
+  deleting.value = true;
+  actionError.value = "";
+  try {
+    await api.deleteIssueRecord(record.value.record_id);
+    record.value = null;
+    deleting.value = false;
+    await router.push({ name: "records" });
+  } catch (error) {
+    actionError.value = error instanceof Error ? error.message : "删除工单失败，请重试。";
+    deleting.value = false;
   }
 }
 
@@ -309,20 +300,20 @@ function displayValue(value: string | null): string {
     <div>
       <p class="workspace-kicker">{{ isDetail ? "历史工单" : "问题上报" }}</p>
       <h1>{{ isDetail ? "工单详情与整改" : "提交工单" }}</h1>
-      <p>{{ isDetail ? "查看处理进展，继续整改与复查。" : transferredAnalysis ? `AI 已判断为${categoryLabels[transferredAnalysis.category as keyof typeof categoryLabels]}问题并预填申请；仍需人工核对、确认和保存。` : "填写问题信息，核对并确认后保存。" }}</p>
+      <p>{{ isDetail ? "查看处理进展，继续整改与复查。" : "填写问题信息，核对并确认后保存。" }}</p>
     </div>
     <div class="connection-pill" :class="{ online: runtime }"><span></span>{{ runtime ? "服务已连接" : runtimeError || "正在检查服务" }}</div>
   </section>
 
   <fieldset class="workspace-fields" :class="{ 'conversation-fields': isConversation }" :disabled="routeBlocking || loadingRecord" aria-label="咨询和工单操作区">
-  <TextPanel v-if="isConversation" mode="auto" :session-id="typeof route.query.chat === 'string' ? route.query.chat : undefined" :new-chat-key="String(route.query.new || '')" @session="rememberChat" @proposal="usePhotoProposal" @analysis="useTextAnalysis" @ticket="openTicketFromAnalysis" @busy="textBusy = $event" @proposing="textProposalBusy = $event" :disabled="routeBlocking || loadingRecord" />
+  <TextPanel v-if="isConversation" mode="auto" :session-id="typeof route.query.chat === 'string' ? route.query.chat : undefined" :new-chat-key="String(route.query.new || '')" @session="rememberChat" @proposal="usePhotoProposal" @busy="textBusy = $event" @proposing="textProposalBusy = $event" :disabled="routeBlocking || loadingRecord" />
   <fieldset class="business-fields" :disabled="working || loadingRecord" aria-label="工单和附件操作区">
   <div v-if="isDetail" class="record-toolbar"><RouterLink to="/records" class="secondary-button">← 返回历史工单</RouterLink><button class="secondary-button" :disabled="loadingRecord || advancing" @click="loadRecord">刷新详情</button></div>
   <div v-if="loadingRecord" class="loading-state" role="status"><span></span><p><strong>正在读取工单详情</strong><small>正在获取处理记录…</small></p></div>
   <p v-if="recordError" class="error-message" role="alert">{{ recordError }}</p>
   <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
 
-  <section v-if="isSubmit" class="proposal-workbench direct-submit">
+  <section v-if="isSubmit && !proposal" class="proposal-workbench direct-submit">
   <section aria-labelledby="proposal-workbench-title">
     <div class="section-heading">
       <div>
@@ -338,7 +329,7 @@ function displayValue(value: string | null): string {
     <div class="form-grid">
       <label>
         问题类别
-        <select v-model="analysisForm.category" :disabled="Boolean(transferredAnalysis)">
+        <select v-model="analysisForm.category">
           <option value="safety">安全问题</option>
           <option value="quality">质量问题</option>
           <option value="management">管理问题</option>
@@ -347,7 +338,7 @@ function displayValue(value: string | null): string {
       </label>
       <label>
         风险等级
-        <select v-model="analysisForm.riskLevel" :disabled="Boolean(transferredAnalysis)">
+        <select v-model="analysisForm.riskLevel">
           <option value="undetermined">待判断</option>
           <option value="low">低</option>
           <option value="medium">中</option>
@@ -357,15 +348,15 @@ function displayValue(value: string | null): string {
       </label>
       <label>
         问题类型
-        <input v-model.trim="analysisForm.issueType" maxlength="100" :disabled="Boolean(transferredAnalysis)" />
+        <input v-model.trim="analysisForm.issueType" maxlength="100" />
       </label>
       <label class="full-field">
         已观察问题摘要
-        <textarea v-model.trim="analysisForm.summary" maxlength="500" rows="3" :disabled="Boolean(transferredAnalysis)"></textarea>
+        <textarea v-model.trim="analysisForm.summary" maxlength="500" rows="3"></textarea>
       </label>
     </div>
     <button class="primary-button" :disabled="previewing" @click="createPreview">
-      {{ previewing ? "正在生成待确认提案…" : "继续：生成待确认提案" }}
+      {{ previewing ? "正在生成工单…" : "生成工单" }}
     </button>
     <p v-if="actionError" class="error-message" role="alert">{{ actionError }}</p>
   </section>
@@ -375,7 +366,7 @@ function displayValue(value: string | null): string {
     <div class="section-heading">
       <div>
         <p class="eyebrow">第 2 步 · 等待人工确认</p>
-        <h2 id="suggestion-title">核对工单提案</h2>
+        <h2 id="suggestion-title">核对工单草稿</h2>
       </div>
       <span class="warning-chip">尚未保存</span>
     </div>
@@ -427,15 +418,15 @@ function displayValue(value: string | null): string {
     </div>
 
     <button class="primary-button confirm-button" :disabled="confirming" @click="confirmProposal">
-      {{ confirming ? "正在确认…" : "确认以上提案" }}
+      {{ confirming ? "正在确认…" : "确认工单内容" }}
     </button>
   </section>
 
   <section v-if="!isDetail && confirmed && !record" class="confirmation-card" aria-live="polite">
-    <strong>第 3 步 · 提案已确认</strong>
-    <p>信息已确认，尚未保存。点击下方按钮创建工单草稿。</p>
+    <strong>第 3 步 · 工单草稿已确认</strong>
+    <p>信息已确认，尚未保存。点击下方按钮保存为正式工单。</p>
     <button class="primary-button" :disabled="saving" @click="saveDraft">
-      {{ saving ? "正在保存，请勿重复点击…" : "保存为正式草稿" }}
+      {{ saving ? "正在保存，请勿重复点击…" : "保存为正式工单" }}
     </button>
   </section>
 
@@ -455,7 +446,16 @@ function displayValue(value: string | null): string {
     <p class="record-description">{{ record.review_fields.record_description }}</p>
     <p v-if="record.review_fields.reporter_note">补充说明：{{ record.review_fields.reporter_note }}</p>
     <p class="section-note">更新：{{ new Date(record.updated_at).toLocaleString() }}</p>
-    <details class="analysis-detail"><summary>查看完整问题分析</summary>
+    <div class="record-toolbar"><a class="primary-button" :href="api.issueRecordWordUrl(record.record_id)" download>生成 Word 文件</a></div>
+    <div class="record-summary-grid">
+      <div><span>工单编号</span><strong>{{ record.record_id }}</strong></div>
+      <div><span>生成时间</span><strong>{{ new Date(record.created_at).toLocaleString() }}</strong></div>
+      <div><span>问题类别</span><strong>{{ categoryNames[record.analysis.category] }}</strong></div>
+      <div><span>风险等级</span><strong>{{ riskNames[record.analysis.risk_level] }}</strong></div>
+      <div><span>人工复核</span><strong>{{ record.analysis.requires_human_review ? "需要" : "不需要" }}</strong></div>
+      <div><span>AI 简要建议</span><strong>{{ record.analysis.suggested_actions.join("；") || "待补充" }}</strong></div>
+    </div>
+    <details class="analysis-detail"><summary>查看 AI 分析详情</summary>
       <p>类别：{{ categoryNames[record.analysis.category] }} · 处理建议：{{ routeNames[record.analysis.recommended_route] }}</p>
       <p>{{ record.analysis.summary }}</p>
       <p>已述事实：{{ record.analysis.observed_facts.join('；') || '无' }}</p>
@@ -558,10 +558,15 @@ function displayValue(value: string | null): string {
         </li>
       </ol>
     </div>
-  </section>
 
-  <ImagePanel v-if="isDetail" :record="record" evidence-only @proposal="usePhotoProposal" @busy="imageBusy = $event" />
-  <KnowledgePanel v-if="activeAnalysis && (isDetail || isSubmit)" :analysis="activeAnalysis" :record="record" />
+    <div class="record-danger-zone">
+      <div>
+        <strong>删除工单</strong>
+        <span>仅从本机删除这条记录，删除后无法恢复；与“取消工单”是不同操作。</span>
+      </div>
+      <button type="button" class="danger-button" :disabled="deleting || advancing" @click="deleteRecord">{{ deleting ? "正在删除…" : "删除工单" }}</button>
+    </div>
+  </section>
   </fieldset>
   </fieldset>
 
@@ -580,5 +585,8 @@ function displayValue(value: string | null): string {
 .analysis-detail { padding: 16px; background: #f5f8fc; border-radius: 12px; overflow-wrap: anywhere; }
 summary { cursor: pointer; font-weight: 700; }
 .workflow-card { overflow-wrap: anywhere; }
+.record-danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 22px; padding: 14px 16px; border: 1px solid #e6c9c5; border-radius: 12px; background: #fdf6f5; }
+.record-danger-zone strong { display: block; font-size: 14px; }
+.record-danger-zone span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
 @media (max-width: 600px) { .section-heading { flex-wrap: wrap; } }
 </style>

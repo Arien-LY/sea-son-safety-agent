@@ -17,7 +17,10 @@ from hello_agents.core.message import Message
 from openai import APITimeoutError, OpenAI
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, ValidationError, model_validator
 
-from agents.schemas import IssueAnalysis, IssueDetail, TextConsultationInput
+from agents.schemas import (
+    IssueAnalysis, IssueCategory, IssueDetail, RecommendedRoute, RiskLevel,
+    TextConsultationInput, TicketDecision, TicketStatus, WORKFLOW_CATEGORIES,
+)
 from agents.answer_stream import AnswerStream
 from agents.chat_settings import (
     CHAT_MAX_INPUT_CHARS, CHAT_MAX_ANSWER_CHARS, CHAT_MAX_OUTPUT_TOKENS,
@@ -57,8 +60,25 @@ class ChatInput(TextConsultationInput):
     message: str = Field(min_length=1, max_length=CHAT_MAX_INPUT_CHARS)
 
 
-class ChatReply(TextReply):
+class TicketDecisionReply(BaseModel):
+    """统一聊天的一次模型返回：自然回答 + 工单判断。"""
+
+    model_config = ConfigDict(extra="ignore", strict=True, str_strip_whitespace=True)
+
     answer: str = Field(min_length=1, max_length=CHAT_MAX_ANSWER_CHARS)
+    follow_up_questions: list[IssueDetail] = Field(default_factory=list, max_length=20)
+    ticket_decision: TicketDecision
+
+
+class ChatReply(BaseModel):
+    """服务端响应里的统一聊天回复；analysis 由 TicketDecision 确定性推导。"""
+
+    model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
+
+    answer: str = Field(min_length=1, max_length=CHAT_MAX_ANSWER_CHARS)
+    follow_up_questions: list[IssueDetail] = Field(default_factory=list, max_length=20)
+    analysis: IssueAnalysis
+    ticket_decision: TicketDecision | None = None
     # Server-owned outcome, deliberately absent from the model's JSON schema.
     _analysis_unavailable: bool = PrivateAttr(default=False)
 
@@ -70,6 +90,60 @@ class ChatReply(TextReply):
 class _ChatAnswer(BaseModel):
     model_config = ConfigDict(strict=True, str_strip_whitespace=True)
     answer: str = Field(min_length=1, max_length=CHAT_MAX_ANSWER_CHARS)
+
+
+DEFAULT_IMMEDIATE_ACTION = "请先远离危险并联系现场专业人员，不要自行处置带电、高处或受限空间危险。"
+DEFAULT_SUGGESTION = "安排有资格的现场人员核实并确定后续处置。"
+DEFAULT_UNCERTAINTY = "现场具体情况仍需专业人员核实。"
+
+
+def decision_to_analysis(decision: TicketDecision) -> IssueAnalysis:
+    """把最小 TicketDecision 确定性地转换成现有 IssueAnalysis 契约。
+
+    浏览器与模型都不直接生成 IssueAnalysis；提案、HMAC 和正式工单流程保持不变。
+    """
+
+    risk = decision.risk_level
+    category = decision.category
+    high = risk in {RiskLevel.HIGH, RiskLevel.EMERGENCY}
+    issue_type = decision.issue_type.strip() or (
+        "待核实现场问题" if category in WORKFLOW_CATEGORIES else "日常咨询")
+    summary = decision.summary.strip() or "用户描述了需要关注的情况，具体细节仍需核实。"
+    missing = [item for item in decision.missing_information if item.strip()]
+    if category is IssueCategory.UNKNOWN and not missing:
+        missing = ["具体问题类别和现场情况"]
+    if risk is RiskLevel.UNDETERMINED and not missing:
+        missing = ["现场风险仍需专业判断"]
+    action = decision.immediate_action.strip() if decision.immediate_action else ""
+    if decision.status is TicketStatus.CREATE_TICKET:
+        uncertainties = list(missing) or [DEFAULT_UNCERTAINTY]
+        review = bool(decision.requires_human_review or high or missing)
+        route = RecommendedRoute.HUMAN_REVIEW if review else RecommendedRoute.PROPOSE_WORKFLOW
+        if high:
+            immediate = [action or DEFAULT_IMMEDIATE_ACTION]
+        else:
+            immediate = [action] if action else []
+        return IssueAnalysis(
+            category=category, issue_type=issue_type, summary=summary,
+            observed_facts=[summary], uncertainties=uncertainties, missing_fields=missing,
+            risk_level=risk, immediate_actions=immediate, suggested_actions=[DEFAULT_SUGGESTION],
+            recommended_route=route, requires_human_review=review, confidence=0.9)
+    # no_ticket / need_more_info：只用于展示与追问，不进入提案流程。
+    if category is IssueCategory.CONSULTATION and risk is not RiskLevel.UNDETERMINED:
+        return IssueAnalysis(
+            category=category, issue_type=issue_type, summary=summary,
+            observed_facts=[summary], uncertainties=list(missing) or [DEFAULT_UNCERTAINTY],
+            missing_fields=missing, risk_level=risk, immediate_actions=[],
+            suggested_actions=[DEFAULT_SUGGESTION], recommended_route=RecommendedRoute.DIRECT_ANSWER,
+            requires_human_review=decision.requires_human_review, confidence=0.9)
+    if not missing:
+        missing = ["如需形成工单，请补充可定位地点、现场异常和影响范围"]
+    return IssueAnalysis(
+        category=category, issue_type=issue_type, summary=summary,
+        observed_facts=[summary], uncertainties=list(missing) or [DEFAULT_UNCERTAINTY],
+        missing_fields=missing, risk_level=risk, immediate_actions=[action] if action else [],
+        suggested_actions=[DEFAULT_SUGGESTION], recommended_route=RecommendedRoute.COLLECT_MORE_INFO,
+        requires_human_review=True, confidence=0.6)
 
 
 def unavailable_analysis_reply(answer: str) -> ChatReply:
@@ -137,17 +211,27 @@ answer直接回答用户最新问题；analysis是同一问题结合历次用户
 """
 
 UNIFIED_SYSTEM_PROMPT = CHAT_SYSTEM_PROMPT + """
-同时判断用户当前问题是否需要安全、质量、管理或后勤工单；仍只输出给定schema的JSON。
-先输出answer字符串，再输出follow_up_questions和analysis；answer是自然对话正文，不复述结构化分析。
+同时判断用户当前问题是否需要安全、质量、管理或后勤工单；只输出给定schema的JSON对象。
+先输出answer字符串，再输出follow_up_questions和ticket_decision；answer是自然对话正文，不复述结构化判断。
 用户转移话题时直接回答新话题；只有明确在补充同一现场事件时才合并该事件相关事实。
-普通问候/常识/写作不要求用户补位置或人员信息：consultation、direct_answer，无现场缺失字段。
-现场事件按以下业务规则填写analysis；这些规则不是要求普通聊天采用表单语气：
-""" + TEXT_SYSTEM_PROMPT.replace("，无工具权限", "") + """
-历史assistant消息仅保留JSON封装的answer供理解指代，不包含旧工单分析；当前回复仍须输出完整JSON对象，不能仿照历史省略字段或输出裸文本。
-工单申请是待人工核验的入口，不要求先完成诊断、责任认定或维修。四类具体现场事件已有可定位地点、明确异常与需跟进诉求时，
-若仍需到场确认原因/设备型号/保修/工程结论，将这些不确定性如实保留，选择human_review并requires_human_review=true，
-在answer说明可进入待人工核验申请、尚未保存或派工。不要反复要求用户先查清诊断才申请，也不要把风险未知猜成low。
-仅缺乏可定位地点、实际异常或无法判断是否具体事件时collect_more_info；普通咨询与unknown不能据此生成申请。
+普通问候/常识/写作不要求用户补位置或人员信息：ticket_decision.status=no_ticket，正常回答即可。
+ticket_decision只回答"要不要开单"，不要输出分析字段、路由、置信度或工具命令：
+status=no_ticket：普通咨询、常识、写作或与现场无关的问题，不需要工单；
+status=need_more_info：像是现场事件但缺少可定位地点、明确异常或影响范围，在answer末尾用一句话简单追问；
+status=create_ticket：可定位的现场问题且需要持续跟进，answer正常回答，系统会在下方提供“生成工单”。
+category：一般方法/假设/无具体事件归consultation；施工人身危险归safety；工程成品缺陷归quality；
+流程秩序归management；宿舍生活保障归logistics；无法区分归unknown。create_ticket只用于safety/quality/management/logistics。
+risk_level：证据不足undetermined，不等于low；影响有限low；需及时核查medium；严重伤害可信风险high；
+危险正在发生、人员被困、火花或紧迫暴露emergency。high/emergency必须create_ticket并requires_human_review=true，
+且在immediate_action写一句立即避险提示；不得宣称风险已经消除。
+missing_information只写需要在安全条件下补充的现场信息；immediate_action写一句先做什么或如何避险。
+先远离危险并联系现场专业人员，不指导无资质者触摸、带电测试或自行修理；不作最终工程定性。
+不编造规范条号、来源、人员责任，不处罚、不创建记录/派工/关闭，不输出工具命令或隐藏思维链。
+历史assistant消息仅保留JSON封装的answer供理解指代，不包含旧工单判断；当前回复仍须输出完整JSON对象。
+工单申请是待人工核验的入口，不要求先完成诊断、责任认定或维修。已有可定位地点、明确异常与需跟进诉求时，
+若仍需到场确认原因/设备型号/保修/工程结论，将这些不确定性如实写入missing_information，选择create_ticket并
+requires_human_review=true，在answer说明可进入待人工核验申请、尚未保存或派工。不要反复要求用户先查清诊断才申请，
+也不要把风险未知猜成low。仅缺乏可定位地点、实际异常或无法判断是否具体事件时need_more_info；普通咨询与unknown不能create_ticket。
 """
 
 
@@ -171,9 +255,13 @@ def parse_reply(raw: object, *, unified: bool = False) -> TextReply:
             raise ValueError("Expected a JSON object")
         body = _ChatAnswer.model_validate({"answer": payload.get("answer")})
         try:
-            return ChatReply.model_validate_json(raw, strict=True)
+            decision_reply = TicketDecisionReply.model_validate_json(raw, strict=True)
+            analysis = decision_to_analysis(decision_reply.ticket_decision)
         except ValidationError:
             return unavailable_analysis_reply(body.answer)
+        return ChatReply(answer=decision_reply.answer,
+                         follow_up_questions=decision_reply.follow_up_questions,
+                         analysis=analysis, ticket_decision=decision_reply.ticket_decision)
     except (ValidationError, ValueError) as exc:
         raise TextError("invalid_text_output", "回答未完整返回或格式无效，请手动重试。") from exc
 
@@ -319,6 +407,15 @@ class DeepSeekTextBackend:
 
 class MockTextBackend:
     def invoke(self, messages: list[dict[str, str]], **kwargs: object) -> str:
+        if kwargs.get("unified"):
+            return json.dumps({
+                "answer": "Mock模式未运行真实文字理解，不能根据此结果判定现场风险。请由专业人员核对；有即时危险时先远离危险并联系现场人员。",
+                "follow_up_questions": ["请补充具体问题、位置和人员是否处于危险中。"],
+                "ticket_decision": {"status": "need_more_info", "category": "unknown",
+                                    "issue_type": "待人工核对", "summary": "Mock未执行文字识别。",
+                                    "risk_level": "undetermined", "requires_human_review": True,
+                                    "missing_information": ["现场专业核对"], "immediate_action": None},
+            }, ensure_ascii=False)
         return json.dumps({
             "answer": "Mock模式未运行真实文字理解，不能根据此结果判定现场风险。请由专业人员核对；有即时危险时先远离危险并联系现场人员。",
             "follow_up_questions": ["请补充具体问题、位置和人员是否处于危险中。"],
@@ -353,7 +450,7 @@ class TextAssistant:
               unified: bool = False, previous_answers: list[str] | None = None,
               thinking_mode: str = "fast", on_text: Callable[[str], None] | None = None,
               current: date | None = None, model: str | None = None, tools=None, image: bytes | None = None) -> TextReply:
-        reply_model = ChatReply if unified else TextReply
+        prompt_model = TicketDecisionReply if unified else TextReply
         prompt = TEXT_SYSTEM_PROMPT
         if unified:
             inputs, previous_answers, _ = select_chat_context(inputs, previous_answers or [], structured_answers=True)
@@ -363,7 +460,7 @@ class TextAssistant:
             prompt += "\n" + IMAGE_BOUNDARY
         agent = SimpleAgent(
             name="sea-son-text-entry", llm=cast(HelloAgentsLLM, _TextGuard(self.backend, unified=unified)),
-            system_prompt=prompt + "\nJSON Schema:\n" + json.dumps(reply_model.model_json_schema(), ensure_ascii=False),
+            system_prompt=prompt + "\nJSON Schema:\n" + json.dumps(prompt_model.model_json_schema(), ensure_ascii=False),
             tool_registry=None, enable_tool_calling=False,
         )
         try:

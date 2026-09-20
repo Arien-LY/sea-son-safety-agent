@@ -102,3 +102,51 @@ class IssueAnalysis(BaseModel):
             if self.recommended_route != RecommendedRoute.HUMAN_REVIEW:
                 raise ValueError("高风险或紧急问题必须路由人工复核。")
         return self
+
+
+WORKFLOW_CATEGORIES = frozenset({
+    IssueCategory.SAFETY,
+    IssueCategory.QUALITY,
+    IssueCategory.MANAGEMENT,
+    IssueCategory.LOGISTICS,
+})
+
+
+class TicketStatus(StrEnum):
+    """聊天回答之后唯一需要的三种工单判断。"""
+
+    NO_TICKET = "no_ticket"
+    NEED_MORE_INFO = "need_more_info"
+    CREATE_TICKET = "create_ticket"
+
+
+class TicketDecision(BaseModel):
+    """比 IssueAnalysis 更小、更稳定的工单判断契约。
+
+    模型只负责判断"要不要开单"；服务端把本契约确定性地转换成
+    现有 IssueAnalysis，再进入 Proposal / HMAC / 正式工单流程。
+    """
+
+    model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
+
+    status: TicketStatus
+    category: IssueCategory = IssueCategory.UNKNOWN
+    issue_type: str = Field(default="", max_length=100)
+    summary: str = Field(default="", max_length=500)
+    risk_level: RiskLevel = RiskLevel.UNDETERMINED
+    requires_human_review: bool = False
+    missing_information: list[IssueDetail] = Field(default_factory=list, max_length=10)
+    immediate_action: str | None = Field(default=None, max_length=300)
+
+    @model_validator(mode="after")
+    def enforce_ticket_boundary(self) -> "TicketDecision":
+        # 高风险或紧急不允许被模型降级：服务端强制开单并要求人工复核。
+        if self.risk_level in {RiskLevel.HIGH, RiskLevel.EMERGENCY}:
+            self.requires_human_review = True
+            self.status = TicketStatus.CREATE_TICKET
+        if self.status is TicketStatus.CREATE_TICKET:
+            if self.category not in WORKFLOW_CATEGORIES:
+                raise ValueError("只有安全/质量/管理/后勤现场问题才能生成工单。")
+            if not self.summary:
+                raise ValueError("生成工单必须给出问题摘要。")
+        return self

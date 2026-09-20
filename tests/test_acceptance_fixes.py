@@ -7,7 +7,7 @@ from agents.text_assistant import TextError
 from backend.app.text_models import TextProposalRequest
 from test_chat_regression import transport, request, service
 from test_web_tools import native_transport, native_request
-from test_product_text import reply_payload
+from test_product_text import decision_payload, reply_payload
 
 
 def test_auto_history_encodes_only_answers_without_inventing_business_analysis(transport):
@@ -39,8 +39,7 @@ def test_unverified_sources_never_stream_or_commit(native_transport, tool, argum
 
 @pytest.mark.parametrize('category', ['safety', 'quality', 'management', 'logistics'])
 def test_manual_review_draft_keeps_missing_diagnosis_without_saving(transport, category):
-    transport.payload = reply_payload(category, 'undetermined', True)
-    transport.payload['analysis'].update(recommended_route='human_review', requires_human_review=True)
+    transport.payload = decision_payload(category, 'undetermined', True)
     app = service()
     result = app.send(request(input={'message': '合成地点设备故障，请申请人工到场核验。'}))
     assert result.can_propose
@@ -53,13 +52,13 @@ def test_manual_review_draft_keeps_missing_diagnosis_without_saving(transport, c
     assert preview.data['proposal']['analysis']['missing_fields']
 
 
-@pytest.mark.parametrize('category,route,review', [
-    ('consultation', 'human_review', True), ('unknown', 'human_review', True),
-    ('logistics', 'collect_more_info', True), ('logistics', 'human_review', False),
+@pytest.mark.parametrize('category,risk,status', [
+    ('consultation', 'low', 'no_ticket'), ('unknown', 'undetermined', 'need_more_info'),
+    ('logistics', 'low', 'need_more_info'), ('safety', 'medium', 'no_ticket'),
 ])
-def test_incomplete_or_unreviewed_cases_still_cannot_propose(transport, category, route, review):
-    transport.payload = reply_payload(category, 'undetermined', True)
-    transport.payload['analysis'].update(recommended_route=route, requires_human_review=review)
+def test_only_create_ticket_can_propose(transport, category, risk, status):
+    # 只有 create_ticket + 安全/质量/管理/后勤 才能出现“生成工单”。
+    transport.payload = decision_payload(category, risk, status=status)
     assert not service().send(request()).can_propose
 
 

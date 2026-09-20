@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from agents.schemas import TextConsultationInput
+from agents.schemas import TextConsultationInput, TicketDecision
 from agents.text_assistant import TextReply, ChatInput, ChatReply
 from agents.chat_settings import CHAT_MAX_TURNS
 
@@ -61,8 +61,27 @@ class TextResponse(BaseModel):
     photo_id: str | None = Field(default=None, pattern=r"^PHOTO-[A-F0-9]{24}$")
     context_trimmed: bool = False
     analysis_status: Literal["validated", "unavailable", "not_requested"] = "validated"
+    ticket_decision: TicketDecision | None = Field(default=None)
+    rejudge_available: bool = False
+    analysis_retry_used: bool = False
     sources: list[dict[str, str]] = Field(default_factory=list, max_length=20)
     tool_results: list[dict] = Field(default_factory=list, max_length=4)
+
+
+class TicketRejudgeRequest(BaseModel):
+    """人工触发一轮工单重新判断；复用已保存的用户输入，不新增用户消息。"""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    expected_turn: int = Field(ge=1, le=CHAT_MAX_TURNS)
+    confirmed: Literal[True]
+
+    @field_validator("confirmed", mode="before")
+    @classmethod
+    def exact_confirm(cls, value: object) -> object:
+        if type(value) is not bool:
+            raise ValueError("Confirmation must be a JSON boolean.")
+        return value
 
 
 class TextProposalRequest(BaseModel):

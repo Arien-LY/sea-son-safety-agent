@@ -122,6 +122,10 @@ async function readEvents<T>(response: Response, onProgress: (event: TextProgres
 
 export const api = {
   listChatSessions() { return request<ChatSessionItem[]>("/api/chat-sessions", undefined, 5_000); },
+  pinChatSession(id: string, pinned: boolean) { return request<{ consultation_id: string; pinned: boolean }>(
+    '/api/chat-sessions/' + encodeURIComponent(id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pinned }) }, 5_000); },
+  deleteChatSession(id: string) { return request<{ deleted: boolean }>(
+    '/api/chat-sessions/' + encodeURIComponent(id), { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmed: true }) }, 5_000); },
   getChatSession(id: string) { return request<ChatSession>(`/api/chat-sessions/${encodeURIComponent(id)}`, undefined, 5_000); },
   getTextRuntime() { return request<VisionRuntime>("/api/text/runtime", undefined, 5_000); },
   sendText(input: TextTurnRequest, signal?: AbortSignal, onProgress?: (event: TextProgress) => void,
@@ -136,6 +140,12 @@ export const api = {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expected_turn: turn, confirmed: true }),
     }, 35_000, onProgress ? response => readEvents(response, onProgress) : undefined);
   },
+  rejudgeText(consultationId: string, turn: number, onProgress?: (event: TextProgress) => void) {
+    return request<TextTurnResponse>(`/api/text-consultations/${encodeURIComponent(consultationId)}/ticket-decision${onProgress ? "/stream" : ""}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expected_turn: turn, confirmed: true }),
+    }, 190_000, onProgress ? response => readEvents(response, onProgress) : undefined);
+  },
+  issueRecordWordUrl(recordId: string) { return `${API_BASE}/api/issue-records/${encodeURIComponent(recordId)}/export.docx`; },
   listRecords(query: URLSearchParams) { return request<RecordPage>(`/api/issue-records?${query}`); },
   getVisionRuntime() { return request<VisionRuntime>("/api/vision/runtime"); },
   uploadPhoto(file: File, signal?: AbortSignal) {
@@ -229,5 +239,9 @@ export const api = {
   },
   getIssueRecord(recordId: string) {
     return request<IssueRecord>(`/api/issue-records/${recordId}`);
+  },
+  deleteIssueRecord(recordId: string) {
+    return request<{ deleted: boolean; record_id: string }>(
+      `/api/issue-records/${encodeURIComponent(recordId)}`, { method: "DELETE" });
   },
 };

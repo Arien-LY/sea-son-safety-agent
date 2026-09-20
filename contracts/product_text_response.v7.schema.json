@@ -1,0 +1,411 @@
+{
+  "$defs": {
+    "ChatReply": {
+      "additionalProperties": false,
+      "description": "服务端响应里的统一聊天回复；analysis 由 TicketDecision 确定性推导。",
+      "properties": {
+        "answer": {
+          "maxLength": 64000,
+          "minLength": 1,
+          "title": "Answer",
+          "type": "string"
+        },
+        "follow_up_questions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Follow Up Questions",
+          "type": "array"
+        },
+        "analysis": {
+          "$ref": "#/$defs/IssueAnalysis"
+        },
+        "ticket_decision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TicketDecision"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "answer",
+        "analysis"
+      ],
+      "title": "ChatReply",
+      "type": "object"
+    },
+    "IssueAnalysis": {
+      "additionalProperties": false,
+      "description": "模型分析结果；不能直接创建或修改业务记录。",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/IssueCategory"
+        },
+        "issue_type": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Issue Type",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "observed_facts": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Observed Facts",
+          "type": "array"
+        },
+        "uncertainties": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Uncertainties",
+          "type": "array"
+        },
+        "missing_fields": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "risk_level": {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        "immediate_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Immediate Actions",
+          "type": "array"
+        },
+        "suggested_actions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Suggested Actions",
+          "type": "array"
+        },
+        "recommended_route": {
+          "$ref": "#/$defs/RecommendedRoute"
+        },
+        "requires_human_review": {
+          "title": "Requires Human Review",
+          "type": "boolean"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "category",
+        "issue_type",
+        "summary",
+        "observed_facts",
+        "uncertainties",
+        "missing_fields",
+        "risk_level",
+        "immediate_actions",
+        "suggested_actions",
+        "recommended_route",
+        "requires_human_review",
+        "confidence"
+      ],
+      "title": "IssueAnalysis",
+      "type": "object"
+    },
+    "IssueCategory": {
+      "enum": [
+        "safety",
+        "quality",
+        "management",
+        "logistics",
+        "consultation",
+        "unknown"
+      ],
+      "title": "IssueCategory",
+      "type": "string"
+    },
+    "RecommendedRoute": {
+      "enum": [
+        "direct_answer",
+        "collect_more_info",
+        "propose_workflow",
+        "human_review"
+      ],
+      "title": "RecommendedRoute",
+      "type": "string"
+    },
+    "RiskLevel": {
+      "enum": [
+        "undetermined",
+        "low",
+        "medium",
+        "high",
+        "emergency"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "TextReply": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Answer",
+          "type": "string"
+        },
+        "follow_up_questions": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Follow Up Questions",
+          "type": "array"
+        },
+        "analysis": {
+          "$ref": "#/$defs/IssueAnalysis"
+        }
+      },
+      "required": [
+        "answer",
+        "follow_up_questions",
+        "analysis"
+      ],
+      "title": "TextReply",
+      "type": "object"
+    },
+    "TicketDecision": {
+      "description": "比 IssueAnalysis 更小、更稳定的工单判断契约。\n\n模型只负责判断\"要不要开单\"；服务端把本契约确定性地转换成\n现有 IssueAnalysis，再进入 Proposal / HMAC / 正式工单流程。",
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/TicketStatus"
+        },
+        "category": {
+          "$ref": "#/$defs/IssueCategory",
+          "default": "unknown"
+        },
+        "issue_type": {
+          "default": "",
+          "maxLength": 100,
+          "title": "Issue Type",
+          "type": "string"
+        },
+        "summary": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Summary",
+          "type": "string"
+        },
+        "risk_level": {
+          "$ref": "#/$defs/RiskLevel",
+          "default": "undetermined"
+        },
+        "requires_human_review": {
+          "default": false,
+          "title": "Requires Human Review",
+          "type": "boolean"
+        },
+        "missing_information": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "immediate_action": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Immediate Action"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "TicketDecision",
+      "type": "object"
+    },
+    "TicketStatus": {
+      "description": "聊天回答之后唯一需要的三种工单判断。",
+      "enum": [
+        "no_ticket",
+        "need_more_info",
+        "create_ticket"
+      ],
+      "title": "TicketStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "consultation_id": {
+      "title": "Consultation Id",
+      "type": "string"
+    },
+    "turn": {
+      "title": "Turn",
+      "type": "integer"
+    },
+    "mode": {
+      "enum": [
+        "mock",
+        "real"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "reply": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TextReply"
+        },
+        {
+          "$ref": "#/$defs/ChatReply"
+        }
+      ],
+      "title": "Reply"
+    },
+    "can_propose": {
+      "title": "Can Propose",
+      "type": "boolean"
+    },
+    "risk_retained": {
+      "title": "Risk Retained",
+      "type": "boolean"
+    },
+    "remaining_turns": {
+      "title": "Remaining Turns",
+      "type": "integer"
+    },
+    "photo_id": {
+      "anyOf": [
+        {
+          "pattern": "^PHOTO-[A-F0-9]{24}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Photo Id"
+    },
+    "context_trimmed": {
+      "default": false,
+      "title": "Context Trimmed",
+      "type": "boolean"
+    },
+    "analysis_status": {
+      "default": "validated",
+      "enum": [
+        "validated",
+        "unavailable",
+        "not_requested"
+      ],
+      "title": "Analysis Status",
+      "type": "string"
+    },
+    "ticket_decision": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TicketDecision"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "rejudge_available": {
+      "default": false,
+      "title": "Rejudge Available",
+      "type": "boolean"
+    },
+    "analysis_retry_used": {
+      "default": false,
+      "title": "Analysis Retry Used",
+      "type": "boolean"
+    },
+    "sources": {
+      "items": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "maxItems": 20,
+      "title": "Sources",
+      "type": "array"
+    },
+    "tool_results": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "maxItems": 4,
+      "title": "Tool Results",
+      "type": "array"
+    }
+  },
+  "required": [
+    "consultation_id",
+    "turn",
+    "mode",
+    "model",
+    "reply",
+    "can_propose",
+    "risk_retained",
+    "remaining_turns"
+  ],
+  "title": "TextResponse",
+  "type": "object"
+}

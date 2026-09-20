@@ -1,19 +1,60 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { api } from "../api";
 import { statusNames } from "../customerLabels";
 import type { RecordListItem, ChatSessionItem } from "../types";
 
 const route = useRoute();
+const router = useRouter();
+const openChatMenu = ref<string | null>(null);
+const chatActionBusy = ref(false);
+let chatLoadGeneration = 0;
 const drawerOpen = ref(false);
 const recent = ref<RecordListItem[]>([]);
 const chats = ref<ChatSessionItem[]>([]);
 const chatError = ref('');
 const newChatNumber = ref(0);
 async function loadChats() {
-  try { chats.value = (await api.listChatSessions()).filter(item => item.intent === 'auto' || item.intent === 'chat'); chatError.value = ''; }
-  catch { chatError.value = '聊天历史暂时无法读取'; }
+  const generation = ++chatLoadGeneration;
+  try {
+    const result = await api.listChatSessions();
+    if (generation !== chatLoadGeneration) return;
+    chats.value = result.filter(item => item.intent === 'auto' || item.intent === 'chat'); chatError.value = '';
+  } catch { if (generation === chatLoadGeneration) chatError.value = '聊天历史暂时无法读取'; }
+}
+function toggleChatMenu(id: string) {
+  if (!chatActionBusy.value) openChatMenu.value = openChatMenu.value === id ? null : id;
+}
+async function pinChat(chat: ChatSessionItem) {
+  if (chatActionBusy.value) return;
+  chatActionBusy.value = true; chatError.value = ''; openChatMenu.value = null;
+  ++chatLoadGeneration;
+  try { await api.pinChatSession(chat.consultation_id, !chat.pinned); await loadChats(); }
+  catch (cause) { chatError.value = cause instanceof Error ? cause.message : '置顶操作失败，请重试'; }
+  finally { chatActionBusy.value = false; }
+}
+async function leaveDeletedChat(id: string) {
+  if (route.query.chat !== id) return;
+  const failure = await router.replace({ path: '/chat', query: { new: String(Date.now()) } });
+  if (failure || route.query.chat === id) throw new Error('当前操作尚未完成，请稍后再删除聊天。');
+}
+async function deleteChat(chat: ChatSessionItem) {
+  if (chatActionBusy.value) return;
+  openChatMenu.value = null;
+  if (!window.confirm('确定删除这条聊天吗？删除后无法恢复；已创建的工单不受影响。')) return;
+  chatActionBusy.value = true; chatError.value = ''; ++chatLoadGeneration;
+  try {
+    // Leave first so a late answer cannot reopen the conversation being deleted.
+    await leaveDeletedChat(chat.consultation_id);
+    await api.deleteChatSession(chat.consultation_id);
+    ++chatLoadGeneration;
+    chats.value = chats.value.filter(item => item.consultation_id !== chat.consultation_id);
+    try { window.sessionStorage.removeItem('sea-son-pending:' + chat.consultation_id); } catch { /* Browser storage is optional. */ }
+    await leaveDeletedChat(chat.consultation_id);
+    await loadChats();
+  } catch (cause) { chatError.value = cause instanceof Error ? cause.message : '删除失败，请重试'; }
+  finally { chatActionBusy.value = false; }
 }
 const historyBusy = ref(false);
 const loginOpen = ref(false);
@@ -37,6 +78,7 @@ async function loadRecent() {
 }
 
 watch(() => route.fullPath, () => {
+  openChatMenu.value = null;
   drawerOpen.value = false;
   userMenuOpen.value = false;
   void loadRecent();
@@ -73,7 +115,7 @@ onBeforeUnmount(() => window.removeEventListener('sea-son-chat-saved', loadChats
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" @click="openChatMenu = null" @keydown.esc="openChatMenu = null">
     <header class="mobile-bar">
       <button class="icon-button" type="button" aria-label="打开导航" @click="drawerOpen = true"><span></span><span></span><span></span></button>
       <RouterLink class="mobile-brand" to="/chat"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>海之子工作台</strong></RouterLink>
@@ -93,7 +135,14 @@ onBeforeUnmount(() => window.removeEventListener('sea-son-chat-saved', loadChats
         <div class="sidebar-section-title"><span id="chat-history-title">最近聊天</span><button type="button" aria-label="刷新聊天历史" @click="loadChats">↻</button></div>
         <p v-if="chatError" class="sidebar-muted">{{ chatError }}</p>
         <p v-else-if="!chats.length" class="sidebar-muted">发送后自动保存在本机</p>
-        <RouterLink v-for="chat in chats" :key="chat.consultation_id" :to="`/chat?chat=${chat.consultation_id}`" class="history-link"><span>{{ chat.title }}</span><small>{{ chat.turns }} 轮对话</small></RouterLink>
+        <div v-for="chat in chats" :key="chat.consultation_id" class="chat-history-row">
+          <RouterLink :to="'/chat?chat=' + chat.consultation_id" class="history-link"><span>{{ chat.title }}</span><small>{{ chat.pinned ? '已置顶 · ' : '' }}{{ chat.turns }} 轮对话</small></RouterLink>
+          <button type="button" class="chat-menu-toggle" :disabled="chatActionBusy" :aria-label="'会话菜单：' + chat.title" :aria-expanded="openChatMenu === chat.consultation_id" @click.stop="toggleChatMenu(chat.consultation_id)">⋯</button>
+          <div v-if="openChatMenu === chat.consultation_id" class="chat-menu" @click.stop>
+            <button type="button" :disabled="chatActionBusy" @click="pinChat(chat)">{{ chat.pinned ? '取消置顶' : '置顶' }}</button>
+            <button type="button" :disabled="chatActionBusy" class="chat-delete" @click="deleteChat(chat)">删除</button>
+          </div>
+        </div>
       </section>
       <section class="sidebar-history" aria-labelledby="recent-title">
         <div class="sidebar-section-title"><span id="recent-title">最近工单</span><button type="button" :disabled="historyBusy" aria-label="刷新最近工单" @click="loadRecent">↻</button></div>
@@ -128,3 +177,14 @@ onBeforeUnmount(() => window.removeEventListener('sea-son-chat-saved', loadChats
     </div>
   </div>
 </template>
+
+<style scoped>
+.chat-history-row { position: relative; display: flex; align-items: center; flex-wrap: wrap; }
+.chat-history-row .history-link { flex: 1; min-width: 0; }
+.chat-menu-toggle { width: 30px; height: 30px; border: 0; border-radius: 6px; background: transparent; font-size: 22px; cursor: pointer; }
+.chat-menu-toggle:hover { background: #e7e7e3; }
+.chat-menu { width: 100%; margin: 0 0 6px; padding: 4px; border: 1px solid #deded9; border-radius: 8px; background: #fff; }
+.chat-menu button { display: block; width: 100%; padding: 7px 10px; text-align: left; border: 0; border-radius: 5px; background: transparent; cursor: pointer; }
+.chat-menu button:hover { background: #f0f0ed; }
+.chat-menu .chat-delete { color: #b42318; }
+</style>

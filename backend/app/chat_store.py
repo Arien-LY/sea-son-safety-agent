@@ -37,3 +37,10 @@ class ChatStore:
                 connection.execute("INSERT INTO sessions VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET body=excluded.body", (key, body))
         except (OSError, sqlite3.Error, ValueError) as exc:
             raise TextError("chat_store_error", "回答未能保存，请检查磁盘空间后重试。") from exc
+
+    def delete(self, key: str):
+        try:
+            with closing(self._connect()) as connection, connection:
+                connection.execute("DELETE FROM sessions WHERE id = ?", (key,))
+        except (OSError, sqlite3.Error) as exc:
+            raise TextError("chat_store_error", "聊天未能删除，请检查本地存储后重试。") from exc

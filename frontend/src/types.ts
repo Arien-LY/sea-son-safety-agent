@@ -31,11 +31,14 @@ export interface TextTurnResponse {
   remaining_turns: number;
   context_trimmed?: boolean;
   analysis_status?: "validated" | "unavailable" | "not_requested";
+  ticket_decision?: TicketDecision | null;
+  rejudge_available?: boolean;
+  analysis_retry_used?: boolean;
   sources?: { id: string; title: string; url: string; excerpt: string }[];
   tool_results?: { tool: string; ok: boolean; summary: string }[];
 }
 
-export interface ChatSessionItem { consultation_id: string; title: string; turns: number; intent: string }
+export interface ChatSessionItem { pinned: boolean; consultation_id: string; title: string; turns: number; intent: string }
 export interface ChatSession { consultation_id: string; proposed: boolean; turns: { request_id: string; message: string; result: TextTurnResponse; thinking: "fast" | "deep" }[] }
 
 export interface RecordListItem {
@@ -172,6 +175,19 @@ export interface IssueAnalysis {
   recommended_route: RecommendedRoute;
   requires_human_review: boolean;
   confidence: number;
+}
+
+export type TicketStatus = "no_ticket" | "need_more_info" | "create_ticket";
+
+export interface TicketDecision {
+  status: TicketStatus;
+  category: IssueCategory;
+  issue_type: string;
+  summary: string;
+  risk_level: RiskLevel;
+  requires_human_review: boolean;
+  missing_information: string[];
+  immediate_action: string | null;
 }
 
 export interface IssueRecordReviewFields {
