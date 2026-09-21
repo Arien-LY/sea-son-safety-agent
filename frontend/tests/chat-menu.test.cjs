@@ -18,7 +18,7 @@ async function mount(options = {}) {
     pinChatSession: async (id, pinned) => { calls.push(['pin', id, pinned]); if (options.fail) throw new Error('保存失败'); list[0].pinned = pinned; },
     deleteChatSession: async id => { calls.push(['delete', id]); if (options.fail) throw new Error('删除失败'); list = []; },
   };
-  const source = fs.readFileSync(path.join(__dirname, '../src/components/AppShell.vue'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '../src/components/AppShell.vue'), 'utf8').replace(/\r\n/g, '\n');
   const { descriptor } = parse(source);
   const js = ts.transpileModule(compileScript(descriptor, { id: 'menu-test' }).content,
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;

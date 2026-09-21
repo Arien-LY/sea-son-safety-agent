@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -95,7 +96,13 @@ def verify(archive: Path) -> dict:
         server = start()
         for record_id in ids:
             assert request("/api/issue-records/" + record_id)["status"] == "closed"
-        report = {"package": archive.name, "source_commit": manifest["source_commit"], "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(), "files_verified": len(manifest["files"]), "native_launcher": "passed", "dpapi_synthetic_roundtrip": "passed", "same_origin_spa": "passed", "mock_stream": "passed", "workflow_categories": ["logistics", "safety"], "restart_persistence": "passed", "real_model_calls": 0, "retained_test_directory": str(target)}
+        with opener.open(base + f"/api/issue-records/{ids[0]}/export.docx", timeout=10) as response:
+            assert response.status == 200
+            exported = response.read()
+        with zipfile.ZipFile(io.BytesIO(exported)) as document:
+            assert 'word/document.xml' in document.namelist()
+            assert ids[0] in document.read('word/document.xml').decode('utf-8')
+        report = {"word_export": "passed", "package": archive.name, "source_commit": manifest["source_commit"], "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(), "files_verified": len(manifest["files"]), "native_launcher": "passed", "dpapi_synthetic_roundtrip": "passed", "same_origin_spa": "passed", "mock_stream": "passed", "workflow_categories": ["logistics", "safety"], "restart_persistence": "passed", "real_model_calls": 0, "retained_test_directory": str(target)}
         (archive.parent / "package-verification.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
     finally:
