@@ -3,7 +3,7 @@
 当前开发分支 `feat/persistent-chat-web-tools` 基于 beta.3 后续提交 `f0aacd3`，尚未重新打包发布。
 增加 SQLite 多会话恢复、刷新待重试输入、原生搜索/网页/时间工具、实际来源与状态；继续保留人工工单确认。
 配置与客户操作见 [使用说明](desktop/USER-GUIDE.txt)，验收边界见 [持久聊天与联网契约](docs/persistent-chat-tools-contract.md)，
-公开实现参考见 [Codex 复用记录](docs/codex-reuse.md)。DeepSeek 与 Tavily 使用独立密钥；腾讯适配未合并，真实付费服务尚待验收。
+公开实现参考见 [Codex 复用记录](docs/codex-reuse.md)。DeepSeek 与 Tavily 使用独立密钥。
 
 ## 下载比赛试用版
 
@@ -19,7 +19,6 @@ Windows 10/11 64位用户可从 [GitHub Releases](https://github.com/Arien-LY/se
 也可以上传单张现场照片。Agent 先正常回答，只有问题需要留痕、整改或复查时才建议进入
 受控工作流。
 
-当前仓库是从 `sea-son-agent` 的 `main` 选择性迁移得到的干净起点，不包含旧 MiC 数据、
 旧演示任务和复杂后台 Agent job。当前已完成 Phase 1–4 的离线分析契约、受控提案、
 本地整改工作流和只读知识检索，并完成 Phase 5 单图证据能力、文字/历史工单产品补齐及会话工作台体验重构。
 文字与图片均有独立模型入口和逐次外发确认；真实文字调用尚未独立冒烟，现场效果仍需专业验收。
